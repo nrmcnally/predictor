@@ -1,8 +1,8 @@
 # UFC Fight Predictor
 
-A full-stack UFC fight prediction app that uses scraped UFCStats data, fighter history, Elo-style ratings, physical profile data, age features, and calibrated machine-learning models to predict individual fights and upcoming UFC cards.
+A full-stack UFC fight prediction app that uses scraped UFCStats data, fighter history, Elo-style ratings, physical profile data, age features, calibrated machine-learning models, and optional betting-odds comparison data to predict individual fights and upcoming UFC cards.
 
-The app includes a FastAPI backend, a React/Vite frontend, an incremental data update pipeline, future-card predictions, saved pre-fight prediction tracking, leaderboards, model evaluation tools, and a rule-based “Why this prediction?” explanation panel.
+The app includes a FastAPI backend, a React/Vite frontend, an incremental data update pipeline, future-card predictions, saved pre-fight prediction tracking, optional market-odds snapshots, leaderboards, model evaluation tools, and a rule-based “Why this prediction?” explanation panel.
 
 ---
 
@@ -23,7 +23,13 @@ The app includes a FastAPI backend, a React/Vite frontend, an incremental data u
   - Takedown differential
   - Age / career-stage edge
 - Future Cards tab with known upcoming UFC cards and winner predictions
+- Optional betting-odds comparison for future fights
+  - Shows current American odds when available
+  - Shows no-vig market-implied probabilities
+  - Compares model pick vs. market favorite
 - Recent Cards tab that compares saved pre-fight predictions against actual results
+  - Saves odds snapshots with pre-fight predictions when `ODDS_API_KEY` is configured
+  - Later compares model pick vs. market favorite vs. actual winner
 - Leaderboards by overall ranking and weight class
 - Model Evaluation tab
   - Fight accuracy
@@ -133,6 +139,67 @@ npm install
 ```
 
 ---
+## 4. Optional: Set Up Betting Odds Comparison
+
+Betting odds are optional. The app does **not** use betting odds as model training features. Odds are only shown as comparison data next to the model prediction.
+
+The odds feature currently uses [The Odds API](https://the-odds-api.com/) for current/upcoming MMA odds.
+
+### Get an API Key
+
+1. Create an account at The Odds API.
+2. Copy your API key from your account dashboard.
+3. Store it locally as an environment variable.
+
+### Temporary Current-Terminal Setup
+
+From a backend terminal:
+
+```cmd
+set ODDS_API_KEY=your_api_key_here
+```
+
+This only applies to the current terminal window.
+
+### Permanent Windows Setup
+
+```cmd
+setx ODDS_API_KEY "your_api_key_here"
+```
+
+After using `setx`, close and reopen your terminal before running the app.
+
+### Local Launcher Option
+
+Do **not** put your real API key in `start_app.bat` if that file is committed to Git.
+
+Instead, create a private local launcher named:
+
+```text
+start_app.local.bat
+```
+
+Add this file to `.gitignore`:
+
+```text
+/start_app.local.bat
+```
+
+Then create `start_app.local.bat` in the project root:
+
+```bat
+@echo off
+set "ODDS_API_KEY=your_api_key_here"
+
+start "UFC Predictor Backend" cmd /k "cd /d %~dp0backend && call .venv\Scripts\activate && uvicorn app.main:app --reload"
+start "UFC Predictor Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
+```
+
+Double-click `start_app.local.bat` to run the app with the API key loaded into the backend process.
+
+Never commit `start_app.local.bat`, `.env`, or any file containing your real API key.
+
+---
 
 # Running the App
 
@@ -177,7 +244,7 @@ http://localhost:5173/
 
 ---
 
-# Optional: Use the Local Launcher
+# Optional: Use a Local Launcher
 
 If `start_app.bat` exists in the project root, you can double-click it after setup.
 
@@ -189,6 +256,8 @@ frontend/node_modules/
 ```
 
 If either one is missing, complete the backend and frontend setup steps first.
+
+If you use betting odds, prefer a private `start_app.local.bat` file instead of putting your real API key in a committed launcher. See **Optional: Set Up Betting Odds Comparison** above.
 
 ---
 
@@ -203,10 +272,16 @@ backend/data/raw/*.csv
 backend/data/processed/*.csv
 backend/data/reports/*.csv
 backend/data/reports/*.json
+backend/data/raw/current_mma_odds.json
+backend/data/processed/future_fight_odds.csv
 backend/models/*.joblib
 backend/models/*.json
 backend/.venv/
 frontend/node_modules/
+start_app.local.bat
+.env
+backend/.env
+frontend/.env
 ```
 
 Because of that, a freshly cloned machine may not be able to make predictions immediately.
@@ -280,7 +355,8 @@ The normal update path is incremental. It:
 12. Rebuilds current fighter data
 13. Adds current age features
 14. Refreshes future cards
-15. Saves future-card prediction snapshots
+15. Refreshes future fight odds if `ODDS_API_KEY` is configured
+16. Saves future-card prediction snapshots, including odds snapshots when available
 
 Command-line version:
 
@@ -350,6 +426,9 @@ Includes:
 - Prediction availability count
 - Confidence badges
 - Winner predictions for known fights
+- Optional current betting odds when `ODDS_API_KEY` is configured
+- No-vig market-implied probabilities
+- Model pick vs. market favorite comparison
 
 Some fights may show:
 
@@ -368,9 +447,11 @@ Compares saved pre-fight predictions against actual fight results once the event
 Includes:
 
 - Saved predictions
+- Saved market odds snapshots when available
 - Actual winners after results are scraped
 - Correct / wrong / waiting status
-- Card-level accuracy summary
+- Card-level model accuracy summary
+- Market favorite accuracy summary when odds were saved before the event
 
 A card may show:
 
@@ -409,6 +490,8 @@ Includes:
 - Most confident wrong picks
 - Broad and detailed method model metrics
 
+Historical betting-odds evaluation is only available for fights where odds were saved locally before the event. The app does not currently include paid historical odds data.
+
 ## Update Data
 
 Runs the incremental update pipeline from the UI and shows progress.
@@ -432,6 +515,10 @@ instead of making a weaker low-quality prediction.
 The “Why this prediction?” panel is rule-based. It does not claim to be the exact internal reasoning of the machine-learning model. It explains the matchup using the same pre-fight edge data returned by the backend.
 
 The method/manner-of-ending model is less accurate than the winner model. It is currently shown only in the Single Fight view to avoid cluttering Future Cards and Recent Cards.
+
+Betting odds are comparison-only data. They are not used as model features and are not used to train the winner model or method model.
+
+Recent Cards can only compare against market odds when those odds were saved before the event. If odds were not available or the API key was not configured when the snapshot was saved, the card will show market odds as unavailable.
 
 ---
 
@@ -458,6 +545,16 @@ npm run dev
 cd backend
 .venv\Scripts\activate
 python -m app.pipeline.update_incremental_data
+```
+
+## Refresh Future Fight Odds
+
+Requires `ODDS_API_KEY` to be set.
+
+```cmd
+cd backend
+.venv\Scripts\activate
+python -m app.services.odds_service
 ```
 
 ## Run Full Rebuild
@@ -611,6 +708,39 @@ python -m app.features.build_method_training_data
 python -m app.models.train_method_models
 ```
 
+## Betting Odds Are Missing
+
+Odds are optional. First check that your API key is available in the backend terminal:
+
+```cmd
+echo %ODDS_API_KEY%
+```
+
+If it prints nothing, set it for the current terminal:
+
+```cmd
+set ODDS_API_KEY=your_api_key_here
+```
+
+Then refresh odds:
+
+```cmd
+cd backend
+.venv\Scripts\activate
+python -m app.services.odds_service
+```
+
+Expected generated files:
+
+```text
+backend/data/raw/current_mma_odds.json
+backend/data/processed/future_fight_odds.csv
+```
+
+These generated files should stay ignored by Git.
+
+If Future Cards shows odds but Recent Cards does not, that usually means the card was saved before odds were added. Run the incremental update again before the event to save a new snapshot that includes odds.
+
 ## Frontend Loads but Cannot Reach API
 
 Make sure the backend is running at:
@@ -636,4 +766,5 @@ Possible future improvements:
 - Export card predictions
 - Deployment packaging
 - More detailed model diagnostics
+- Model-vs-market evaluation for saved odds snapshots
 - Better handling for fighters with limited UFC history

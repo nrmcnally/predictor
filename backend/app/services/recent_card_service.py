@@ -42,6 +42,25 @@ def parse_bool(value: Any) -> bool:
     return value_text in {"true", "1", "yes"}
 
 
+def optional_float(value: Any) -> float | None:
+    if value is None or pd.isna(value):
+        return None
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def optional_int(value: Any) -> int | None:
+    if value is None or pd.isna(value):
+        return None
+
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
 def read_csv_or_empty(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
@@ -152,6 +171,14 @@ def build_fight_result_row(
     if prediction_available and actual_result_available and predicted_winner:
         prediction_correct = predicted_winner == actual_winner
 
+    odds_available = parse_bool(saved_row.get("odds_available", False))
+    market_favorite = clean_text(saved_row.get("market_favorite", ""))
+
+    market_correct = None
+
+    if odds_available and actual_result_available and market_favorite:
+        market_correct = market_favorite == actual_winner
+
     return {
         "saved_at": clean_text(saved_row.get("saved_at", "")),
 
@@ -177,6 +204,42 @@ def build_fight_result_row(
         "actual_time": actual_time,
 
         "prediction_correct": prediction_correct,
+
+        # Saved market odds snapshot
+        "odds_available": odds_available,
+        "odds_bookmaker": clean_text(saved_row.get("odds_bookmaker", "")),
+        "odds_last_update": clean_text(saved_row.get("odds_last_update", "")),
+        "bookmakers_matched": optional_int(saved_row.get("bookmakers_matched")),
+
+        "fighter_1_odds_american": optional_int(
+            saved_row.get("fighter_1_odds_american")
+        ),
+        "fighter_2_odds_american": optional_int(
+            saved_row.get("fighter_2_odds_american")
+        ),
+
+        "fighter_1_market_probability": optional_float(
+            saved_row.get("fighter_1_market_probability")
+        ),
+        "fighter_2_market_probability": optional_float(
+            saved_row.get("fighter_2_market_probability")
+        ),
+        "fighter_1_market_percentage": clean_text(
+            saved_row.get("fighter_1_market_percentage", "")
+        ),
+        "fighter_2_market_percentage": clean_text(
+            saved_row.get("fighter_2_market_percentage", "")
+        ),
+
+        "market_favorite": market_favorite,
+        "market_favorite_probability": optional_float(
+            saved_row.get("market_favorite_probability")
+        ),
+        "market_favorite_percentage": clean_text(
+            saved_row.get("market_favorite_percentage", "")
+        ),
+        "market_correct": market_correct,
+
         "error_json": clean_text(saved_row.get("error_json", "")),
     }
 
@@ -197,6 +260,16 @@ def summarize_card_fights(fights: list[dict[str, Any]]) -> dict[str, Any]:
         if fight["prediction_correct"] is True
     ]
 
+    market_completed_fights = [
+        fight for fight in completed_fights
+        if fight.get("odds_available") and fight.get("market_correct") is not None
+    ]
+
+    correct_market_favorites = [
+        fight for fight in market_completed_fights
+        if fight["market_correct"] is True
+    ]
+
     if not completed_fights:
         status = "waiting_for_results"
     elif len(completed_fights) < len(fights):
@@ -209,6 +282,11 @@ def summarize_card_fights(fights: list[dict[str, Any]]) -> dict[str, Any]:
     if predicted_completed_fights:
         accuracy = len(correct_predictions) / len(predicted_completed_fights)
 
+    market_accuracy = None
+
+    if market_completed_fights:
+        market_accuracy = len(correct_market_favorites) / len(market_completed_fights)
+
     return {
         "status": status,
         "fight_count": len(fights),
@@ -217,6 +295,12 @@ def summarize_card_fights(fights: list[dict[str, Any]]) -> dict[str, Any]:
         "correct_prediction_count": len(correct_predictions),
         "accuracy": accuracy,
         "accuracy_percentage": f"{accuracy * 100.0:.1f}%" if accuracy is not None else "",
+        "market_completed_count": len(market_completed_fights),
+        "correct_market_count": len(correct_market_favorites),
+        "market_accuracy": market_accuracy,
+        "market_accuracy_percentage": f"{market_accuracy * 100.0:.1f}%"
+        if market_accuracy is not None
+        else "",
     }
 
 

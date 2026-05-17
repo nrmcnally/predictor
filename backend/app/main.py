@@ -11,6 +11,11 @@ from pathlib import Path
 
 from app.services.method_prediction_service import predict_method_data
 
+from app.services.odds_service import (
+    load_future_fight_odds,
+    refresh_future_fight_odds,
+)
+
 from app.services.prediction_service import (
     FighterNotFoundError,
     get_available_weight_classes,
@@ -431,6 +436,35 @@ def method_model_metrics() -> dict[str, Any]:
             status_code=500,
             detail={
                 "message": "Failed to load method model metrics.",
+                "error": str(error),
+            },
+        )
+    
+@app.get("/future-fight-odds")
+def future_fight_odds() -> dict[str, Any]:
+    try:
+        return load_future_fight_odds()
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to load future fight odds.",
+                "error": str(error),
+            },
+        )
+
+
+@app.post("/future-fight-odds/refresh")
+def refresh_future_fight_odds_endpoint() -> dict[str, Any]:
+    try:
+        return refresh_future_fight_odds()
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to refresh future fight odds.",
                 "error": str(error),
             },
         )

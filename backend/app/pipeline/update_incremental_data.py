@@ -12,6 +12,8 @@ import pandas as pd
 
 from app.data.restore_fighter_dobs import restore_fighter_dobs_from_backup
 
+from app.services.odds_service import refresh_future_fight_odds
+
 from app.services.prediction_service import clear_prediction_cache
 
 from app.services.saved_prediction_service import (
@@ -163,6 +165,19 @@ def read_csv_or_empty(path: Path) -> pd.DataFrame:
         return pd.read_csv(path)
     except pd.errors.EmptyDataError:
         return pd.DataFrame()
+    
+def refresh_future_fight_odds_stage() -> dict[str, Any]:
+    try:
+        return {
+            "available": True,
+            **refresh_future_fight_odds(),
+        }
+    except Exception as error:
+        return {
+            "available": False,
+            "message": "Skipped odds refresh. Set ODDS_API_KEY to enable odds.",
+            "error": str(error),
+        }
 
 
 def write_dataframe_csv(df: pd.DataFrame, path: Path) -> None:
@@ -600,6 +615,9 @@ def run_incremental_update(
         ("Build current fighter features", build_current_fighter_features_stage),
         ("Add current age features", add_age_features_stage),
         ("Refresh future cards", refresh_future_cards_stage),
+        ("Refresh future cards", refresh_future_cards_stage),
+        ("Refresh future fight odds", refresh_future_fight_odds_stage),
+        ("Save future-card predictions", save_future_card_predictions_stage),
         ("Save future-card predictions", save_future_card_predictions_stage),
 ]
 

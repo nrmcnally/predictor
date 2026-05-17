@@ -2459,3 +2459,124 @@ select:focus {
   color: #344054;
   background: #f2f4f7;
 }
+
+.odds-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #eaecf0;
+  border-radius: 16px;
+  background: #fcfcfd;
+}
+
+.odds-comparison div {
+  display: grid;
+  gap: 3px;
+}
+
+.odds-comparison span {
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.odds-comparison strong {
+  color: #101828;
+  font-size: 0.92rem;
+}
+
+.odds-comparison small {
+  grid-column: 1 / -1;
+  color: #667085;
+  font-size: 0.78rem;
+}
+
+.odds-comparison.muted {
+  grid-template-columns: 1fr;
+  color: #667085;
+  background: #f9fafb;
+}
+
+@media (max-width: 720px) {
+  .odds-comparison {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cards-layout {
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(300px, 420px);
+  align-items: start;
+}
+
+.cards-sidebar,
+.card-fights-panel,
+.results-panel,
+.fight-list,
+.fight-row {
+  min-width: 0;
+}
+
+.fight-row {
+  width: 100%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, auto);
+  gap: 12px;
+  align-items: start;
+  overflow: hidden;
+}
+
+.fight-row > div {
+  min-width: 0;
+}
+
+.fight-row strong,
+.fight-row span,
+.fight-row em {
+  overflow-wrap: anywhere;
+}
+
+.fight-row .odds-comparison {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-top: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fight-row .odds-comparison strong,
+.fight-row .odds-comparison span {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1200px) {
+  .cards-layout {
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  }
+
+  .cards-layout > .results-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .cards-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fight-row {
+    grid-template-columns: 1fr;
+  }
+
+  .fight-row .odds-comparison {
+    grid-template-columns: 1fr;
+  }
+}
+
+.odds-comparison-note {
+  color: #667085;
+  font-style: italic;
+}

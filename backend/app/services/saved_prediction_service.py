@@ -7,6 +7,8 @@ from typing import Any
 
 import pandas as pd
 
+from app.services.odds_service import FUTURE_FIGHT_ODDS_CSV
+
 from app.services.future_card_service import (
     get_future_card_predictions,
     get_future_cards,
@@ -28,6 +30,15 @@ def clean_text(value: Any) -> str:
 
     return " ".join(str(value).split())
 
+def normalize_fight_url(value: Any) -> str:
+    if value is None:
+        return ""
+
+    normalized = " ".join(str(value).split())
+    normalized = normalized.replace("https://www.", "https://")
+    normalized = normalized.replace("http://www.", "http://")
+
+    return normalized.rstrip("/")
 
 def now_iso() -> str:
     return datetime.now().isoformat(timespec="seconds")
@@ -69,6 +80,7 @@ def write_saved_predictions(df: pd.DataFrame) -> None:
 def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
     card = get_future_card_predictions(event_id)
     model_metadata = load_model_metadata()
+    odds_lookup = load_future_odds_lookup()
 
     saved_at = now_iso()
 
@@ -78,6 +90,7 @@ def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
         prediction_available = bool(fight.get("prediction_available"))
         prediction = fight.get("prediction") or {}
         error = fight.get("error")
+        odds_data = odds_lookup.get(normalize_fight_url(fight["fight_url"]), {})
 
         row = {
             "saved_at": saved_at,
@@ -112,6 +125,20 @@ def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
             "basic_matchup_edges_json": json.dumps(
                 prediction.get("basic_matchup_edges", [])
             ),
+
+            "odds_available": odds_data.get("odds_available", False),
+            "odds_bookmaker": odds_data.get("odds_bookmaker", ""),
+            "odds_last_update": odds_data.get("odds_last_update", ""),
+            "bookmakers_matched": odds_data.get("bookmakers_matched"),
+            "fighter_1_odds_american": odds_data.get("fighter_1_odds_american"),
+            "fighter_2_odds_american": odds_data.get("fighter_2_odds_american"),
+            "fighter_1_market_probability": odds_data.get("fighter_1_market_probability"),
+            "fighter_2_market_probability": odds_data.get("fighter_2_market_probability"),
+            "fighter_1_market_percentage": odds_data.get("fighter_1_market_percentage", ""),
+            "fighter_2_market_percentage": odds_data.get("fighter_2_market_percentage", ""),
+            "market_favorite": odds_data.get("market_favorite", ""),
+            "market_favorite_probability": odds_data.get("market_favorite_probability"),
+            "market_favorite_percentage": odds_data.get("market_favorite_percentage", ""),
         }
 
         if prediction_available:
@@ -240,3 +267,41 @@ def get_saved_card_predictions() -> dict[str, Any]:
         "saved_prediction_count": int(len(df)),
         "cards": cards,
     }
+
+def load_future_odds_lookup() -> dict[str, dict[str, Any]]:
+    if not FUTURE_FIGHT_ODDS_CSV.exists():
+        return {}
+
+    try:
+        odds_df = pd.read_csv(FUTURE_FIGHT_ODDS_CSV)
+    except Exception:
+        return {}
+
+    if odds_df.empty or "fight_url" not in odds_df.columns:
+        return {}
+
+    odds_lookup = {}
+
+    for _, row in odds_df.iterrows():
+        fight_url = normalize_fight_url(row.get("fight_url", ""))
+
+        if not fight_url:
+            continue
+
+        odds_lookup[fight_url] = {
+            "odds_available": bool(row.get("odds_available", False)),
+            "odds_bookmaker": clean_text(row.get("odds_bookmaker", "")),
+            "odds_last_update": clean_text(row.get("odds_last_update", "")),
+            "bookmakers_matched": row.get("bookmakers_matched"),
+            "fighter_1_odds_american": row.get("fighter_1_odds_american"),
+            "fighter_2_odds_american": row.get("fighter_2_odds_american"),
+            "fighter_1_market_probability": row.get("fighter_1_market_probability"),
+            "fighter_2_market_probability": row.get("fighter_2_market_probability"),
+            "fighter_1_market_percentage": clean_text(row.get("fighter_1_market_percentage", "")),
+            "fighter_2_market_percentage": clean_text(row.get("fighter_2_market_percentage", "")),
+            "market_favorite": clean_text(row.get("market_favorite", "")),
+            "market_favorite_probability": row.get("market_favorite_probability"),
+            "market_favorite_percentage": clean_text(row.get("market_favorite_percentage", "")),
+        }
+
+    return odds_lookup

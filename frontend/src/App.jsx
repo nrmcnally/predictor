@@ -23,6 +23,40 @@ function formatCalibrationGap(row) {
   return `${sign}${(gap * 100).toFixed(1)} pts`;
 }
 
+function formatAmericanOdds(value) {
+  if (value === null || value === undefined || value === "") {
+    return "N/A";
+  }
+
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return String(value);
+  }
+
+  return numberValue > 0 ? `+${numberValue}` : `${numberValue}`;
+}
+
+function normalizeFightUrl(value) {
+  return String(value || "")
+    .replace("https://www.", "https://")
+    .replace("http://www.", "http://")
+    .replace(/\/$/, "");
+}
+
+function getOddsForFight(oddsRows, fightUrl) {
+  if (!Array.isArray(oddsRows) || !fightUrl) {
+    return null;
+  }
+
+  const normalizedFightUrl = normalizeFightUrl(fightUrl);
+
+  return (
+    oddsRows.find((row) => normalizeFightUrl(row.fight_url) === normalizedFightUrl) ||
+    null
+  );
+}
+
 function getCalibrationClass(row) {
   if (
     row?.accuracy === null ||
@@ -229,9 +263,26 @@ function summarizeRecentCard(card) {
 
   const waitingCount = fights.filter((fight) => !fight.actual_result_available).length;
 
+  const marketCompletedFights = fights.filter(
+    (fight) =>
+      fight.actual_result_available &&
+      fight.odds_available &&
+      fight.market_correct !== null &&
+      fight.market_correct !== undefined
+  );
+
+  const marketCorrectCount = marketCompletedFights.filter(
+    (fight) => fight.market_correct === true
+  ).length;
+
   const accuracy =
     predictedCompletedFights.length > 0
       ? correctCount / predictedCompletedFights.length
+      : null;
+
+  const marketAccuracy =
+    marketCompletedFights.length > 0
+      ? marketCorrectCount / marketCompletedFights.length
       : null;
 
   return {
@@ -243,6 +294,11 @@ function summarizeRecentCard(card) {
     waitingCount,
     accuracy,
     accuracyPercentage: accuracy !== null ? `${(accuracy * 100).toFixed(1)}%` : "N/A",
+    marketCompletedCount: marketCompletedFights.length,
+    marketCorrectCount,
+    marketAccuracy,
+    marketAccuracyPercentage:
+      marketAccuracy !== null ? `${(marketAccuracy * 100).toFixed(1)}%` : "N/A",
   };
 }
 
@@ -638,6 +694,57 @@ function MethodPredictionDetails({
   );
 }
 
+function FightOddsComparison({ fight, odds }) {
+  if (!odds || !odds.odds_available) {
+    return (
+      <div className="odds-comparison muted">
+        <span>Market odds unavailable</span>
+      </div>
+    );
+  }
+
+  const fighter1Name = fight?.fighter_1 || "Fighter 1";
+  const fighter2Name = fight?.fighter_2 || "Fighter 2";
+
+  return (
+    <div className="odds-comparison">
+      <div>
+        <span>Market favorite</span>
+        <strong>
+          {odds.market_favorite || "Unknown"}{" "}
+          {odds.market_favorite_percentage || ""}
+        </strong>
+      </div>
+
+      <div>
+        <span>{fighter1Name}</span>
+        <strong>
+          {formatAmericanOdds(odds.fighter_1_odds_american)} •{" "}
+          {odds.fighter_1_market_percentage || "N/A"}
+        </strong>
+      </div>
+
+      <div>
+        <span>{fighter2Name}</span>
+        <strong>
+          {formatAmericanOdds(odds.fighter_2_odds_american)} •{" "}
+          {odds.fighter_2_market_percentage || "N/A"}
+        </strong>
+      </div>
+
+      <small>
+      {odds.odds_bookmaker
+        ? `${odds.odds_bookmaker}${odds.bookmakers_matched ? ` • ${odds.bookmakers_matched} books` : ""}`
+        : "Market odds source unavailable"}
+    </small>
+
+    <small className="odds-comparison-note">
+      Market odds are shown for comparison only and are not used as model features.
+    </small>
+    </div>
+  );
+}
+
 function RecentFightDetails({ fight }) {
   if (!fight) {
     return (
@@ -651,11 +758,7 @@ function RecentFightDetails({ fight }) {
   const fighter1Probability = parsePercentageText(fight.fighter_1_percentage);
   const fighter2Probability = parsePercentageText(fight.fighter_2_percentage);
 
-  const resultClass = fight.actual_result_available
-    ? fight.prediction_correct
-      ? "correct"
-      : "incorrect"
-    : "waiting";
+  const resultClass = getRecentFightResultClass(fight);
 
   return (
     <>
@@ -663,11 +766,13 @@ function RecentFightDetails({ fight }) {
         <p className="eyebrow">Prediction result</p>
 
         <h2>
-          {fight.actual_result_available
-            ? fight.prediction_correct
-              ? "Correct prediction"
-              : "Incorrect prediction"
-            : "Waiting for results"}
+          {resultClass === "correct"
+            ? "Correct prediction"
+            : resultClass === "incorrect"
+              ? "Incorrect prediction"
+              : resultClass === "no-prediction"
+                ? "No saved prediction"
+                : "Waiting for results"}
         </h2>
 
         {fight.prediction_available ? (
@@ -734,6 +839,8 @@ function RecentFightDetails({ fight }) {
         </div>
       </div>
 
+      <FightOddsComparison fight={fight} odds={fight} />
+
       <div className="edges-card">
         <h2>Saved prediction details</h2>
 
@@ -768,6 +875,34 @@ function RecentFightDetails({ fight }) {
               <span>Model used when the prediction was saved</span>
             </div>
             <strong>{fight.model_name || "Unknown"}</strong>
+          </div>
+
+          <div className="edge-row">
+            <div>
+              <strong>Market favorite</strong>
+              <span>Saved sportsbook consensus/representative odds snapshot</span>
+            </div>
+            <strong>
+              {fight.odds_available
+                ? `${fight.market_favorite || "Unknown"} ${
+                    fight.market_favorite_percentage || ""
+                  }`
+                : "Unavailable"}
+            </strong>
+          </div>
+
+          <div className="edge-row">
+            <div>
+              <strong>Market result</strong>
+              <span>Whether the saved market favorite matched the actual winner</span>
+            </div>
+            <strong>
+              {fight.market_correct === true
+                ? "Correct"
+                : fight.market_correct === false
+                  ? "Wrong"
+                  : "N/A"}
+            </strong>
           </div>
 
           <div className="edge-row">
@@ -851,6 +986,9 @@ function App() {
   const [methodModelMetrics, setMethodModelMetrics] = useState(null);
   const [methodModelMetricsError, setMethodModelMetricsError] = useState("");
 
+  const [futureFightOdds, setFutureFightOdds] = useState([]);
+  const [futureFightOddsError, setFutureFightOddsError] = useState("");
+
   useEffect(() => {
     async function loadWeightClasses() {
       try {
@@ -886,6 +1024,7 @@ function App() {
     loadLeaderboards();
     loadModelEvaluation();
     loadMethodModelMetrics();
+    loadFutureFightOdds();
   }, []);
 
   useEffect(() => {
@@ -971,7 +1110,28 @@ async function loadMethodModelMetrics() {
   }
 }
 
-  async function loadMethodPrediction(nextFighterA, nextFighterB, nextWeightClass) {
+async function loadFutureFightOdds() {
+  setFutureFightOddsError("");
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/future-fight-odds`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.detail?.message ||
+          data?.detail?.error ||
+          "Failed to load future fight odds."
+      );
+    }
+
+    setFutureFightOdds(data.odds || []);
+  } catch (requestError) {
+    setFutureFightOddsError(requestError.message);
+  }
+}
+
+async function loadMethodPrediction(nextFighterA, nextFighterB, nextWeightClass) {
   setMethodPredictionLoading(true);
   setMethodPredictionError("");
   setSingleMethodPrediction(null);
@@ -1213,6 +1373,7 @@ async function loadLeaderboards() {
       }
 
       await loadFutureCards();
+      await loadFutureFightOdds();
     } catch (requestError) {
       setCardsError(requestError.message);
     } finally {
@@ -1803,6 +1964,7 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
             </div>
 
             {cardsError && <pre className="error-box">{cardsError}</pre>}
+            {futureFightOddsError && <pre className="error-box">{futureFightOddsError}</pre>}
 
             <div className="card-list">
               {futureCards.map((card) => (
@@ -1920,6 +2082,11 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                           <span>{fight.error?.message ?? "Missing fighter data"}</span>
                         </div>
                       )}
+
+                      <FightOddsComparison
+                        fight={fight}
+                        odds={getOddsForFight(futureFightOdds, fight.fight_url)}
+                      />
                     </button>
                   ))}
                 </div>
@@ -2039,6 +2206,10 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                       {selectedRecentCardSummary.correctCount} correct of{" "}
                       {selectedRecentCardSummary.predictedCompletedCount} scored predictions
                     </span>
+                    <span>
+                      Market: {selectedRecentCardSummary.marketAccuracyPercentage} over{" "}
+                      {selectedRecentCardSummary.marketCompletedCount} scored fights
+                    </span>
                   </div>
                 </div>
 
@@ -2071,6 +2242,16 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                   <div>
                     <span>Accuracy</span>
                     <strong>{selectedRecentCardSummary.accuracyPercentage}</strong>
+                  </div>
+
+                  <div>
+                    <span>Market accuracy</span>
+                    <strong>{selectedRecentCardSummary.marketAccuracyPercentage}</strong>
+                  </div>
+
+                  <div>
+                    <span>Market scored</span>
+                    <strong>{selectedRecentCardSummary.marketCompletedCount}</strong>
                   </div>
                 </div>
 
@@ -2106,6 +2287,12 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                             <span>Predicted: {fight.predicted_winner || "N/A"}</span>
                             {fight.confidence_percentage && (
                               <span>{fight.confidence_percentage} confidence</span>
+                            )}
+                            {fight.odds_available && (
+                              <span>
+                                Market: {fight.market_favorite || "N/A"}{" "}
+                                {fight.market_favorite_percentage || ""}
+                              </span>
                             )}
                           </div>
                         </div>

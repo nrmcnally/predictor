@@ -1,0 +1,2214 @@
+{
+  "fetched_at": "2026-05-17T17:58:07",
+  "source": "the-odds-api",
+  "sport_key": "mma_mixed_martial_arts",
+  "markets": "h2h",
+  "odds_format": "american",
+  "data": [
+    {
+      "id": "cbab69c179be988e710daca0234cc2d7",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-05-30T08:00:00Z",
+      "home_team": "Loma Lookboonmee",
+      "away_team": "Jaqueline Amorim",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Jaqueline Amorim",
+                  "price": 105
+                },
+                {
+                  "name": "Loma Lookboonmee",
+                  "price": -125
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Jaqueline Amorim",
+                  "price": 105
+                },
+                {
+                  "name": "Loma Lookboonmee",
+                  "price": -125
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-05-17T21:54:18Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:54:18Z",
+              "outcomes": [
+                {
+                  "name": "Jaqueline Amorim",
+                  "price": -103
+                },
+                {
+                  "name": "Loma Lookboonmee",
+                  "price": -117
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "80630708caf0340ecb71797ab841bc9c",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-05-30T08:00:00Z",
+      "home_team": "Rei Tsuruya",
+      "away_team": "Jesus Santos Aguilar",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Jesus Santos Aguilar",
+                  "price": 250
+                },
+                {
+                  "name": "Rei Tsuruya",
+                  "price": -300
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Jesus Santos Aguilar",
+                  "price": 245
+                },
+                {
+                  "name": "Rei Tsuruya",
+                  "price": -305
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-05-17T21:54:18Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:54:18Z",
+              "outcomes": [
+                {
+                  "name": "Jesus Santos Aguilar",
+                  "price": 260
+                },
+                {
+                  "name": "Rei Tsuruya",
+                  "price": -320
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a4b4900eee63e6c81e720895861a7f32",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-05-30T08:00:00Z",
+      "home_team": "Meng Ding",
+      "away_team": "Jos\u00e9 Henrique",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Jos\u00e9 Henrique",
+                  "price": 105
+                },
+                {
+                  "name": "Meng Ding",
+                  "price": -125
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Jos\u00e9 Henrique",
+                  "price": 105
+                },
+                {
+                  "name": "Meng Ding",
+                  "price": -125
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-05-17T21:54:18Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:54:18Z",
+              "outcomes": [
+                {
+                  "name": "Jos\u00e9 Henrique",
+                  "price": 102
+                },
+                {
+                  "name": "Meng Ding",
+                  "price": -122
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a409b20d9cab669d50db14c9a7ce1a1b",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-05-30T10:00:00Z",
+      "home_team": "Aori Qileng",
+      "away_team": "Cody Haddon",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Aori Qileng",
+                  "price": 285
+                },
+                {
+                  "name": "Cody Haddon",
+                  "price": -350
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Aori Qileng",
+                  "price": 280
+                },
+                {
+                  "name": "Cody Haddon",
+                  "price": -355
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-05-17T21:54:18Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:54:18Z",
+              "outcomes": [
+                {
+                  "name": "Aori Qileng",
+                  "price": 270
+                },
+                {
+                  "name": "Cody Haddon",
+                  "price": -340
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7ba015886a163ee334a3c9b34c706621",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-05-30T10:00:00Z",
+      "home_team": "Muslim Salikhov",
+      "away_team": "Jake Matthews",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Jake Matthews",
+                  "price": -105
+                },
+                {
+                  "name": "Muslim Salikhov",
+                  "price": -115
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Jake Matthews",
+                  "price": -105
+                },
+                {
+                  "name": "Muslim Salikhov",
+                  "price": -115
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-05-17T21:54:18Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:54:18Z",
+              "outcomes": [
+                {
+                  "name": "Jake Matthews",
+                  "price": -105
+                },
+                {
+                  "name": "Muslim Salikhov",
+                  "price": -115
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b41f98f0c942159705d3cebdaa3edc9c",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-05-30T11:00:00Z",
+      "home_team": "Alex Perez",
+      "away_team": "Su Mudaerji",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Alex Perez",
+                  "price": -125
+                },
+                {
+                  "name": "Su Mudaerji",
+                  "price": 105
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Alex Perez",
+                  "price": -122
+                },
+                {
+                  "name": "Su Mudaerji",
+                  "price": 102
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-05-17T21:54:18Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:54:18Z",
+              "outcomes": [
+                {
+                  "name": "Alex Perez",
+                  "price": -128
+                },
+                {
+                  "name": "Su Mudaerji",
+                  "price": 107
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9491c31da52bf6a09c24af58d4546139",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-05-30T11:00:00Z",
+      "home_team": "Zhang Mingyang",
+      "away_team": "Alonzo Menifield",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Alonzo Menifield",
+                  "price": 180
+                },
+                {
+                  "name": "Zhang Mingyang",
+                  "price": -210
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Alonzo Menifield",
+                  "price": 180
+                },
+                {
+                  "name": "Zhang Mingyang",
+                  "price": -218
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-05-17T21:54:18Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:54:18Z",
+              "outcomes": [
+                {
+                  "name": "Alonzo Menifield",
+                  "price": 180
+                },
+                {
+                  "name": "Zhang Mingyang",
+                  "price": -220
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a89ce2c4544384b51adb32e09f0953d9",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-05-30T11:00:00Z",
+      "home_team": "Kai Asakura",
+      "away_team": "Cameron Smotherman",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Cameron Smotherman",
+                  "price": 250
+                },
+                {
+                  "name": "Kai Asakura",
+                  "price": -300
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Cameron Smotherman",
+                  "price": 245
+                },
+                {
+                  "name": "Kai Asakura",
+                  "price": -305
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-05-17T21:54:18Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:54:18Z",
+              "outcomes": [
+                {
+                  "name": "Cameron Smotherman",
+                  "price": 250
+                },
+                {
+                  "name": "Kai Asakura",
+                  "price": -300
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a4776337215e434e60d95be6d087e953",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-05-30T11:00:00Z",
+      "home_team": "Song Yadong",
+      "away_team": "Deiveson Figueiredo",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Deiveson Figueiredo",
+                  "price": 420
+                },
+                {
+                  "name": "Song Yadong",
+                  "price": -550
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Deiveson Figueiredo",
+                  "price": 410
+                },
+                {
+                  "name": "Song Yadong",
+                  "price": -550
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-05-17T21:54:18Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:54:18Z",
+              "outcomes": [
+                {
+                  "name": "Deiveson Figueiredo",
+                  "price": 345
+                },
+                {
+                  "name": "Song Yadong",
+                  "price": -470
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "46c477fdf7a9c1048ddb2d7a6dea9480",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-05-30T11:00:00Z",
+      "home_team": "Sergey Pavlovich",
+      "away_team": "Tallison Teixeira",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Sergey Pavlovich",
+                  "price": -500
+                },
+                {
+                  "name": "Tallison Teixeira",
+                  "price": 385
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Sergey Pavlovich",
+                  "price": -500
+                },
+                {
+                  "name": "Tallison Teixeira",
+                  "price": 380
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-05-17T21:54:18Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:54:18Z",
+              "outcomes": [
+                {
+                  "name": "Sergey Pavlovich",
+                  "price": -450
+                },
+                {
+                  "name": "Tallison Teixeira",
+                  "price": 335
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f1fb488f82150df01e4c09f56f5efe09",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-02T02:00:00Z",
+      "home_team": "Islam Makhachev",
+      "away_team": "Ilia Topuria",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Ilia Topuria",
+                  "price": 199
+                },
+                {
+                  "name": "Islam Makhachev",
+                  "price": -234
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c8dbccd9eda383d9c76dc15e4a3c96a7",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-14T02:00:00Z",
+      "home_team": "Alex Pereira",
+      "away_team": "Carlos Ulberg",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Alex Pereira",
+                  "price": -175
+                },
+                {
+                  "name": "Carlos Ulberg",
+                  "price": 150
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b1a902b892f239a0404c75781af22e87",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-14T02:00:00Z",
+      "home_team": "Alex Pereira",
+      "away_team": "Jiri Prochazka",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Alex Pereira",
+                  "price": -300
+                },
+                {
+                  "name": "Jiri Prochazka",
+                  "price": 250
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e7a638f5736f2d0edc762b56fc404f74",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-14T02:00:00Z",
+      "home_team": "Alex Pereira",
+      "away_team": "Jon Jones",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Alex Pereira",
+                  "price": 210
+                },
+                {
+                  "name": "Jon Jones",
+                  "price": -250
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a3c203ddf1665927314db9cc73ede377",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-14T02:00:00Z",
+      "home_team": "Magomed Ankalaev",
+      "away_team": "Carlos Ulberg",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Carlos Ulberg",
+                  "price": 210
+                },
+                {
+                  "name": "Magomed Ankalaev",
+                  "price": -250
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4b4920d2454497566b519a271f9e1e93",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-14T22:10:00Z",
+      "home_team": "Diego Lopes",
+      "away_team": "Steve Garcia Jr.",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Diego Lopes",
+                  "price": -185
+                },
+                {
+                  "name": "Steve Garcia Jr.",
+                  "price": 154
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Diego Lopes",
+                  "price": -185
+                },
+                {
+                  "name": "Steve Garcia Jr.",
+                  "price": 160
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-05-17T21:57:48Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:48Z",
+              "outcomes": [
+                {
+                  "name": "Diego Lopes",
+                  "price": -200
+                },
+                {
+                  "name": "Steve Garcia Jr.",
+                  "price": 154
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9cf76c6ecde4824965ca04da644dfefa",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-14T22:30:00Z",
+      "home_team": "Bo Nickal",
+      "away_team": "Kyle Daukaus",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Bo Nickal",
+                  "price": -298
+                },
+                {
+                  "name": "Kyle Daukaus",
+                  "price": 240
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Bo Nickal",
+                  "price": -280
+                },
+                {
+                  "name": "Kyle Daukaus",
+                  "price": 240
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-05-17T21:56:50Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:56:50Z",
+              "outcomes": [
+                {
+                  "name": "Bo Nickal",
+                  "price": -305
+                },
+                {
+                  "name": "Kyle Daukaus",
+                  "price": 240
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-05-17T21:57:48Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:48Z",
+              "outcomes": [
+                {
+                  "name": "Bo Nickal",
+                  "price": -330
+                },
+                {
+                  "name": "Kyle Daukaus",
+                  "price": 240
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2f1aabeeefbe5b02db96846ac879a6ae",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-14T22:50:00Z",
+      "home_team": "Derrick Lewis",
+      "away_team": "Josh Hokit",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Derrick Lewis",
+                  "price": 285
+                },
+                {
+                  "name": "Josh Hokit",
+                  "price": -360
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Derrick Lewis",
+                  "price": 270
+                },
+                {
+                  "name": "Josh Hokit",
+                  "price": -330
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-05-17T21:56:50Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:56:50Z",
+              "outcomes": [
+                {
+                  "name": "Derrick Lewis",
+                  "price": 240
+                },
+                {
+                  "name": "Josh Hokit",
+                  "price": -305
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-05-17T21:57:48Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:48Z",
+              "outcomes": [
+                {
+                  "name": "Derrick Lewis",
+                  "price": 240
+                },
+                {
+                  "name": "Josh Hokit",
+                  "price": -330
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "54eb45b661945af7aa7da285a12e835c",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-14T23:15:00Z",
+      "home_team": "Mauricio Ruffy",
+      "away_team": "Michael Chandler",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Mauricio Ruffy",
+                  "price": -600
+                },
+                {
+                  "name": "Michael Chandler",
+                  "price": 440
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Mauricio Ruffy",
+                  "price": -600
+                },
+                {
+                  "name": "Michael Chandler",
+                  "price": 450
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-05-17T21:56:50Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:56:50Z",
+              "outcomes": [
+                {
+                  "name": "Mauricio Ruffy",
+                  "price": -590
+                },
+                {
+                  "name": "Michael Chandler",
+                  "price": 420
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-05-17T21:57:48Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:48Z",
+              "outcomes": [
+                {
+                  "name": "Mauricio Ruffy",
+                  "price": -650
+                },
+                {
+                  "name": "Michael Chandler",
+                  "price": 420
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "20d0d02349fe04d63631b1e3f1879fa3",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-14T23:45:00Z",
+      "home_team": "Sean O'Malley",
+      "away_team": "Aiemann Zahabi",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Aiemann Zahabi",
+                  "price": 310
+                },
+                {
+                  "name": "Sean O'Malley",
+                  "price": -395
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Aiemann Zahabi",
+                  "price": 330
+                },
+                {
+                  "name": "Sean O'Malley",
+                  "price": -400
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-05-17T21:56:50Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:56:50Z",
+              "outcomes": [
+                {
+                  "name": "Aiemann Zahabi",
+                  "price": 310
+                },
+                {
+                  "name": "Sean O'Malley",
+                  "price": -420
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-05-17T21:57:48Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:48Z",
+              "outcomes": [
+                {
+                  "name": "Aiemann Zahabi",
+                  "price": 300
+                },
+                {
+                  "name": "Sean O'Malley",
+                  "price": -430
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1e972b73d422aa4cadb9185ca87c3c93",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-15T00:30:00Z",
+      "home_team": "Alex Pereira",
+      "away_team": "Ciryl Gane",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Alex Pereira",
+                  "price": -115
+                },
+                {
+                  "name": "Ciryl Gane",
+                  "price": -105
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-05-17T21:56:50Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:56:50Z",
+              "outcomes": [
+                {
+                  "name": "Alex Pereira",
+                  "price": -113
+                },
+                {
+                  "name": "Ciryl Gane",
+                  "price": -110
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Alex Pereira",
+                  "price": -110
+                },
+                {
+                  "name": "Ciryl Gane",
+                  "price": -110
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-05-17T21:57:48Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:48Z",
+              "outcomes": [
+                {
+                  "name": "Alex Pereira",
+                  "price": -113
+                },
+                {
+                  "name": "Ciryl Gane",
+                  "price": -113
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e34a17d5cf2a82a5161a54631e06770c",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-15T01:15:00Z",
+      "home_team": "Ilia Topuria",
+      "away_team": "Justin Gaethje",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Ilia Topuria",
+                  "price": -850
+                },
+                {
+                  "name": "Justin Gaethje",
+                  "price": 575
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-05-17T21:56:50Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:56:50Z",
+              "outcomes": [
+                {
+                  "name": "Ilia Topuria",
+                  "price": -770
+                },
+                {
+                  "name": "Justin Gaethje",
+                  "price": 525
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Ilia Topuria",
+                  "price": -800
+                },
+                {
+                  "name": "Justin Gaethje",
+                  "price": 550
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-05-17T21:57:48Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:48Z",
+              "outcomes": [
+                {
+                  "name": "Ilia Topuria",
+                  "price": -750
+                },
+                {
+                  "name": "Justin Gaethje",
+                  "price": 460
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "891965c02d665af81f9308428b8f33e7",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-27T14:00:00Z",
+      "home_team": "Valentina Shevchenko",
+      "away_team": "Natalia Silva",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Natalia Silva",
+                  "price": 210
+                },
+                {
+                  "name": "Valentina Shevchenko",
+                  "price": -250
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ee37a39c1d8a992a65c6ff399fa48c63",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-28T02:00:00Z",
+      "home_team": "Alexandre Pantoja",
+      "away_team": "Joshua Van",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Alexandre Pantoja",
+                  "price": -175
+                },
+                {
+                  "name": "Joshua Van",
+                  "price": 150
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1ca0b61248b7eb5feef12a04661003e0",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-28T02:00:00Z",
+      "home_team": "Tom Aspinall",
+      "away_team": "Ciryl Gane",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Ciryl Gane",
+                  "price": 175
+                },
+                {
+                  "name": "Tom Aspinall",
+                  "price": -205
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "702055a9e35d07bddba5fd446eef719c",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-28T02:00:00Z",
+      "home_team": "Islam Makhachev",
+      "away_team": "Michael Morales",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Islam Makhachev",
+                  "price": -335
+                },
+                {
+                  "name": "Michael Morales",
+                  "price": 275
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ee6203b3168fb34a63a60ad51dd01050",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-28T02:00:00Z",
+      "home_team": "Weili Zhang",
+      "away_team": "Mackenzie Dern",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Mackenzie Dern",
+                  "price": 350
+                },
+                {
+                  "name": "Weili Zhang",
+                  "price": -450
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "05b3dc3515568962c8e7351c06ff69c0",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-06-28T02:00:00Z",
+      "home_team": "Merab Dvalishvili",
+      "away_team": "Petr Yan",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Merab Dvalishvili",
+                  "price": 150
+                },
+                {
+                  "name": "Petr Yan",
+                  "price": -175
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "3b755bb89b4450d72825f3e7327cb547",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-12T02:00:00Z",
+      "home_team": "Brandon Royval",
+      "away_team": "Lone'er Kavanagh",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Brandon Royval",
+                  "price": 145
+                },
+                {
+                  "name": "Lone'er Kavanagh",
+                  "price": -170
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "96b80306b34d20d1370629a7469f676d",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-12T02:00:00Z",
+      "home_team": "Cory Sandhagen",
+      "away_team": "Mario Bautista",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Cory Sandhagen",
+                  "price": -150
+                },
+                {
+                  "name": "Mario Bautista",
+                  "price": 130
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b1ae0b4452457fa13a37445b78f46930",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-12T02:00:00Z",
+      "home_team": "Gable Steveson",
+      "away_team": "Elisha Ellison",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Elisha Ellison",
+                  "price": 900
+                },
+                {
+                  "name": "Gable Steveson",
+                  "price": -1800
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "8ea7b2765e5de9ce31d512d1a6c1a138",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-12T03:00:00Z",
+      "home_team": "Benoit Saint-Denis",
+      "away_team": "Paddy Pimblett",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Benoit Saint-Denis",
+                  "price": -170
+                },
+                {
+                  "name": "Paddy Pimblett",
+                  "price": 142
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Benoit Saint-Denis",
+                  "price": -180
+                },
+                {
+                  "name": "Paddy Pimblett",
+                  "price": 155
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2c982ef7f30e521915fb0c82ffdaf4ba",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-12T04:00:00Z",
+      "home_team": "Conor McGregor",
+      "away_team": "Max Holloway",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Conor McGregor",
+                  "price": 350
+                },
+                {
+                  "name": "Max Holloway",
+                  "price": -455
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-05-17T21:57:48Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:48Z",
+              "outcomes": [
+                {
+                  "name": "Conor McGregor",
+                  "price": 330
+                },
+                {
+                  "name": "Max Holloway",
+                  "price": -480
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Conor McGregor",
+                  "price": 350
+                },
+                {
+                  "name": "Max Holloway",
+                  "price": -450
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f09d8755975042bcd105a5ab258253ff",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-08-02T03:10:00Z",
+      "home_team": "Ilia Topuria",
+      "away_team": "Arman Tsarukyan",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Arman Tsarukyan",
+                  "price": 165
+                },
+                {
+                  "name": "Ilia Topuria",
+                  "price": -190
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "be9636f30a46a5e2c5f9c869b685b788",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-12-27T03:00:00Z",
+      "home_team": "Manel Kape",
+      "away_team": "Joshua Van",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Joshua Van",
+                  "price": 135
+                },
+                {
+                  "name": "Manel Kape",
+                  "price": -155
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "944dd8a4945ba0df2c4370de73387c5d",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-12-31T17:00:00Z",
+      "home_team": "Conor McGregor",
+      "away_team": "Jorge Masvidal",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Conor McGregor",
+                  "price": -145
+                },
+                {
+                  "name": "Jorge Masvidal",
+                  "price": 125
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b40b838fc3b12e959a10d678ed58321f",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-12-31T19:25:00Z",
+      "home_team": "Islam Makhachev",
+      "away_team": "Kamaru Usman",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Islam Makhachev",
+                  "price": -310
+                },
+                {
+                  "name": "Kamaru Usman",
+                  "price": 250
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fa2d7e022c2c47e0855f04084d08f163",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-12-31T20:00:00Z",
+      "home_team": "Tom Aspinall",
+      "away_team": "Ciryl Gane",
+      "bookmakers": [
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-05-17T21:57:47Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:47Z",
+              "outcomes": [
+                {
+                  "name": "Ciryl Gane",
+                  "price": 160
+                },
+                {
+                  "name": "Tom Aspinall",
+                  "price": -192
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "8488c2a34f7093513d463d4b2730572e",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2027-01-01T03:00:00Z",
+      "home_team": "Khamzat Chimaev",
+      "away_team": "Paulo Henrique Costa",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Khamzat Chimaev",
+                  "price": -500
+                },
+                {
+                  "name": "Paulo Henrique Costa",
+                  "price": 375
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e697d4df59aa825d85fa764db999757f",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2027-01-01T03:00:00Z",
+      "home_team": "Sean Strickland",
+      "away_team": "Khamzat Chimaev",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Khamzat Chimaev",
+                  "price": -205
+                },
+                {
+                  "name": "Sean Strickland",
+                  "price": 175
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ead94688d843f96aba0f1486ce663b61",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2027-01-01T03:00:00Z",
+      "home_team": "Sean Strickland",
+      "away_team": "Nassourdine Imavov",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Nassourdine Imavov",
+                  "price": -114
+                },
+                {
+                  "name": "Sean Strickland",
+                  "price": -106
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fcee675894f8285afc8daf0808198b74",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2027-07-02T02:00:00Z",
+      "home_team": "Islam Makhachev",
+      "away_team": "Kamaru Usman",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-05-17T21:57:30Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-05-17T21:57:30Z",
+              "outcomes": [
+                {
+                  "name": "Islam Makhachev",
+                  "price": -330
+                },
+                {
+                  "name": "Kamaru Usman",
+                  "price": 270
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
