@@ -195,7 +195,15 @@ function getRecentFightResultClass(fight) {
     return "waiting";
   }
 
-  if (fight.prediction_correct) {
+  if (
+    !fight?.prediction_available ||
+    fight.prediction_correct === null ||
+    fight.prediction_correct === undefined
+  ) {
+    return "no-prediction";
+  }
+
+  if (fight.prediction_correct === true) {
     return "correct";
   }
 
@@ -2103,24 +2111,28 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                         </div>
 
                         <div className={`fight-result-pill improved ${resultClass}`}>
-                          <span className={`status-badge ${resultClass}`}>
-                            {resultClass === "correct"
-                              ? "Correct"
-                              : resultClass === "incorrect"
-                                ? "Wrong"
+                        <span className={`status-badge ${resultClass}`}>
+                          {resultClass === "correct"
+                            ? "Correct"
+                            : resultClass === "incorrect"
+                              ? "Wrong"
+                              : resultClass === "no-prediction"
+                                ? "No prediction"
                                 : "Waiting"}
-                          </span>
+                        </span>
 
-                          {fight.actual_result_available ? (
-                            <>
-                              <strong>{fight.actual_winner}</strong>
-                              <span>
-                                {fight.actual_method
+                        {fight.actual_result_available ? (
+                          <>
+                            <strong>{fight.actual_winner}</strong>
+                            <span>
+                              {!fight.prediction_available
+                                ? "No saved prediction"
+                                : fight.actual_method
                                   ? `${fight.actual_method}${fight.actual_round ? ` • R${fight.actual_round}` : ""}`
                                   : "Actual winner"}
-                              </span>
-                            </>
-                          ) : (
+                            </span>
+                          </>
+                        ) : (
                             <>
                               <strong>{fight.predicted_winner || "No prediction"}</strong>
                               <span>Awaiting result</span>

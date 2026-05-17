@@ -22,6 +22,17 @@ def clean_text(value: Any) -> str:
     return " ".join(str(value).split())
 
 
+def normalize_fight_url(value: Any) -> str:
+    if value is None:
+        return ""
+
+    normalized = " ".join(str(value).split())
+
+    normalized = normalized.replace("https://www.", "https://")
+    normalized = normalized.replace("http://www.", "http://")
+
+    return normalized.rstrip("/")
+
 def parse_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
@@ -87,7 +98,7 @@ def build_actual_result_lookup(event_fights_df: pd.DataFrame) -> dict[str, dict[
     lookup: dict[str, dict[str, Any]] = {}
 
     for _, row in df.iterrows():
-        fight_url = clean_text(row.get("fight_url", ""))
+        fight_url = normalize_fight_url(row.get("fight_url", ""))
 
         if not fight_url:
             continue
@@ -115,7 +126,7 @@ def build_fight_result_row(
     saved_row: pd.Series,
     actual_lookup: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
-    fight_url = clean_text(saved_row.get("fight_url", ""))
+    fight_url = normalize_fight_url(saved_row.get("fight_url", ""))
     actual = actual_lookup.get(fight_url)
 
     prediction_available = parse_bool(saved_row.get("prediction_available", False))

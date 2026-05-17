@@ -2449,3 +2449,13 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+.status-badge.no-prediction {
+  color: #344054;
+  background: #f2f4f7;
+}
+
+.fight-result-pill.improved.no-prediction {
+  color: #344054;
+  background: #f2f4f7;
+}
