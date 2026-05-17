@@ -9,6 +9,8 @@ from typing import Any, Callable
 
 import pandas as pd
 
+from app.data.restore_fighter_dobs import restore_fighter_dobs_from_backup
+
 from app.data.scrape_ufcstats import (
     fetch_completed_events,
     save_completed_events_csv,
@@ -69,6 +71,8 @@ LATEST_REPORT_PATH = REPORTS_DIR / "latest_update_report.json"
 def now_iso() -> str:
     return datetime.now().isoformat(timespec="seconds")
 
+def restore_fighter_dobs_stage() -> dict[str, Any]:
+    return restore_fighter_dobs_from_backup()
 
 def seconds_since(start_time: float) -> float:
     return round(time.perf_counter() - start_time, 2)
@@ -364,6 +368,7 @@ def run_update_all(stop_on_failure: bool = True) -> dict[str, Any]:
         ("Refresh completed fight list", stage_refresh_completed_fight_list),
         ("Refresh detailed fight stats", stage_refresh_fight_details),
         ("Refresh fighter profiles", stage_refresh_fighter_profiles),
+        ("Restore fighter DOBs", restore_fighter_dobs_stage),
         ("Build fighter snapshots", stage_build_fighter_snapshots),
         ("Add Elo features", stage_add_elo_features),
         ("Add physical features", stage_add_physical_features),

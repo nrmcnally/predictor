@@ -10,6 +10,8 @@ from typing import Any, Callable
 
 import pandas as pd
 
+from app.data.restore_fighter_dobs import restore_fighter_dobs_from_backup
+
 from app.services.prediction_service import clear_prediction_cache
 
 from app.services.saved_prediction_service import (
@@ -93,6 +95,8 @@ LATEST_INCREMENTAL_REPORT_PATH = REPORTS_DIR / "latest_incremental_update_report
 def now_iso() -> str:
     return datetime.now().isoformat(timespec="seconds")
 
+def restore_fighter_dobs_stage() -> dict[str, Any]:
+    return restore_fighter_dobs_from_backup()
 
 def seconds_since(start_time: float) -> float:
     return round(time.perf_counter() - start_time, 2)
@@ -546,6 +550,7 @@ def run_incremental_update(
 
     stages: list[tuple[str, Callable[[], dict[str, Any]]]] = [
         ("Refresh fighter profiles", refresh_fighter_profiles_stage),
+        ("Restore fighter DOBs", restore_fighter_dobs_stage),
         ("Build fighter snapshots", build_fighter_snapshots_stage),
         ("Add Elo features", add_elo_features_stage),
         ("Add physical features", add_physical_features_stage),
