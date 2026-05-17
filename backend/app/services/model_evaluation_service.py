@@ -64,6 +64,14 @@ CONFIDENCE_BUCKETS = [
     },
 ]
 
+FAVORITE_THRESHOLDS = [
+    0.50,
+    0.55,
+    0.60,
+    0.65,
+    0.70,
+    0.75,
+]
 
 def clean_text(value: Any) -> str:
     if value is None or pd.isna(value):
@@ -459,6 +467,39 @@ def summarize_by_confidence_bucket(fight_df: pd.DataFrame) -> list[dict[str, Any
 
     return rows
 
+def summarize_by_favorite_threshold(fight_df: pd.DataFrame) -> list[dict[str, Any]]:
+    if fight_df.empty:
+        return []
+
+    rows = []
+
+    for threshold in FAVORITE_THRESHOLDS:
+        group_df = fight_df[fight_df["model_confidence"] >= threshold].copy()
+
+        summary = summarize_fight_predictions(group_df)
+
+        correct_count = 0
+        wrong_count = 0
+
+        if not group_df.empty:
+            correct_count = int(group_df["prediction_correct"].sum())
+            wrong_count = int((~group_df["prediction_correct"]).sum())
+
+        rows.append(
+            {
+                "name": f"{threshold * 100:.0f}%+ favorites",
+                "threshold": threshold,
+                "fight_count": summary["fight_count"],
+                "correct_count": correct_count,
+                "wrong_count": wrong_count,
+                "accuracy": summary["accuracy"],
+                "accuracy_percentage": summary["accuracy_percentage"],
+                "average_confidence": summary["average_confidence"],
+                "average_confidence_percentage": summary["average_confidence_percentage"],
+            }
+        )
+
+    return rows
 
 def sample_recent_predictions(
     fight_df: pd.DataFrame,
@@ -495,6 +536,51 @@ def sample_recent_predictions(
 
     return rows
 
+def sample_confident_predictions(
+    fight_df: pd.DataFrame,
+    prediction_correct: bool,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    if fight_df.empty:
+        return []
+
+    filtered_df = fight_df[
+        fight_df["prediction_correct"] == prediction_correct
+    ].copy()
+
+    if filtered_df.empty:
+        return []
+
+    sample_df = filtered_df.sort_values(
+        ["model_confidence", "event_date_parsed"],
+        ascending=[False, False],
+    ).head(limit)
+
+    rows = []
+
+    for _, row in sample_df.iterrows():
+        confidence = float(row["model_confidence"])
+        actual_winner_probability = float(row["actual_winner_probability"])
+
+        rows.append(
+            {
+                "event_date": clean_text(row.get("event_date", "")),
+                "event_name": clean_text(row.get("event_name", "")),
+                "weight_class": clean_text(row.get("weight_class", "")),
+                "fighter_a": clean_text(row.get("fighter_a", "")),
+                "fighter_b": clean_text(row.get("fighter_b", "")),
+                "predicted_winner": clean_text(row.get("predicted_winner", "")),
+                "actual_winner": clean_text(row.get("actual_winner", "")),
+                "prediction_correct": bool(row.get("prediction_correct", False)),
+                "actual_winner_probability": actual_winner_probability,
+                "actual_winner_percentage": format_percent(actual_winner_probability),
+                "confidence": confidence,
+                "confidence_percentage": format_percent(confidence),
+                "confidence_bucket": clean_text(row.get("confidence_bucket", "")),
+            }
+        )
+
+    return rows
 
 def get_model_evaluation(
     test_fraction: float = 0.20,
@@ -570,8 +656,19 @@ def get_model_evaluation(
             sort_by_name=True,
         ),
         "by_confidence_bucket": summarize_by_confidence_bucket(fight_level_df),
+        "by_favorite_threshold": summarize_by_favorite_threshold(fight_level_df),
         "recent_predictions": sample_recent_predictions(
             fight_df=fight_level_df,
             limit=recent_prediction_limit,
+        ),
+        "most_confident_correct": sample_confident_predictions(
+        fight_df=fight_level_df,
+        prediction_correct=True,
+        limit=10,
+        ),
+        "most_confident_wrong": sample_confident_predictions(
+            fight_df=fight_level_df,
+            prediction_correct=False,
+            limit=10,
         ),
     }

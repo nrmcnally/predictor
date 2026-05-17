@@ -2013,3 +2013,279 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+.evaluation-card-note {
+  margin-top: -2px;
+  color: #667085;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.evaluation-threshold-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid #eaecf0;
+  border-radius: 16px;
+  padding: 12px;
+  background: #fcfcfd;
+}
+
+.evaluation-threshold-row span {
+  display: block;
+  margin-top: 3px;
+  color: #667085;
+  font-size: 0.86rem;
+}
+
+.threshold-record {
+  text-align: right;
+}
+
+.threshold-record strong {
+  display: block;
+  color: #1d4ed8;
+  font-size: 1.05rem;
+}
+
+.threshold-record span {
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .evaluation-threshold-row {
+    grid-template-columns: 1fr;
+  }
+
+  .threshold-record {
+    text-align: left;
+  }
+
+  .threshold-record span {
+    white-space: normal;
+  }
+}
+
+.evaluation-confidence-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.evaluation-compact-prediction-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.evaluation-compact-prediction-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(90px, 1fr));
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #eaecf0;
+  border-radius: 16px;
+  padding: 12px;
+  background: #fcfcfd;
+}
+
+.evaluation-compact-prediction-row.correct {
+  border-color: #abefc6;
+}
+
+.evaluation-compact-prediction-row.incorrect {
+  border-color: #fecdca;
+}
+
+.evaluation-compact-prediction-row span {
+  display: block;
+  color: #667085;
+  font-size: 0.82rem;
+}
+
+.evaluation-compact-prediction-row strong {
+  display: block;
+  margin-top: 3px;
+  color: #101828;
+}
+
+@media (max-width: 1100px) {
+  .evaluation-confidence-review-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .evaluation-compact-prediction-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.evaluation-calibration-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.evaluation-calibration-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.4fr) minmax(90px, 0.7fr) minmax(120px, 0.8fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #eaecf0;
+  border-radius: 16px;
+  padding: 12px;
+  background: #fcfcfd;
+}
+
+.evaluation-calibration-row span {
+  display: block;
+  margin-top: 3px;
+  color: #667085;
+  font-size: 0.84rem;
+}
+
+.evaluation-calibration-row strong {
+  display: block;
+  color: #101828;
+}
+
+.calibration-gap.good {
+  color: #067647;
+}
+
+.calibration-gap.warning {
+  color: #93370d;
+}
+
+.calibration-gap.bad {
+  color: #b42318;
+}
+
+.calibration-gap.unknown {
+  color: #667085;
+}
+
+.sample-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sample-badge.good {
+  color: #067647;
+  background: #ecfdf3;
+}
+
+.sample-badge.medium {
+  color: #175cd3;
+  background: #eff8ff;
+}
+
+.sample-badge.low {
+  color: #93370d;
+  background: #fffcf5;
+}
+
+.sample-badge.unknown {
+  color: #344054;
+  background: #f2f4f7;
+}
+
+.evaluation-table-row.improved {
+  align-items: center;
+}
+
+.evaluation-mini-result {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.evaluation-mini-result strong {
+  color: #1d4ed8;
+}
+
+@media (max-width: 900px) {
+  .evaluation-calibration-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .evaluation-calibration-row {
+    grid-template-columns: 1fr;
+  }
+
+  .evaluation-mini-result {
+    justify-items: start;
+  }
+}
+
+.evaluation-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.evaluation-grid {
+  align-items: start;
+}
+
+.evaluation-calibration-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.evaluation-calibration-row > div:first-child {
+  min-width: 0;
+}
+
+.evaluation-calibration-row > div:first-child strong,
+.evaluation-calibration-row > div:first-child span {
+  overflow-wrap: anywhere;
+}
+
+.evaluation-calibration-row > div:nth-child(2) {
+  text-align: right;
+}
+
+.evaluation-calibration-row > div:nth-child(3) {
+  grid-column: 1 / 2;
+}
+
+.evaluation-calibration-row > .sample-badge {
+  grid-column: 2 / 3;
+  justify-self: end;
+  align-self: center;
+}
+
+.evaluation-threshold-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+}
+
+.evaluation-threshold-row > div:first-child {
+  min-width: 0;
+}
+
+.evaluation-threshold-row > div:first-child strong,
+.evaluation-threshold-row > div:first-child span {
+  overflow-wrap: anywhere;
+}
+
+.threshold-record {
+  min-width: max-content;
+  justify-self: end;
+}
+
+.threshold-record span {
+  white-space: normal;
+}

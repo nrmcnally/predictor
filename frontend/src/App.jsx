@@ -3,6 +3,89 @@ import "./App.css";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
+function formatCalibrationGap(row) {
+  if (
+    row?.accuracy === null ||
+    row?.accuracy === undefined ||
+    row?.average_confidence === null ||
+    row?.average_confidence === undefined
+  ) {
+    return "N/A";
+  }
+
+  const gap = Number(row.accuracy) - Number(row.average_confidence);
+
+  if (!Number.isFinite(gap)) {
+    return "N/A";
+  }
+
+  const sign = gap >= 0 ? "+" : "";
+  return `${sign}${(gap * 100).toFixed(1)} pts`;
+}
+
+function getCalibrationClass(row) {
+  if (
+    row?.accuracy === null ||
+    row?.accuracy === undefined ||
+    row?.average_confidence === null ||
+    row?.average_confidence === undefined
+  ) {
+    return "unknown";
+  }
+
+  const gap = Math.abs(Number(row.accuracy) - Number(row.average_confidence));
+
+  if (!Number.isFinite(gap)) {
+    return "unknown";
+  }
+
+  if (gap <= 0.05) {
+    return "good";
+  }
+
+  if (gap <= 0.10) {
+    return "warning";
+  }
+
+  return "bad";
+}
+
+function getSampleSizeClass(fightCount) {
+  const count = Number(fightCount);
+
+  if (!Number.isFinite(count)) {
+    return "unknown";
+  }
+
+  if (count < 20) {
+    return "low";
+  }
+
+  if (count < 50) {
+    return "medium";
+  }
+
+  return "good";
+}
+
+function getSampleSizeLabel(fightCount) {
+  const sampleClass = getSampleSizeClass(fightCount);
+
+  if (sampleClass === "low") {
+    return "Low sample";
+  }
+
+  if (sampleClass === "medium") {
+    return "Moderate sample";
+  }
+
+  if (sampleClass === "good") {
+    return "Good sample";
+  }
+
+  return "Unknown sample";
+}
+
 function formatEdgeDifference(edge) {
   if (edge.difference === null || edge.difference === undefined) {
     return "Unknown";
@@ -2181,54 +2264,202 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
     {modelEvaluation && (
       <section className="evaluation-grid">
         <div className="evaluation-card">
-          <h2>By confidence bucket</h2>
+  <h2>Favorite threshold performance</h2>
+  <p className="evaluation-card-note">
+    Cumulative accuracy for fights where the model favorite reached at least this
+    confidence level.
+  </p>
 
-          <div className="evaluation-table">
-            {modelEvaluation.by_confidence_bucket?.map((row) => (
-              <div className="evaluation-table-row" key={row.name}>
-                <div>
-                  <strong>{row.name}</strong>
-                  <span>{row.fight_count} fights</span>
-                </div>
-                <strong>{row.accuracy_percentage || "N/A"}</strong>
-              </div>
-            ))}
+  <div className="evaluation-table">
+    {modelEvaluation.by_favorite_threshold?.map((row) => (
+      <div className="evaluation-threshold-row" key={row.name}>
+        <div>
+          <strong>{row.name}</strong>
+          <span>
+            {row.fight_count} fights • avg confidence{" "}
+            {row.average_confidence_percentage || "N/A"}
+          </span>
+        </div>
+
+        <div className="threshold-record">
+          <strong>{row.accuracy_percentage || "N/A"}</strong>
+          <span>
+            {row.correct_count} correct / {row.wrong_count} wrong
+          </span>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+        <div className="evaluation-card">
+  <h2>By confidence bucket</h2>
+  <p className="evaluation-card-note">
+    Calibration gap compares actual accuracy against average model confidence.
+    Near 0 is better.
+  </p>
+
+  <div className="evaluation-calibration-list">
+    {modelEvaluation.by_confidence_bucket?.map((row) => {
+      const calibrationClass = getCalibrationClass(row);
+      const sampleClass = getSampleSizeClass(row.fight_count);
+
+      return (
+        <div className="evaluation-calibration-row" key={row.name}>
+          <div>
+            <strong>{row.name}</strong>
+            <span>
+              {row.fight_count} fights • avg confidence{" "}
+              {row.average_confidence_percentage || "N/A"}
+            </span>
+          </div>
+
+          <div>
+            <span>Accuracy</span>
+            <strong>{row.accuracy_percentage || "N/A"}</strong>
+          </div>
+
+          <div>
+            <span>Calibration gap</span>
+            <strong className={`calibration-gap ${calibrationClass}`}>
+              {formatCalibrationGap(row)}
+            </strong>
+          </div>
+
+          <span className={`sample-badge ${sampleClass}`}>
+            {getSampleSizeLabel(row.fight_count)}
+          </span>
+        </div>
+      );
+    })}
+  </div>
+</div>
+
+<div className="evaluation-card">
+  <h2>By weight class</h2>
+
+  <div className="evaluation-table">
+    {modelEvaluation.by_weight_class?.map((row) => {
+      const sampleClass = getSampleSizeClass(row.fight_count);
+
+      return (
+        <div className="evaluation-table-row improved" key={row.name}>
+          <div>
+            <strong>{row.name || "Unknown"}</strong>
+            <span>{row.fight_count} fights</span>
+          </div>
+
+          <div className="evaluation-mini-result">
+            <strong>{row.accuracy_percentage || "N/A"}</strong>
+            <span className={`sample-badge ${sampleClass}`}>
+              {getSampleSizeLabel(row.fight_count)}
+            </span>
           </div>
         </div>
+      );
+    })}
+  </div>
+</div>
 
         <div className="evaluation-card">
-          <h2>By weight class</h2>
+  <h2>By year</h2>
 
-          <div className="evaluation-table">
-            {modelEvaluation.by_weight_class?.map((row) => (
-              <div className="evaluation-table-row" key={row.name}>
-                <div>
-                  <strong>{row.name || "Unknown"}</strong>
-                  <span>{row.fight_count} fights</span>
-                </div>
-                <strong>{row.accuracy_percentage || "N/A"}</strong>
-              </div>
-            ))}
+  <div className="evaluation-table">
+    {modelEvaluation.by_year?.map((row) => {
+      const sampleClass = getSampleSizeClass(row.fight_count);
+
+      return (
+        <div className="evaluation-table-row improved" key={row.name}>
+          <div>
+            <strong>{row.name || "Unknown"}</strong>
+            <span>{row.fight_count} fights</span>
+          </div>
+
+          <div className="evaluation-mini-result">
+            <strong>{row.accuracy_percentage || "N/A"}</strong>
+            <span className={`sample-badge ${sampleClass}`}>
+              {getSampleSizeLabel(row.fight_count)}
+            </span>
           </div>
         </div>
-
-        <div className="evaluation-card">
-          <h2>By year</h2>
-
-          <div className="evaluation-table">
-            {modelEvaluation.by_year?.map((row) => (
-              <div className="evaluation-table-row" key={row.name}>
-                <div>
-                  <strong>{row.name || "Unknown"}</strong>
-                  <span>{row.fight_count} fights</span>
-                </div>
-                <strong>{row.accuracy_percentage || "N/A"}</strong>
-              </div>
-            ))}
-          </div>
-        </div>
+      );
+    })}
+  </div>
+</div>
       </section>
     )}
+
+{modelEvaluation && (
+  <section className="evaluation-confidence-review-grid">
+    <div className="evaluation-card">
+      <h2>Most confident correct picks</h2>
+
+      <div className="evaluation-compact-prediction-list">
+        {modelEvaluation.most_confident_correct?.map((prediction, index) => (
+          <div
+            className="evaluation-compact-prediction-row correct"
+            key={`correct-${prediction.event_date}-${prediction.fighter_a}-${prediction.fighter_b}-${index}`}
+          >
+            <div>
+              <strong>
+                {prediction.fighter_a} vs {prediction.fighter_b}
+              </strong>
+              <span>
+                {prediction.event_date} • {prediction.weight_class}
+              </span>
+            </div>
+
+            <div>
+              <span>Predicted</span>
+              <strong>{prediction.predicted_winner}</strong>
+            </div>
+
+            <div>
+              <span>Confidence</span>
+              <strong>{prediction.confidence_percentage}</strong>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="evaluation-card">
+      <h2>Most confident wrong picks</h2>
+
+      <div className="evaluation-compact-prediction-list">
+        {modelEvaluation.most_confident_wrong?.map((prediction, index) => (
+          <div
+            className="evaluation-compact-prediction-row incorrect"
+            key={`wrong-${prediction.event_date}-${prediction.fighter_a}-${prediction.fighter_b}-${index}`}
+          >
+            <div>
+              <strong>
+                {prediction.fighter_a} vs {prediction.fighter_b}
+              </strong>
+              <span>
+                {prediction.event_date} • {prediction.weight_class}
+              </span>
+            </div>
+
+            <div>
+              <span>Predicted</span>
+              <strong>{prediction.predicted_winner}</strong>
+            </div>
+
+            <div>
+              <span>Actual</span>
+              <strong>{prediction.actual_winner}</strong>
+            </div>
+
+            <div>
+              <span>Confidence</span>
+              <strong>{prediction.confidence_percentage}</strong>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
 
     {modelEvaluation?.recent_predictions && (
       <section className="evaluation-card">
