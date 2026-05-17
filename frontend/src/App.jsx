@@ -535,6 +535,101 @@ function PredictionDetails({ prediction, showBasicEdges = false }) {
   );
 }
 
+function MethodPredictionDetails({
+  methodPrediction,
+  loading = false,
+  error = "",
+}) {
+  if (loading) {
+    return (
+      <div className="method-card">
+        <p className="eyebrow">Manner of ending</p>
+        <h2>Loading method probabilities...</h2>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="method-card">
+        <p className="eyebrow">Manner of ending</p>
+        <h2>Method prediction unavailable</h2>
+        <p className="method-note">{error}</p>
+      </div>
+    );
+  }
+
+  if (!methodPrediction) {
+    return null;
+  }
+
+  return (
+    <div className="method-card">
+      <div className="method-header">
+        <div>
+          <p className="eyebrow">Manner of ending</p>
+          <h2>
+            Most likely: {methodPrediction.predicted_broad_method}{" "}
+            <span>{methodPrediction.predicted_broad_method_percentage}</span>
+          </h2>
+          <p>
+            Detailed lean: {methodPrediction.predicted_detailed_method}{" "}
+            {methodPrediction.predicted_detailed_method_percentage}
+          </p>
+        </div>
+      </div>
+
+      <div className="method-grid">
+        <div className="method-section">
+          <h3>Broad method</h3>
+
+          <div className="method-probability-list">
+            {methodPrediction.broad_method_probabilities?.map((row) => (
+              <div className="method-probability-row" key={row.label}>
+                <div className="method-row-label">
+                  <strong>{row.label}</strong>
+                  <span>{row.percentage}</span>
+                </div>
+
+                <div className="method-bar-track">
+                  <div
+                    className="method-bar-fill"
+                    style={{ width: getProbabilityWidth(row.probability) }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="method-section">
+          <h3>Detailed method</h3>
+
+          <div className="method-probability-list detailed">
+            {methodPrediction.detailed_method_probabilities?.map((row) => (
+              <div className="method-probability-row" key={row.label}>
+                <div className="method-row-label">
+                  <strong>{row.label}</strong>
+                  <span>{row.percentage}</span>
+                </div>
+
+                <div className="method-bar-track">
+                  <div
+                    className="method-bar-fill"
+                    style={{ width: getProbabilityWidth(row.probability) }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <p className="method-note">{methodPrediction.model_note}</p>
+    </div>
+  );
+}
+
 function RecentFightDetails({ fight }) {
   if (!fight) {
     return (
@@ -741,6 +836,13 @@ function App() {
   const [recentError, setRecentError] = useState("");
   const [updateError, setUpdateError] = useState("");
 
+  const [singleMethodPrediction, setSingleMethodPrediction] = useState(null);
+  const [methodPredictionLoading, setMethodPredictionLoading] = useState(false);
+  const [methodPredictionError, setMethodPredictionError] = useState("");
+
+  const [methodModelMetrics, setMethodModelMetrics] = useState(null);
+  const [methodModelMetricsError, setMethodModelMetricsError] = useState("");
+
   useEffect(() => {
     async function loadWeightClasses() {
       try {
@@ -775,6 +877,7 @@ function App() {
     loadLeaderboardOptions();
     loadLeaderboards();
     loadModelEvaluation();
+    loadMethodModelMetrics();
   }, []);
 
   useEffect(() => {
@@ -839,12 +942,71 @@ function App() {
     }
   }
 
+async function loadMethodModelMetrics() {
+  setMethodModelMetricsError("");
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/method-model-metrics`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.detail?.message ||
+          data?.detail?.error ||
+          "Failed to load method model metrics."
+      );
+    }
+
+    setMethodModelMetrics(data);
+  } catch (requestError) {
+    setMethodModelMetricsError(requestError.message);
+  }
+}
+
+  async function loadMethodPrediction(nextFighterA, nextFighterB, nextWeightClass) {
+  setMethodPredictionLoading(true);
+  setMethodPredictionError("");
+  setSingleMethodPrediction(null);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/predict-method`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fighter_a: nextFighterA,
+        fighter_b: nextFighterB,
+        weight_class: nextWeightClass,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.detail?.message ||
+          data?.detail?.error ||
+          "Failed to predict method of ending."
+      );
+    }
+
+    setSingleMethodPrediction(data);
+  } catch (requestError) {
+    setMethodPredictionError(requestError.message);
+  } finally {
+    setMethodPredictionLoading(false);
+  }
+}
+
   async function handlePredict(event) {
     event.preventDefault();
 
     setLoading(true);
     setError("");
     setSinglePrediction(null);
+    setSingleMethodPrediction(null);
+    setMethodPredictionError("");
 
     try {
       const response = await fetch(`${API_BASE_URL}/predict`, {
@@ -872,6 +1034,7 @@ function App() {
       }
 
       setSinglePrediction(data);
+      await loadMethodPrediction(data.fighter_a, data.fighter_b, data.weight_class);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -904,6 +1067,22 @@ function App() {
   }
 }
 
+function formatMetricPercent(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) {
+    return "N/A";
+  }
+
+  return `${(Number(value) * 100).toFixed(1)}%`;
+}
+
+function formatMetricDecimal(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) {
+    return "N/A";
+  }
+
+  return Number(value).toFixed(4);
+}
+
   function swapSingleFightFighters() {
   setFighterA(fighterB);
   setFighterB(fighterA);
@@ -911,6 +1090,8 @@ function App() {
   setFighterBSearchResults([]);
   setSinglePrediction(null);
   setError("");
+  setSingleMethodPrediction(null);
+  setMethodPredictionError("");
 }
 
 function clearSingleFightForm() {
@@ -921,6 +1102,8 @@ function clearSingleFightForm() {
   setFighterBSearchResults([]);
   setSinglePrediction(null);
   setError("");
+  setSingleMethodPrediction(null);
+  setMethodPredictionError("");
 }
 
 function loadExampleFight(exampleFighterA, exampleFighterB, exampleWeightClass) {
@@ -930,7 +1113,11 @@ function loadExampleFight(exampleFighterA, exampleFighterB, exampleWeightClass) 
   setFighterASearchResults([]);
   setFighterBSearchResults([]);
   setSinglePrediction(null);
+  setSingleMethodPrediction(null);
+  setMethodPredictionError("");
   setError("");
+  setSingleMethodPrediction(null);
+  setMethodPredictionError("");
 }
 
   async function loadFutureCards() {
@@ -1586,6 +1773,12 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
             <PredictionDetails
               prediction={singlePrediction}
               showBasicEdges={showSingleFightEdges}
+            />
+
+            <MethodPredictionDetails
+              methodPrediction={singleMethodPrediction}
+              loading={methodPredictionLoading}
+              error={methodPredictionError}
             />
           </section>
         </section>
@@ -2260,6 +2453,120 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
         </div>
       </section>
     )}
+
+    {methodModelMetricsError && (
+  <pre className="error-box">{methodModelMetricsError}</pre>
+)}
+
+{methodModelMetrics?.available && methodModelMetrics.metrics && (
+  <section className="method-evaluation-grid">
+    <div className="evaluation-card">
+      <p className="eyebrow">Manner of ending</p>
+      <h2>Broad method model</h2>
+      <p className="evaluation-card-note">
+        Predicts Decision vs KO/TKO vs Submission vs Other.
+      </p>
+
+      <div className="method-metric-grid">
+        <div>
+          <span>Best model</span>
+          <strong>
+            {formatModelName(methodModelMetrics.metrics.broad.best_model_name)}
+          </strong>
+        </div>
+
+        <div>
+          <span>Accuracy</span>
+          <strong>
+            {formatMetricPercent(
+              methodModelMetrics.metrics.broad.best_metrics?.accuracy
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Log loss</span>
+          <strong>
+            {formatMetricDecimal(
+              methodModelMetrics.metrics.broad.best_metrics?.log_loss
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Top-2 accuracy</span>
+          <strong>
+            {formatMetricPercent(
+              methodModelMetrics.metrics.broad.best_metrics?.top_2_accuracy
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Top-3 accuracy</span>
+          <strong>
+            {formatMetricPercent(
+              methodModelMetrics.metrics.broad.best_metrics?.top_3_accuracy
+            )}
+          </strong>
+        </div>
+      </div>
+    </div>
+
+    <div className="evaluation-card">
+      <p className="eyebrow">Manner of ending</p>
+      <h2>Detailed method model</h2>
+      <p className="evaluation-card-note">
+        Predicts detailed method flavor. Treat this as directional, not exact.
+      </p>
+
+      <div className="method-metric-grid">
+        <div>
+          <span>Best model</span>
+          <strong>
+            {formatModelName(methodModelMetrics.metrics.detailed.best_model_name)}
+          </strong>
+        </div>
+
+        <div>
+          <span>Accuracy</span>
+          <strong>
+            {formatMetricPercent(
+              methodModelMetrics.metrics.detailed.best_metrics?.accuracy
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Log loss</span>
+          <strong>
+            {formatMetricDecimal(
+              methodModelMetrics.metrics.detailed.best_metrics?.log_loss
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Top-2 accuracy</span>
+          <strong>
+            {formatMetricPercent(
+              methodModelMetrics.metrics.detailed.best_metrics?.top_2_accuracy
+            )}
+          </strong>
+        </div>
+
+        <div>
+          <span>Top-3 accuracy</span>
+          <strong>
+            {formatMetricPercent(
+              methodModelMetrics.metrics.detailed.best_metrics?.top_3_accuracy
+            )}
+          </strong>
+        </div>
+      </div>
+    </div>
+  </section>
+)}
 
     {modelEvaluation && (
       <section className="evaluation-grid">

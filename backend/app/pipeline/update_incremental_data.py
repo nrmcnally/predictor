@@ -77,6 +77,16 @@ from app.services.future_card_service import refresh_upcoming_cards
 
 from app.features.add_age_features import add_age_features
 
+from app.analysis.explore_method_labels import build_method_label_exploration
+from app.features.build_method_training_data import build_method_training_data
+from app.models.train_method_models import (
+    BROAD_MODEL_PATH,
+    DETAILED_MODEL_PATH,
+    FEATURES_PATH as METHOD_FEATURES_PATH,
+    METRICS_PATH as METHOD_METRICS_PATH,
+    main as train_method_models_main,
+)
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -117,6 +127,32 @@ def count_csv_rows(path: Path) -> int | None:
         return int(len(pd.read_csv(path)))
     except Exception:
         return None
+
+def build_method_labels_stage() -> dict[str, Any]:
+    summary = build_method_label_exploration()
+
+    return {
+        "fight_rows": summary["metadata"]["fight_rows"],
+        "major_weight_class_rows": summary["metadata"]["major_weight_class_rows"],
+        "output_csv": summary["metadata"]["output_csv"],
+        "broad_counts": summary["broad_counts"],
+        "detailed_counts": summary["detailed_counts"],
+    }
+
+
+def build_method_training_data_stage() -> dict[str, Any]:
+    return build_method_training_data()
+
+
+def train_method_models_stage() -> dict[str, Any]:
+    train_method_models_main()
+
+    return {
+        "broad_model": str(BROAD_MODEL_PATH),
+        "detailed_model": str(DETAILED_MODEL_PATH),
+        "features": str(METHOD_FEATURES_PATH),
+        "metrics": str(METHOD_METRICS_PATH),
+    }
 
 
 def read_csv_or_empty(path: Path) -> pd.DataFrame:
@@ -556,6 +592,9 @@ def run_incremental_update(
         ("Add physical features", add_physical_features_stage),
         ("Add age features", add_age_features_stage),
         ("Build matchup training rows", build_matchups_stage),
+        ("Build method labels", build_method_labels_stage),
+        ("Build method training data", build_method_training_data_stage),
+        ("Train method models", train_method_models_stage),
         ("Train calibrated model", train_model_stage),
         ("Build current fighter features", build_current_fighter_features_stage),
         ("Add current age features", add_age_features_stage),

@@ -6,6 +6,11 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+import json
+from pathlib import Path
+
+from app.services.method_prediction_service import predict_method_data
+
 from app.services.prediction_service import (
     FighterNotFoundError,
     get_available_weight_classes,
@@ -61,6 +66,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+METHOD_MODEL_METRICS_PATH = PROJECT_ROOT / "models" / "method_model_metrics.json"
 
 
 class PredictionRequest(BaseModel):
@@ -369,6 +377,60 @@ def model_evaluation(
             status_code=500,
             detail={
                 "message": "Failed to load model evaluation.",
+                "error": str(error),
+            },
+        )
+    
+@app.post("/predict-method")
+def predict_method(request: PredictionRequest) -> dict[str, Any]:
+    try:
+        return predict_method_data(
+            fighter_a=request.fighter_a,
+            fighter_b=request.fighter_b,
+            weight_class=request.weight_class,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "message": str(error),
+            },
+        )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to predict method of victory.",
+                "error": str(error),
+            },
+        )
+    
+@app.get("/method-model-metrics")
+def method_model_metrics() -> dict[str, Any]:
+    try:
+        if not METHOD_MODEL_METRICS_PATH.exists():
+            return {
+                "available": False,
+                "message": "Method model metrics are not available yet. Train method models first.",
+                "metrics": None,
+            }
+
+        with open(METHOD_MODEL_METRICS_PATH, "r", encoding="utf-8") as file:
+            metrics = json.load(file)
+
+        return {
+            "available": True,
+            "message": "Method model metrics loaded.",
+            "metrics": metrics,
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to load method model metrics.",
                 "error": str(error),
             },
         )

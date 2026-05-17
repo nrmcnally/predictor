@@ -13,6 +13,8 @@ from app.pipeline.update_incremental_data import (
 )
 from app.services.prediction_service import clear_prediction_cache
 
+from app.services.method_prediction_service import clear_method_prediction_cache
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -26,7 +28,7 @@ _update_status: dict[str, Any] = {
     "finished_at": None,
     "current_stage": None,
     "current_stage_index": 0,
-    "total_stages": 15,
+    "total_stages": 18,
     "progress_percent": 0,
     "message": "No update has been started.",
     "success": None,
@@ -75,6 +77,7 @@ def _run_incremental_update_job() -> None:
         )
 
         clear_prediction_cache()
+        clear_method_prediction_cache()
 
         _set_status(
             {
@@ -120,7 +123,7 @@ def start_incremental_update_job() -> dict[str, Any]:
                 "finished_at": None,
                 "current_stage": None,
                 "current_stage_index": 0,
-                "total_stages": 15,
+                "total_stages": 18,
                 "progress_percent": 0,
                 "message": "Incremental update is starting.",
                 "success": None,
