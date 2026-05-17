@@ -313,10 +313,8 @@ def update_fight_stats_incrementally_stage() -> dict[str, Any]:
     existing_stats_df = read_csv_or_empty(FIGHT_STATS_CSV)
 
     event_fights_df = event_fights_df[
-        event_fights_df["winner"].notna()
-        & event_fights_df["loser"].notna()
-        & (event_fights_df["winner"].astype(str).str.strip() != "")
-        & (event_fights_df["loser"].astype(str).str.strip() != "")
+    event_fights_df["fight_url"].notna()
+    & (event_fights_df["fight_url"].astype(str).str.strip() != "")
     ].copy()
 
     if existing_stats_df.empty or "fight_url" not in existing_stats_df.columns:
@@ -585,6 +583,9 @@ def run_incremental_update(
     started_at = datetime.now().isoformat(timespec="seconds")
 
     stages: list[tuple[str, Callable[[], dict[str, Any]]]] = [
+        ("Refresh completed events", refresh_completed_events_stage),
+        ("Update completed fight list incrementally", update_event_fights_incrementally_stage),
+        ("Update fight stats incrementally", update_fight_stats_incrementally_stage),
         ("Refresh fighter profiles", refresh_fighter_profiles_stage),
         ("Restore fighter DOBs", restore_fighter_dobs_stage),
         ("Build fighter snapshots", build_fighter_snapshots_stage),

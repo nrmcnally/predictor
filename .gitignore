@@ -50,4 +50,6 @@ backend/models/*.json
 !backend/data/raw/.gitkeep
 !backend/data/processed/.gitkeep
 !backend/data/reports/.gitkeep
-!backend/models/.gitkeep
+!backend/models/.gitkeepbackend/data/reports/method_label_exploration.csv
+/backend/data/reports/method_label_exploration.csv
+/backend/data/reports/method_label_summary.json
