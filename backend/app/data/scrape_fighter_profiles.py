@@ -10,6 +10,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
+import re
 
 BASE_URL = "http://ufcstats.com"
 
@@ -47,6 +48,9 @@ class FighterProfile:
     current_losses: int | None
     current_draws: int | None
     belt: str
+
+    dob_raw: str
+    dob: str
 
 
 def clean_text(value: Any) -> str:
@@ -160,6 +164,123 @@ def parse_int(value: Any) -> int | None:
         return None
 
 
+def parse_dob_to_iso(value: Any) -> str:
+    value = clean_text(value)
+
+    if not value or value == "--":
+        return ""
+
+    parsed_date = pd.to_datetime(value, errors="coerce")
+
+    if pd.isna(parsed_date):
+        return ""
+
+    return parsed_date.date().isoformat()
+
+
+def parse_profile_detail_items(soup: BeautifulSoup) -> dict[str, str]:
+    details: dict[str, str] = {}
+
+    for item in soup.select("li.b-list__box-list-item"):
+        title_element = item.select_one("i.b-list__box-item-title")
+
+        if title_element is None:
+            continue
+
+        label = clean_text(title_element.get_text()).replace(":", "").lower()
+
+        full_text = clean_text(item.get_text(" "))
+        label_text = clean_text(title_element.get_text(" "))
+        value = clean_text(full_text.replace(label_text, "", 1))
+
+        details[label] = value
+
+    return details
+
+def extract_dob_text(text: Any) -> str:
+    text = clean_text(text)
+
+    if not text or "DOB:" not in text:
+        return ""
+
+    match = re.search(
+        r"DOB:\s*([A-Za-z]{3}\s+\d{1,2},\s+\d{4})",
+        text,
+    )
+
+    if not match:
+        return ""
+
+    return clean_text(match.group(1))
+
+def scrape_dob_from_profile_page(profile_url: str) -> tuple[str, str]:
+    profile_url = clean_text(profile_url)
+
+    if not profile_url:
+        return "", ""
+
+    soup = get_soup(profile_url)
+
+    # UFCStats often stores all profile details in one list item, so we extract
+    # the DOB date pattern directly from the item text.
+    for item in soup.select("li.b-list__box-list-item"):
+        dob_raw = extract_dob_text(item.get_text(" "))
+
+        if dob_raw:
+            return dob_raw, parse_dob_to_iso(dob_raw)
+
+    # Fallback: search all list items.
+    for item in soup.select("li"):
+        dob_raw = extract_dob_text(item.get_text(" "))
+
+        if dob_raw:
+            return dob_raw, parse_dob_to_iso(dob_raw)
+
+    # Final fallback: search the whole page.
+    dob_raw = extract_dob_text(soup.get_text(" "))
+
+    if dob_raw:
+        return dob_raw, parse_dob_to_iso(dob_raw)
+
+    return "", ""
+
+
+def load_existing_dob_lookup() -> dict[str, tuple[str, str]]:
+    """
+    Reads the existing fighter_profiles.csv, if present, so DOB values are preserved
+    between scraper runs.
+
+    This prevents the profile-list scrape from wiping dob_raw/dob every time.
+    """
+    if not FIGHTER_PROFILES_CSV.exists():
+        return {}
+
+    try:
+        existing_df = pd.read_csv(FIGHTER_PROFILES_CSV)
+    except pd.errors.EmptyDataError:
+        return {}
+
+    required_columns = {"profile_url", "dob_raw", "dob"}
+
+    if not required_columns.issubset(existing_df.columns):
+        return {}
+
+    lookup: dict[str, tuple[str, str]] = {}
+
+    for _, row in existing_df.iterrows():
+        profile_url = clean_text(row.get("profile_url", ""))
+        dob_raw = clean_text(row.get("dob_raw", ""))
+        dob = clean_text(row.get("dob", ""))
+
+        if not profile_url:
+            continue
+
+        if dob:
+            lookup[profile_url] = (dob_raw, dob)
+
+    return lookup
+
+
 def scrape_profiles_for_letter(letter: str) -> list[FighterProfile]:
     url = f"{BASE_URL}/statistics/fighters?char={letter}&page=all"
 
@@ -220,6 +341,9 @@ def scrape_profiles_for_letter(letter: str) -> list[FighterProfile]:
                 current_losses=current_losses,
                 current_draws=current_draws,
                 belt=belt,
+
+                dob_raw="",
+                dob="",
             )
         )
 
@@ -259,6 +383,60 @@ def scrape_all_fighter_profiles() -> list[FighterProfile]:
     return unique_profiles
 
 
+def add_dobs_to_profiles(profiles: list[FighterProfile]) -> list[FighterProfile]:
+    existing_dob_lookup = load_existing_dob_lookup()
+
+    already_known_count = 0
+    scraped_count = 0
+    unavailable_count = 0
+    failed_count = 0
+
+    print()
+    print("Adding DOB data to fighter profiles...")
+    print(f"Existing known DOBs available: {len(existing_dob_lookup)}")
+    print()
+
+    for index, profile in enumerate(profiles, start=1):
+        existing_dob = existing_dob_lookup.get(profile.profile_url)
+
+        if existing_dob is not None:
+            profile.dob_raw = existing_dob[0]
+            profile.dob = existing_dob[1]
+            already_known_count += 1
+            continue
+
+        print(f"[{index}/{len(profiles)}] Scraping DOB: {profile.fighter}")
+
+        try:
+            dob_raw, dob = scrape_dob_from_profile_page(profile.profile_url)
+
+            profile.dob_raw = dob_raw
+            profile.dob = dob
+
+            if dob:
+                scraped_count += 1
+                print(f"    DOB: {dob_raw} -> {dob}")
+            else:
+                unavailable_count += 1
+                print("    DOB unavailable")
+
+        except Exception as error:
+            failed_count += 1
+            print(f"    FAILED DOB scrape for {profile.fighter}: {error}")
+
+        time.sleep(0.25)
+
+    print()
+    print("DOB summary")
+    print("-" * 60)
+    print(f"Already known: {already_known_count}")
+    print(f"Newly scraped: {scraped_count}")
+    print(f"Unavailable:   {unavailable_count}")
+    print(f"Failed:        {failed_count}")
+
+    return profiles
+
+
 def save_profiles_csv(profiles: list[FighterProfile]) -> None:
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -273,6 +451,8 @@ def main() -> None:
 
     if not profiles:
         raise RuntimeError("No fighter profiles were scraped.")
+
+    profiles = add_dobs_to_profiles(profiles)
 
     save_profiles_csv(profiles)
 
@@ -291,6 +471,8 @@ def main() -> None:
         "stance",
         "weight_raw",
         "weight_lbs",
+        "dob_raw",
+        "dob",
     ]
 
     preview_df = pd.DataFrame([asdict(profile) for profile in profiles])

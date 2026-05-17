@@ -448,35 +448,6 @@ and the frontend is running at:
 http://localhost:5173
 ```
 
-## Backend Fails After Editing Python Files
-
-Run a syntax check:
-
-```cmd
-cd backend
-.venv\Scripts\activate
-python -m py_compile app\services\prediction_service.py
-```
-
-If there is no output, the file syntax is okay.
-
-Then restart the backend:
-
-```cmd
-uvicorn app.main:app --reload
-```
-
-## Frontend Does Not Update After Editing
-
-Restart Vite:
-
-```cmd
-Ctrl + C
-npm run dev
-```
-
-Then refresh the browser.
-
 ---
 
 # Roadmap

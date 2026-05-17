@@ -37,6 +37,13 @@ from app.services.recent_card_service import (
     get_recent_cards,
 )
 
+from app.services.leaderboard_service import (
+    get_leaderboard_options,
+    get_leaderboards,
+)
+
+from app.services.model_evaluation_service import get_model_evaluation
+
 app = FastAPI(
     title="UFC Fight Predictor API",
     description="Predicts UFC fight winner probabilities using historical fight data.",
@@ -305,6 +312,63 @@ def recent_card_detail(event_id: str) -> dict[str, Any]:
             status_code=500,
             detail={
                 "message": "Failed to load recent card.",
+                "error": str(error),
+            },
+        )
+    
+@app.get("/leaderboards/options")
+def leaderboard_options() -> dict[str, Any]:
+    try:
+        return get_leaderboard_options()
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to load leaderboard options.",
+                "error": str(error),
+            },
+        )
+
+
+@app.get("/leaderboards")
+def leaderboards(
+    top: int = 5,
+    min_fights: int = 5,
+    max_inactive_days: int = 1095,
+) -> dict[str, Any]:
+    try:
+        return get_leaderboards(
+            top=top,
+            min_fights=min_fights,
+            max_inactive_days=max_inactive_days,
+        )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to load leaderboards.",
+                "error": str(error),
+            },
+        )
+    
+@app.get("/model-evaluation")
+def model_evaluation(
+    test_fraction: float = 0.20,
+    recent_prediction_limit: int = 25,
+) -> dict[str, Any]:
+    try:
+        return get_model_evaluation(
+            test_fraction=test_fraction,
+            recent_prediction_limit=recent_prediction_limit,
+        )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to load model evaluation.",
                 "error": str(error),
             },
         )

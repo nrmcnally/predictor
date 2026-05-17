@@ -73,6 +73,8 @@ from app.models.train_calibrated_models import main as train_calibrated_models
 
 from app.services.future_card_service import refresh_upcoming_cards
 
+from app.features.add_age_features import add_age_features
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -184,6 +186,8 @@ def refresh_completed_events_stage() -> dict[str, Any]:
         "output_file": str(COMPLETED_EVENTS_CSV),
     }
 
+def add_age_features_stage() -> dict[str, Any]:
+    return add_age_features()
 
 def update_event_fights_incrementally_stage() -> dict[str, Any]:
     if not COMPLETED_EVENTS_CSV.exists():
@@ -541,16 +545,15 @@ def run_incremental_update(
     started_at = datetime.now().isoformat(timespec="seconds")
 
     stages: list[tuple[str, Callable[[], dict[str, Any]]]] = [
-        ("Refresh completed events", refresh_completed_events_stage),
-        ("Update completed fight list incrementally", update_event_fights_incrementally_stage),
-        ("Update fight stats incrementally", update_fight_stats_incrementally_stage),
         ("Refresh fighter profiles", refresh_fighter_profiles_stage),
         ("Build fighter snapshots", build_fighter_snapshots_stage),
         ("Add Elo features", add_elo_features_stage),
         ("Add physical features", add_physical_features_stage),
+        ("Add age features", add_age_features_stage),
         ("Build matchup training rows", build_matchups_stage),
         ("Train calibrated model", train_model_stage),
         ("Build current fighter features", build_current_fighter_features_stage),
+        ("Add current age features", add_age_features_stage),
         ("Refresh future cards", refresh_future_cards_stage),
         ("Save future-card predictions", save_future_card_predictions_stage),
 ]

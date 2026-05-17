@@ -265,50 +265,71 @@ def build_basic_matchup_edges(
     fighter_a_row: pd.Series,
     fighter_b_row: pd.Series,
 ) -> list[dict[str, Any]]:
-    
-    return [
-        build_edge(
+    def make_edge(
+        label: str,
+        column: str,
+        unit: str,
+    ) -> dict[str, Any]:
+        fighter_a_value = optional_float(fighter_a_row.get(column))
+        fighter_b_value = optional_float(fighter_b_row.get(column))
+
+        difference = None
+
+        if fighter_a_value is not None and fighter_b_value is not None:
+            difference = fighter_a_value - fighter_b_value
+
+        return {
+            "label": label,
+            "fighter_a_value": fighter_a_value,
+            "fighter_b_value": fighter_b_value,
+            "difference": difference,
+            "unit": unit,
+        }
+
+    edges = [
+        make_edge(
             label="Elo edge",
-            fighter_a_value=fighter_a_row.get("prior_elo", pd.NA),
-            fighter_b_value=fighter_b_row.get("prior_elo", pd.NA),
+            column="prior_elo",
             unit="pts",
         ),
-        build_edge(
+        make_edge(
             label="Experience edge",
-            fighter_a_value=fighter_a_row.get("prior_fights", pd.NA),
-            fighter_b_value=fighter_b_row.get("prior_fights", pd.NA),
+            column="prior_fights",
             unit="fights",
         ),
-        build_edge(
+        make_edge(
             label="Win-rate edge",
-            fighter_a_value=fighter_a_row.get("prior_win_rate", pd.NA),
-            fighter_b_value=fighter_b_row.get("prior_win_rate", pd.NA),
+            column="prior_win_rate",
+            unit="",
         ),
-        build_edge(
+        make_edge(
             label="Reach edge",
-            fighter_a_value=fighter_a_row.get("reach_inches", pd.NA),
-            fighter_b_value=fighter_b_row.get("reach_inches", pd.NA),
+            column="reach_inches",
             unit="in",
         ),
-        build_edge(
+        make_edge(
             label="Height edge",
-            fighter_a_value=fighter_a_row.get("height_inches", pd.NA),
-            fighter_b_value=fighter_b_row.get("height_inches", pd.NA),
+            column="height_inches",
             unit="in",
         ),
-        build_edge(
+        make_edge(
             label="Striking differential edge",
-            fighter_a_value=fighter_a_row.get("avg_sig_str_differential_per_15", pd.NA),
-            fighter_b_value=fighter_b_row.get("avg_sig_str_differential_per_15", pd.NA),
+            column="avg_sig_str_differential_per_15",
             unit="sig str/15",
         ),
-        build_edge(
+        make_edge(
             label="Takedown differential edge",
-            fighter_a_value=fighter_a_row.get("avg_td_landed_per_15", pd.NA),
-            fighter_b_value=fighter_b_row.get("avg_td_landed_per_15", pd.NA),
+            column="avg_td_landed_per_15",
             unit="TD/15",
         ),
+        make_edge(
+            label="Age edge",
+            column="age_years",
+            unit="yrs",
+        ),
     ]
+
+    return edges
 
 def get_edge_by_label(
     edges: list[dict[str, Any]],
@@ -344,6 +365,14 @@ def format_signed_value(value: float, unit: str = "") -> str:
 
     return formatted_value
 
+def optional_float(value: Any) -> float | None:
+    if value is None or pd.isna(value):
+        return None
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 def add_sided_insight(
     insights: dict[str, Any],

@@ -14,12 +14,252 @@ function formatEdgeDifference(edge) {
   return edge.unit ? `${sign}${value} ${edge.unit}` : `${sign}${value}`;
 }
 
+function formatModelName(modelName = "") {
+  const names = {
+    calibrated_logistic_regression: "Calibrated Logistic",
+    calibrated_random_forest: "Calibrated Random Forest",
+    calibrated_xgboost: "Calibrated XGBoost",
+    logistic_regression: "Logistic Regression",
+    random_forest: "Random Forest",
+    xgboost: "XGBoost",
+  };
+
+  return names[modelName] ?? modelName.replaceAll("_", " ");
+}
+
 function getProbabilityWidth(probability) {
   if (!Number.isFinite(probability)) {
     return "0%";
   }
 
   return `${Math.max(0, Math.min(100, probability * 100))}%`;
+}
+
+function getConfidenceClass(label = "") {
+  const lowerLabel = String(label).toLowerCase();
+
+  if (lowerLabel.includes("high")) {
+    return "high";
+  }
+
+  if (lowerLabel.includes("strong")) {
+    return "strong";
+  }
+
+  if (lowerLabel.includes("moderate")) {
+    return "moderate";
+  }
+
+  if (lowerLabel.includes("slight") || lowerLabel.includes("very close")) {
+    return "close";
+  }
+
+  return "unknown";
+}
+
+function summarizeFutureCard(card) {
+  const fights = card?.fights ?? [];
+
+  const predictionAvailableFights = fights.filter(
+    (fight) => fight.prediction_available && fight.prediction
+  );
+
+  const predictionUnavailableFights = fights.filter(
+    (fight) => !fight.prediction_available || !fight.prediction
+  );
+
+  const highConfidenceFights = predictionAvailableFights.filter((fight) => {
+    const confidenceClass = getConfidenceClass(fight.prediction.confidence_label);
+    return confidenceClass === "high" || confidenceClass === "strong";
+  });
+
+  const moderateConfidenceFights = predictionAvailableFights.filter((fight) => {
+    const confidenceClass = getConfidenceClass(fight.prediction.confidence_label);
+    return confidenceClass === "moderate";
+  });
+
+  const closeFights = predictionAvailableFights.filter((fight) => {
+    const confidenceClass = getConfidenceClass(fight.prediction.confidence_label);
+    return confidenceClass === "close";
+  });
+
+  return {
+    totalFights: fights.length,
+    predictionAvailableCount: predictionAvailableFights.length,
+    predictionUnavailableCount: predictionUnavailableFights.length,
+    highConfidenceCount: highConfidenceFights.length,
+    moderateConfidenceCount: moderateConfidenceFights.length,
+    closeFightCount: closeFights.length,
+  };
+}
+
+function getRecentCardStatusClass(status = "") {
+  const normalizedStatus = String(status).toLowerCase();
+
+  if (normalizedStatus === "completed") {
+    return "completed";
+  }
+
+  if (normalizedStatus === "partially_completed") {
+    return "partial";
+  }
+
+  return "waiting";
+}
+
+function getRecentFightResultClass(fight) {
+  if (!fight?.actual_result_available) {
+    return "waiting";
+  }
+
+  if (fight.prediction_correct) {
+    return "correct";
+  }
+
+  return "incorrect";
+}
+
+function summarizeRecentCard(card) {
+  const fights = card?.fights ?? [];
+
+  const actualResultCount = fights.filter((fight) => fight.actual_result_available).length;
+
+  const predictedCompletedFights = fights.filter(
+    (fight) => fight.actual_result_available && fight.prediction_available
+  );
+
+  const correctCount = predictedCompletedFights.filter(
+    (fight) => fight.prediction_correct
+  ).length;
+
+  const wrongCount = predictedCompletedFights.filter(
+    (fight) => fight.prediction_correct === false
+  ).length;
+
+  const waitingCount = fights.filter((fight) => !fight.actual_result_available).length;
+
+  const accuracy =
+    predictedCompletedFights.length > 0
+      ? correctCount / predictedCompletedFights.length
+      : null;
+
+  return {
+    totalFights: fights.length,
+    actualResultCount,
+    predictedCompletedCount: predictedCompletedFights.length,
+    correctCount,
+    wrongCount,
+    waitingCount,
+    accuracy,
+    accuracyPercentage: accuracy !== null ? `${(accuracy * 100).toFixed(1)}%` : "N/A",
+  };
+}
+
+function formatNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return "N/A";
+  }
+
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return String(value);
+  }
+
+  return numberValue.toLocaleString();
+}
+
+function formatStatLabel(value = "") {
+  const labels = {
+    prior_elo: "Elo",
+    prior_peak_elo: "Peak Elo",
+    prior_win_rate: "Win rate",
+    recent_5_win_rate: "Recent 5 win rate",
+    prior_finish_win_rate: "Finish win rate",
+    prior_finish_loss_rate: "Finish loss rate",
+    prior_fights: "UFC fights",
+    prior_wins: "UFC wins",
+    prior_losses: "UFC losses",
+
+    avg_sig_str_differential_per_15: "Sig. strike diff / 15",
+    avg_sig_str_landed_per_15: "Sig. strikes landed / 15",
+    avg_sig_str_absorbed_per_15: "Sig. strikes absorbed / 15",
+    avg_sig_str_accuracy: "Sig. strike accuracy",
+    avg_sig_str_defense: "Sig. strike defense",
+    avg_kd_for: "Knockdowns for",
+    avg_kd_against: "Knockdowns against",
+
+    avg_td_landed_per_15: "Takedowns landed / 15",
+    avg_td_attempted_per_15: "Takedowns attempted / 15",
+    avg_td_accuracy: "Takedown accuracy",
+    avg_td_defense: "Takedown defense",
+    avg_td_absorbed_per_15: "Takedowns absorbed / 15",
+    avg_ctrl_seconds_per_15: "Control seconds / 15",
+    avg_ctrl_absorbed_seconds_per_15: "Control absorbed / 15",
+    avg_sub_att_per_15: "Sub attempts / 15",
+
+    height_inches: "Height",
+    reach_inches: "Reach",
+    reach_minus_height_inches: "Reach minus height",
+  };
+
+  return labels[value] ?? value.replaceAll("_", " ");
+}
+
+function formatLeaderboardStatValue(key, value) {
+  if (value === null || value === undefined || value === "") {
+    return "N/A";
+  }
+
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return String(value);
+  }
+
+  if (
+    key.includes("rate") ||
+    key.includes("accuracy") ||
+    key.includes("defense")
+  ) {
+    return `${(numberValue * 100).toFixed(1)}%`;
+  }
+
+  if (key.includes("height") || key.includes("reach")) {
+    return `${numberValue.toFixed(1)} in`;
+  }
+
+  return numberValue.toFixed(2);
+}
+
+function formatDuration(seconds) {
+  if (seconds === null || seconds === undefined || !Number.isFinite(Number(seconds))) {
+    return "N/A";
+  }
+
+  const totalSeconds = Math.round(Number(seconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+
+  if (minutes <= 0) {
+    return `${remainingSeconds}s`;
+  }
+
+  return `${minutes}m ${remainingSeconds}s`;
+}
+
+function buildStageLookup(report) {
+  const lookup = {};
+
+  for (const stage of report?.stages ?? []) {
+    lookup[stage.name] = stage;
+  }
+
+  return lookup;
+}
+
+function getStageDetails(stageLookup, stageName) {
+  return stageLookup?.[stageName]?.details ?? {};
 }
 
 function parsePercentageText(value) {
@@ -36,7 +276,7 @@ function parsePercentageText(value) {
   return parsed / 100;
 }
 
-function PredictionDetails({ prediction }) {
+function PredictionDetails({ prediction, showBasicEdges = false }) {
   const winnerSide = useMemo(() => {
     if (!prediction) {
       return null;
@@ -189,23 +429,25 @@ function PredictionDetails({ prediction }) {
         </div>
       )}
 
-      <div className="edges-card">
-        <h2>Basic matchup edges</h2>
+            {showBasicEdges && (
+        <div className="edges-card">
+          <h2>Basic matchup edges</h2>
 
-        <div className="edges-list">
-          {prediction.basic_matchup_edges.map((edge) => (
-            <div className="edge-row" key={edge.label}>
-              <div>
-                <strong>{edge.label}</strong>
-                <span>
-                  {prediction.fighter_a} vs {prediction.fighter_b}
-                </span>
+          <div className="edges-list">
+            {prediction.basic_matchup_edges.map((edge) => (
+              <div className="edge-row" key={edge.label}>
+                <div>
+                  <strong>{edge.label}</strong>
+                  <span>
+                    {prediction.fighter_a} vs {prediction.fighter_b}
+                  </span>
+                </div>
+                <strong>{formatEdgeDifference(edge)}</strong>
               </div>
-              <strong>{formatEdgeDifference(edge)}</strong>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
@@ -358,12 +600,36 @@ function RecentFightDetails({ fight }) {
 function App() {
   const [activeView, setActiveView] = useState("single");
 
+  const [showDashboardDetails, setShowDashboardDetails] = useState(false);
+
+  const [leaderboardOptions, setLeaderboardOptions] = useState(null);
+  const [leaderboards, setLeaderboards] = useState(null);
+
+  const [leaderboardScope, setLeaderboardScope] = useState("overall");
+  const [leaderboardWeightClass, setLeaderboardWeightClass] = useState("Lightweight");
+  const [leaderboardCategory, setLeaderboardCategory] = useState("overall");
+  const [leaderboardDirection, setLeaderboardDirection] = useState("best");
+  const [leaderboardTop, setLeaderboardTop] = useState(5);
+  const [leaderboardMinFights, setLeaderboardMinFights] = useState(5);
+  const [leaderboardMaxInactiveDays, setLeaderboardMaxInactiveDays] = useState(1095);
+
+  const [leaderboardsLoading, setLeaderboardsLoading] = useState(false);
+  const [leaderboardsError, setLeaderboardsError] = useState("");
+
+  const [modelEvaluation, setModelEvaluation] = useState(null);
+  const [modelEvaluationLoading, setModelEvaluationLoading] = useState(false);
+  const [modelEvaluationError, setModelEvaluationError] = useState("");
+
+  const [evaluationTestFraction, setEvaluationTestFraction] = useState(0.2);
+  const [evaluationRecentLimit, setEvaluationRecentLimit] = useState(25);
+
   const [fighterA, setFighterA] = useState("Khamzat Chimaev");
   const [fighterB, setFighterB] = useState("Sean Strickland");
   const [weightClass, setWeightClass] = useState("Middleweight");
 
   const [weightClasses, setWeightClasses] = useState([]);
   const [singlePrediction, setSinglePrediction] = useState(null);
+  const [showSingleFightEdges, setShowSingleFightEdges] = useState(true);
 
   const [fighterASearchResults, setFighterASearchResults] = useState([]);
   const [fighterBSearchResults, setFighterBSearchResults] = useState([]);
@@ -423,6 +689,9 @@ function App() {
     loadRecentCards();
     loadUpdateStatus();
     loadLatestReport();
+    loadLeaderboardOptions();
+    loadLeaderboards();
+    loadModelEvaluation();
   }, []);
 
   useEffect(() => {
@@ -527,6 +796,60 @@ function App() {
     }
   }
 
+  async function loadModelEvaluation() {
+  setModelEvaluationLoading(true);
+  setModelEvaluationError("");
+
+  try {
+    const params = new URLSearchParams({
+      test_fraction: String(evaluationTestFraction),
+      recent_prediction_limit: String(evaluationRecentLimit),
+    });
+
+    const response = await fetch(`${API_BASE_URL}/model-evaluation?${params}`);
+
+    if (!response.ok) {
+      throw new Error("Failed to load model evaluation.");
+    }
+
+    const data = await response.json();
+    setModelEvaluation(data);
+  } catch (requestError) {
+    setModelEvaluationError(requestError.message);
+  } finally {
+    setModelEvaluationLoading(false);
+  }
+}
+
+  function swapSingleFightFighters() {
+  setFighterA(fighterB);
+  setFighterB(fighterA);
+  setFighterASearchResults([]);
+  setFighterBSearchResults([]);
+  setSinglePrediction(null);
+  setError("");
+}
+
+function clearSingleFightForm() {
+  setFighterA("");
+  setFighterB("");
+  setWeightClass("Middleweight");
+  setFighterASearchResults([]);
+  setFighterBSearchResults([]);
+  setSinglePrediction(null);
+  setError("");
+}
+
+function loadExampleFight(exampleFighterA, exampleFighterB, exampleWeightClass) {
+  setFighterA(exampleFighterA);
+  setFighterB(exampleFighterB);
+  setWeightClass(exampleWeightClass);
+  setFighterASearchResults([]);
+  setFighterBSearchResults([]);
+  setSinglePrediction(null);
+  setError("");
+}
+
   async function loadFutureCards() {
     setCardsLoading(true);
     setCardsError("");
@@ -552,6 +875,51 @@ function App() {
       setCardsLoading(false);
     }
   }
+
+  async function loadLeaderboardOptions() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/leaderboards/options`);
+
+    if (!response.ok) {
+      throw new Error("Failed to load leaderboard options.");
+    }
+
+    const data = await response.json();
+    setLeaderboardOptions(data);
+
+    if (data.weight_classes?.length && !leaderboardWeightClass) {
+      setLeaderboardWeightClass(data.weight_classes[0]);
+    }
+  } catch (requestError) {
+    console.error(requestError);
+  }
+}
+
+async function loadLeaderboards() {
+  setLeaderboardsLoading(true);
+  setLeaderboardsError("");
+
+  try {
+    const params = new URLSearchParams({
+      top: String(leaderboardTop),
+      min_fights: String(leaderboardMinFights),
+      max_inactive_days: String(leaderboardMaxInactiveDays),
+    });
+
+    const response = await fetch(`${API_BASE_URL}/leaderboards?${params}`);
+
+    if (!response.ok) {
+      throw new Error("Failed to load leaderboards.");
+    }
+
+    const data = await response.json();
+    setLeaderboards(data);
+  } catch (requestError) {
+    setLeaderboardsError(requestError.message);
+  } finally {
+    setLeaderboardsLoading(false);
+  }
+}
 
   async function refreshFutureCards() {
     setCardsLoading(true);
@@ -621,7 +989,13 @@ function App() {
       }
 
       const data = await response.json();
-      const cards = data.cards ?? [];
+
+      const cards = [...(data.cards ?? [])].sort((a, b) => {
+        const dateA = new Date(a.event_date);
+        const dateB = new Date(b.event_date);
+
+        return dateA - dateB;
+      });
 
       setRecentCards(cards);
 
@@ -735,10 +1109,113 @@ function App() {
     }
   }
 
-  const latestReportSummary = latestReport?.report?.summary;
-  const latestReportStartedAt = latestReport?.report?.started_at;
-  const latestReportFinishedAt = latestReport?.report?.finished_at;
-  const latestReportDuration = latestReport?.report?.duration_seconds;
+  const latestReportObject = latestReport?.report;
+  const latestReportSummary = latestReportObject?.summary;
+  const latestReportStartedAt = latestReportObject?.started_at;
+  const latestReportFinishedAt = latestReportObject?.finished_at;
+  const latestReportDuration = latestReportObject?.duration_seconds;
+
+  const latestStageLookup = useMemo(
+    () => buildStageLookup(latestReportObject),
+    [latestReportObject]
+  );
+
+  const fightStatsUpdateDetails = getStageDetails(
+    latestStageLookup,
+    "Update fight stats incrementally"
+  );
+
+  const trainModelDetails = getStageDetails(
+    latestStageLookup,
+    "Train calibrated model"
+  );
+
+  const refreshFutureCardsDetails = getStageDetails(
+    latestStageLookup,
+    "Refresh future cards"
+  );
+
+  const saveFuturePredictionsDetails = getStageDetails(
+    latestStageLookup,
+    "Save future-card predictions"
+  );
+
+  const selectedFutureCardSummary = useMemo(
+    () => summarizeFutureCard(selectedCard),
+    [selectedCard]
+  );
+
+  const selectedRecentCardSummary = useMemo(
+  () => summarizeRecentCard(selectedRecentCard),
+  [selectedRecentCard]
+);
+
+const leaderboardCategoryPayload = useMemo(() => {
+  if (!leaderboards) {
+    return null;
+  }
+
+  if (leaderboardScope === "overall") {
+    return leaderboards.overall?.categories?.[leaderboardCategory] ?? null;
+  }
+
+  return (
+    leaderboards.weight_classes?.[leaderboardWeightClass]?.categories?.[
+      leaderboardCategory
+    ] ?? null
+  );
+}, [leaderboards, leaderboardScope, leaderboardWeightClass, leaderboardCategory]);
+
+const displayedLeaderboardRows =
+  leaderboardCategoryPayload?.[leaderboardDirection] ?? [];
+
+const leaderboardCategoryOptions =
+  leaderboardOptions?.categories ?? [
+    { value: "overall", label: "Overall" },
+    { value: "striking", label: "Striking" },
+    { value: "grappling", label: "Grappling" },
+    { value: "wrestling", label: "Wrestling" },
+    { value: "finishing", label: "Finishing" },
+    { value: "defense", label: "Defense" },
+    { value: "elo", label: "Elo" },
+    { value: "experience", label: "Experience" },
+    { value: "reach", label: "Reach" },
+    { value: "reach_for_size", label: "Reach for Size" },
+  ];
+
+const leaderboardWeightClassOptions = leaderboardOptions?.weight_classes ?? [];
+
+const futureFightCount = useMemo(() => {
+  return futureCards.reduce((total, card) => {
+    return total + Number(card.fight_count ?? 0);
+  }, 0);
+}, [futureCards]);
+
+const recentStatusCounts = useMemo(() => {
+  return recentCards.reduce(
+    (counts, card) => {
+      if (card.status === "completed") {
+        counts.completed += 1;
+      } else if (card.status === "partially_completed") {
+        counts.partial += 1;
+      } else {
+        counts.waiting += 1;
+      }
+
+      return counts;
+    },
+    {
+      completed: 0,
+      partial: 0,
+      waiting: 0,
+    }
+  );
+}, [recentCards]);
+
+const latestUpdateWasSuccessful = latestReportSummary?.success === true;
+const latestUpdateFailed = latestReportSummary?.success === false;
+
+const dashboardModelName = trainModelDetails.best_model_name || "N/A";
 
   return (
     <main className="app-shell">
@@ -785,17 +1262,135 @@ function App() {
 
         <button
           type="button"
+          className={activeView === "leaderboards" ? "active" : ""}
+          onClick={() => setActiveView("leaderboards")}
+        >
+          Leaderboards
+        </button>
+
+        <button
+          type="button"
           className={activeView === "update" ? "active" : ""}
           onClick={() => setActiveView("update")}
         >
           Update data
         </button>
+
+        <button
+          type="button"
+          className={activeView === "evaluation" ? "active" : ""}
+          onClick={() => setActiveView("evaluation")}
+        >
+          Evaluation
+        </button>
       </nav>
+
+      <section className="compact-dashboard">
+  <button
+    type="button"
+    className="compact-dashboard-toggle"
+    onClick={() => setShowDashboardDetails((currentValue) => !currentValue)}
+  >
+    <div>
+      <span className="status-dot" />
+      <strong>
+        {latestUpdateWasSuccessful
+          ? "Data/model up to date"
+          : latestUpdateFailed
+            ? "Last update failed"
+            : "Project status"}
+      </strong>
+      <em>
+        {futureCards.length} upcoming cards • {recentCards.length} saved cards •{" "}
+        {formatModelName(dashboardModelName)}
+      </em>
+    </div>
+
+    <span className="dashboard-chevron">
+      {showDashboardDetails ? "Hide details ▲" : "Show details ▼"}
+    </span>
+  </button>
+
+  {showDashboardDetails && (
+    <div className="dashboard-details-grid">
+      <div className="dashboard-card">
+        <span>Upcoming cards</span>
+        <strong>{formatNumber(futureCards.length)}</strong>
+        <em>{formatNumber(futureFightCount)} known fights</em>
+      </div>
+
+      <div className="dashboard-card">
+        <span>Recent tracking</span>
+        <strong>{formatNumber(recentCards.length)}</strong>
+        <em>
+          {recentStatusCounts.waiting} waiting • {recentStatusCounts.completed} completed
+        </em>
+      </div>
+
+      <div className="dashboard-card">
+        <span>Last update</span>
+        <strong>
+          {latestUpdateWasSuccessful
+            ? "Success"
+            : latestUpdateFailed
+              ? "Failed"
+              : "No report"}
+        </strong>
+        <em>{latestReportFinishedAt || "Run update to generate report"}</em>
+      </div>
+
+      <div className="dashboard-card">
+        <span>Current model</span>
+        <strong>{formatModelName(dashboardModelName)}</strong>
+        <em>
+          {trainModelDetails.best_model_metrics?.accuracy !== undefined
+            ? `${(trainModelDetails.best_model_metrics.accuracy * 100).toFixed(1)}% test accuracy`
+            : "Metrics unavailable"}
+        </em>
+      </div>
+
+      <div className="dashboard-card">
+        <span>Saved predictions</span>
+        <strong>{formatNumber(latestReportSummary?.saved_card_predictions_rows)}</strong>
+        <em>Used by Recent Cards</em>
+      </div>
+    </div>
+  )}
+</section>
 
       {activeView === "single" && (
         <section className="layout">
-          <form className="predict-card" onSubmit={handlePredict}>
-            <h2>Single fight prediction</h2>
+          <form className="predict-card single-fight-card" onSubmit={handlePredict}>
+            <div className="single-form-header">
+              <div>
+                <p className="eyebrow">Single matchup</p>
+                <h2>Single fight prediction</h2>
+                <p>
+                  Enter two fighters and a weight class to generate win probabilities,
+                  matchup insights, and basic statistical edges.
+                </p>
+              </div>
+            </div>
+
+            <div className="example-fight-row">
+              <button
+                type="button"
+                onClick={() =>
+                  loadExampleFight("Khamzat Chimaev", "Sean Strickland", "Middleweight")
+                }
+              >
+                Khamzat vs Strickland
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  loadExampleFight("Islam Makhachev", "Max Holloway", "Lightweight")
+                }
+              >
+                Islam vs Holloway
+              </button>
+            </div>
 
             <label>
               Fighter A
@@ -869,15 +1464,46 @@ function App() {
               </select>
             </label>
 
-            <button className="primary-button" type="submit" disabled={loading}>
-              {loading ? "Predicting..." : "Predict fight"}
-            </button>
+            <div className="single-form-actions">
+              <button className="primary-button" type="submit" disabled={loading}>
+                {loading ? "Predicting..." : "Predict fight"}
+              </button>
+
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={swapSingleFightFighters}
+                disabled={!fighterA && !fighterB}
+              >
+                Swap fighters
+              </button>
+
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={clearSingleFightForm}
+              >
+                Clear
+              </button>
+            </div>
+
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={showSingleFightEdges}
+                onChange={(event) => setShowSingleFightEdges(event.target.checked)}
+              />
+              Show basic matchup edges
+            </label>
 
             {error && <pre className="error-box">{error}</pre>}
           </form>
 
           <section className="results-panel">
-            <PredictionDetails prediction={singlePrediction} />
+            <PredictionDetails
+              prediction={singlePrediction}
+              showBasicEdges={showSingleFightEdges}
+            />
           </section>
         </section>
       )}
@@ -925,21 +1551,54 @@ function App() {
             {selectedCard && (
               <>
                 <div className="selected-card-header">
-                  <div>
-                    <p className="eyebrow">Selected card</p>
-                    <h2>{selectedCard.event_name}</h2>
-                    <p>
-                      {selectedCard.event_date} • {selectedCard.event_location}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => loadCardPredictions(selectedCard.event_id)}
-                    disabled={cardPredictionsLoading}
-                  >
-                    {cardPredictionsLoading ? "Loading..." : "Reload predictions"}
-                  </button>
-                </div>
+            <div>
+              <p className="eyebrow">Selected card</p>
+              <h2>{selectedCard.event_name}</h2>
+              <p>
+                {selectedCard.event_date} • {selectedCard.event_location}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => loadCardPredictions(selectedCard.event_id)}
+              disabled={cardPredictionsLoading}
+            >
+              {cardPredictionsLoading ? "Loading..." : "Reload predictions"}
+            </button>
+          </div>
+
+          <div className="future-card-summary-grid">
+            <div>
+              <span>Total fights</span>
+              <strong>{selectedFutureCardSummary.totalFights}</strong>
+            </div>
+
+            <div>
+              <span>Predictions available</span>
+              <strong>{selectedFutureCardSummary.predictionAvailableCount}</strong>
+            </div>
+
+            <div>
+              <span>No prediction</span>
+              <strong>{selectedFutureCardSummary.predictionUnavailableCount}</strong>
+            </div>
+
+            <div>
+              <span>Strong/high leans</span>
+              <strong>{selectedFutureCardSummary.highConfidenceCount}</strong>
+            </div>
+
+            <div>
+              <span>Moderate leans</span>
+              <strong>{selectedFutureCardSummary.moderateConfidenceCount}</strong>
+            </div>
+
+            <div>
+              <span>Close fights</span>
+              <strong>{selectedFutureCardSummary.closeFightCount}</strong>
+            </div>
+          </div>
 
                 <div className="fight-list">
                   {selectedCard.fights.map((fight) => (
@@ -1016,32 +1675,47 @@ function App() {
                 </div>
               )}
 
-              {recentCards.map((card) => (
-                <button
-                  type="button"
-                  key={card.event_id}
-                  className={
-                    selectedRecentCardId === card.event_id
-                      ? "event-card active"
-                      : "event-card"
-                  }
-                  onClick={() => {
-                    setSelectedRecentCardId(card.event_id);
-                    setSelectedRecentFight(null);
-                  }}
-                >
-                  <strong>{card.event_name}</strong>
-                  <span>{card.event_date}</span>
-                  <span>{card.event_location}</span>
-                  <em>
-                    {card.status === "completed"
-                      ? `${card.accuracy_percentage || "N/A"} accuracy`
-                      : card.status === "partially_completed"
-                        ? "Partially completed"
-                        : "Waiting for results"}
-                  </em>
-                </button>
-              ))}
+              {recentCards.map((card) => {
+                const statusClass = getRecentCardStatusClass(card.status);
+
+                return (
+                  <button
+                    type="button"
+                    key={card.event_id}
+                    className={
+                      selectedRecentCardId === card.event_id
+                        ? "event-card active"
+                        : "event-card"
+                    }
+                    onClick={() => {
+                      setSelectedRecentCardId(card.event_id);
+                      setSelectedRecentFight(null);
+                    }}
+                  >
+                    <div className="event-card-title-row">
+                      <strong>{card.event_name}</strong>
+                      <span className={`status-badge ${statusClass}`}>
+                        {card.status === "completed"
+                          ? "Completed"
+                          : card.status === "partially_completed"
+                            ? "Partial"
+                            : "Waiting"}
+                      </span>
+                    </div>
+
+                    <span>{card.event_date}</span>
+                    <span>{card.event_location}</span>
+
+                    <em>
+                      {card.status === "completed"
+                        ? `${card.accuracy_percentage || "N/A"} accuracy`
+                        : card.status === "partially_completed"
+                          ? `${card.actual_result_count} of ${card.fight_count} results in`
+                          : `${card.fight_count} saved predictions`}
+                    </em>
+                  </button>
+                );
+              })}
             </div>
           </aside>
 
@@ -1067,59 +1741,119 @@ function App() {
                     </p>
                   </div>
 
-                  <div className="recent-card-summary">
-                    <strong>
+                  <div className="recent-card-summary improved">
+                    <span className={`status-badge ${getRecentCardStatusClass(selectedRecentCard.status)}`}>
                       {selectedRecentCard.status === "completed"
-                        ? selectedRecentCard.accuracy_percentage || "N/A"
+                        ? "Completed"
                         : selectedRecentCard.status === "partially_completed"
-                          ? "Partial"
-                          : "Waiting"}
-                    </strong>
+                          ? "Partially completed"
+                          : "Waiting for results"}
+                    </span>
+
+                    <strong>{selectedRecentCardSummary.accuracyPercentage}</strong>
                     <span>
-                      {selectedRecentCard.correct_prediction_count} correct of{" "}
-                      {selectedRecentCard.predicted_completed_count} scored predictions
+                      {selectedRecentCardSummary.correctCount} correct of{" "}
+                      {selectedRecentCardSummary.predictedCompletedCount} scored predictions
                     </span>
                   </div>
                 </div>
 
-                <div className="fight-list">
-                  {selectedRecentCard.fights.map((fight) => (
-                    <button
-                      type="button"
-                      key={fight.fight_id}
-                      className={
-                        selectedRecentFight?.fight_id === fight.fight_id
-                          ? "fight-row active"
-                          : "fight-row"
-                      }
-                      onClick={() => setSelectedRecentFight(fight)}
-                    >
-                      <div>
-                        <strong>
-                          {fight.fighter_1} vs {fight.fighter_2}
-                        </strong>
-                        <span>{fight.weight_class}</span>
-                      </div>
+                <div className="recent-card-summary-grid">
+                  <div>
+                    <span>Total fights</span>
+                    <strong>{selectedRecentCardSummary.totalFights}</strong>
+                  </div>
 
-                      {fight.actual_result_available ? (
-                        <div
-                          className={
-                            fight.prediction_correct
-                              ? "fight-result-pill correct"
-                              : "fight-result-pill incorrect"
-                          }
-                        >
-                          <strong>{fight.prediction_correct ? "Correct" : "Wrong"}</strong>
-                          <span>Actual: {fight.actual_winner}</span>
+                  <div>
+                    <span>Results in</span>
+                    <strong>{selectedRecentCardSummary.actualResultCount}</strong>
+                  </div>
+
+                  <div>
+                    <span>Correct</span>
+                    <strong>{selectedRecentCardSummary.correctCount}</strong>
+                  </div>
+
+                  <div>
+                    <span>Wrong</span>
+                    <strong>{selectedRecentCardSummary.wrongCount}</strong>
+                  </div>
+
+                  <div>
+                    <span>Waiting</span>
+                    <strong>{selectedRecentCardSummary.waitingCount}</strong>
+                  </div>
+
+                  <div>
+                    <span>Accuracy</span>
+                    <strong>{selectedRecentCardSummary.accuracyPercentage}</strong>
+                  </div>
+                </div>
+
+                {selectedRecentCard.status === "waiting_for_results" && (
+                  <div className="recent-info-box">
+                    This card is waiting for completed fight results. After the event happens, run
+                    the Update Data pipeline to scrape results and score the saved predictions.
+                  </div>
+                )}
+
+                <div className="fight-list">
+                  {selectedRecentCard.fights.map((fight) => {
+                    const resultClass = getRecentFightResultClass(fight);
+
+                    return (
+                      <button
+                        type="button"
+                        key={fight.fight_id}
+                        className={
+                          selectedRecentFight?.fight_id === fight.fight_id
+                            ? "fight-row active"
+                            : "fight-row"
+                        }
+                        onClick={() => setSelectedRecentFight(fight)}
+                      >
+                        <div>
+                          <strong>
+                            {fight.fighter_1} vs {fight.fighter_2}
+                          </strong>
+                          <span>{fight.weight_class}</span>
+
+                          <div className="recent-fight-subline">
+                            <span>Predicted: {fight.predicted_winner || "N/A"}</span>
+                            {fight.confidence_percentage && (
+                              <span>{fight.confidence_percentage} confidence</span>
+                            )}
+                          </div>
                         </div>
-                      ) : (
-                        <div className="fight-result-pill waiting">
-                          <strong>Waiting</strong>
-                          <span>Predicted: {fight.predicted_winner || "N/A"}</span>
+
+                        <div className={`fight-result-pill improved ${resultClass}`}>
+                          <span className={`status-badge ${resultClass}`}>
+                            {resultClass === "correct"
+                              ? "Correct"
+                              : resultClass === "incorrect"
+                                ? "Wrong"
+                                : "Waiting"}
+                          </span>
+
+                          {fight.actual_result_available ? (
+                            <>
+                              <strong>{fight.actual_winner}</strong>
+                              <span>
+                                {fight.actual_method
+                                  ? `${fight.actual_method}${fight.actual_round ? ` • R${fight.actual_round}` : ""}`
+                                  : "Actual winner"}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <strong>{fight.predicted_winner || "No prediction"}</strong>
+                              <span>Awaiting result</span>
+                            </>
+                          )}
                         </div>
-                      )}
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -1130,6 +1864,426 @@ function App() {
           </section>
         </section>
       )}
+
+      {activeView === "leaderboards" && (
+  <section className="leaderboards-layout">
+    <section className="leaderboard-controls-card">
+      <div>
+        <p className="eyebrow">Fighter analysis</p>
+        <h2>Leaderboards</h2>
+        <p>
+          Rank fighters by category using the current feature dataset. Composite
+          categories are for analysis and depend on the feature weights in the backend.
+        </p>
+      </div>
+
+      <div className="leaderboard-controls-grid">
+        <label>
+          Scope
+          <select
+            value={leaderboardScope}
+            onChange={(event) => setLeaderboardScope(event.target.value)}
+          >
+            <option value="overall">Overall</option>
+            <option value="weight_class">By weight class</option>
+          </select>
+        </label>
+
+        <label>
+          Weight class
+          <select
+            value={leaderboardWeightClass}
+            onChange={(event) => setLeaderboardWeightClass(event.target.value)}
+            disabled={leaderboardScope === "overall"}
+          >
+            {leaderboardWeightClassOptions.map((weightClassOption) => (
+              <option key={weightClassOption} value={weightClassOption}>
+                {weightClassOption}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Category
+          <select
+            value={leaderboardCategory}
+            onChange={(event) => setLeaderboardCategory(event.target.value)}
+          >
+            {leaderboardCategoryOptions.map((categoryOption) => (
+              <option key={categoryOption.value} value={categoryOption.value}>
+                {categoryOption.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Direction
+          <select
+            value={leaderboardDirection}
+            onChange={(event) => setLeaderboardDirection(event.target.value)}
+          >
+            <option value="best">Best</option>
+            <option value="worst">Worst</option>
+          </select>
+        </label>
+
+        <label>
+          Top
+          <input
+            type="number"
+            min="1"
+            max="25"
+            value={leaderboardTop}
+            onChange={(event) => setLeaderboardTop(Number(event.target.value))}
+          />
+        </label>
+
+        <label>
+          Minimum fights
+          <input
+            type="number"
+            min="0"
+            value={leaderboardMinFights}
+            onChange={(event) =>
+              setLeaderboardMinFights(Number(event.target.value))
+            }
+          />
+        </label>
+
+        <label>
+          Max inactive days
+          <input
+            type="number"
+            min="0"
+            value={leaderboardMaxInactiveDays}
+            onChange={(event) =>
+              setLeaderboardMaxInactiveDays(Number(event.target.value))
+            }
+          />
+        </label>
+
+        <button
+          type="button"
+          className="primary-button leaderboard-load-button"
+          onClick={loadLeaderboards}
+          disabled={leaderboardsLoading}
+        >
+          {leaderboardsLoading ? "Loading..." : "Load leaderboards"}
+        </button>
+      </div>
+
+      {leaderboardsError && <pre className="error-box">{leaderboardsError}</pre>}
+
+      {leaderboards?.metadata && (
+        <div className="leaderboard-meta-box">
+          <span>
+            Fighters after filters:{" "}
+            <strong>{formatNumber(leaderboards.metadata.fighter_rows_after_filters)}</strong>
+          </span>
+          <span>
+            Min fights: <strong>{leaderboards.metadata.min_fights}</strong>
+          </span>
+          <span>
+            Activity filter:{" "}
+            <strong>
+              {leaderboards.metadata.max_inactive_days ?? "Disabled"}
+            </strong>
+          </span>
+        </div>
+      )}
+    </section>
+
+    <section className="leaderboard-results-card">
+      <div className="leaderboard-results-header">
+        <div>
+          <p className="eyebrow">
+            {leaderboardDirection === "best" ? "Best" : "Worst"} category ranking
+          </p>
+          <h2>
+            {leaderboardScope === "overall"
+              ? "Overall"
+              : leaderboardWeightClass}{" "}
+            •{" "}
+            {
+              leaderboardCategoryOptions.find(
+                (category) => category.value === leaderboardCategory
+              )?.label
+            }
+          </h2>
+        </div>
+      </div>
+
+      {displayedLeaderboardRows.length === 0 && (
+        <div className="empty-state compact">
+          <h2>No leaderboard rows</h2>
+          <p>
+            Try lowering minimum fights, disabling the inactivity filter with 0,
+            or choosing another category.
+          </p>
+        </div>
+      )}
+
+      <div className="leaderboard-row-list">
+        {displayedLeaderboardRows.map((row) => (
+          <div className="leaderboard-row" key={`${row.rank}-${row.fighter}`}>
+            <div className="leaderboard-rank">
+              #{row.rank}
+            </div>
+
+            <div className="leaderboard-main">
+              <h3>{row.fighter}</h3>
+              <span>
+                {row.weight_class} • {row.prior_fights} UFC fights
+              </span>
+            </div>
+
+            <div className="leaderboard-score">
+              <span>Score</span>
+              <strong>{row.score}</strong>
+            </div>
+
+            <div className="leaderboard-supporting-stats">
+              {Object.entries(row.supporting_stats ?? {}).map(([key, value]) => (
+                <div key={key}>
+                  <span>{formatStatLabel(key)}</span>
+                  <strong>{formatLeaderboardStatValue(key, value)}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  </section>
+)}
+
+{activeView === "evaluation" && (
+  <section className="evaluation-layout">
+    <section className="evaluation-controls-card">
+      <div>
+        <p className="eyebrow">Model performance</p>
+        <h2>Model evaluation</h2>
+        <p>
+          Evaluate the currently saved model against a chronological holdout set.
+          This helps show where the model is strong, weak, and whether confidence
+          levels are reliable.
+        </p>
+      </div>
+
+      <div className="evaluation-controls-grid">
+        <label>
+          Test fraction
+          <input
+            type="number"
+            min="0.05"
+            max="0.5"
+            step="0.05"
+            value={evaluationTestFraction}
+            onChange={(event) =>
+              setEvaluationTestFraction(Number(event.target.value))
+            }
+          />
+        </label>
+
+        <label>
+          Recent prediction rows
+          <input
+            type="number"
+            min="5"
+            max="100"
+            value={evaluationRecentLimit}
+            onChange={(event) =>
+              setEvaluationRecentLimit(Number(event.target.value))
+            }
+          />
+        </label>
+
+        <button
+          type="button"
+          className="primary-button evaluation-load-button"
+          onClick={loadModelEvaluation}
+          disabled={modelEvaluationLoading}
+        >
+          {modelEvaluationLoading ? "Loading..." : "Reload evaluation"}
+        </button>
+      </div>
+
+      {modelEvaluationError && <pre className="error-box">{modelEvaluationError}</pre>}
+
+      {modelEvaluation?.metadata && (
+        <div className="leaderboard-meta-box">
+          <span>
+            Test fights:{" "}
+            <strong>{formatNumber(modelEvaluation.metadata.test_fights)}</strong>
+          </span>
+          <span>
+            Test range:{" "}
+            <strong>
+              {modelEvaluation.metadata.test_date_min || "N/A"} →{" "}
+              {modelEvaluation.metadata.test_date_max || "N/A"}
+            </strong>
+          </span>
+          <span>
+            Model:{" "}
+            <strong>
+              {formatModelName(modelEvaluation.metadata.saved_best_model_name)}
+            </strong>
+          </span>
+        </div>
+      )}
+    </section>
+
+    {modelEvaluation?.overall && (
+      <section className="evaluation-summary-grid">
+        <div>
+          <span>Accuracy</span>
+          <strong>{modelEvaluation.overall.accuracy_percentage || "N/A"}</strong>
+        </div>
+
+        <div>
+          <span>Average confidence</span>
+          <strong>
+            {modelEvaluation.overall.average_confidence_percentage || "N/A"}
+          </strong>
+        </div>
+
+        <div>
+          <span>Brier score</span>
+          <strong>
+            {modelEvaluation.overall.brier_score !== null
+              ? Number(modelEvaluation.overall.brier_score).toFixed(4)
+              : "N/A"}
+          </strong>
+        </div>
+
+        <div>
+          <span>Log loss</span>
+          <strong>
+            {modelEvaluation.overall.log_loss !== null
+              ? Number(modelEvaluation.overall.log_loss).toFixed(4)
+              : "N/A"}
+          </strong>
+        </div>
+
+        <div>
+          <span>ROC AUC</span>
+          <strong>
+            {modelEvaluation.overall.roc_auc !== null
+              ? Number(modelEvaluation.overall.roc_auc).toFixed(4)
+              : "N/A"}
+          </strong>
+        </div>
+      </section>
+    )}
+
+    {modelEvaluation && (
+      <section className="evaluation-grid">
+        <div className="evaluation-card">
+          <h2>By confidence bucket</h2>
+
+          <div className="evaluation-table">
+            {modelEvaluation.by_confidence_bucket?.map((row) => (
+              <div className="evaluation-table-row" key={row.name}>
+                <div>
+                  <strong>{row.name}</strong>
+                  <span>{row.fight_count} fights</span>
+                </div>
+                <strong>{row.accuracy_percentage || "N/A"}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="evaluation-card">
+          <h2>By weight class</h2>
+
+          <div className="evaluation-table">
+            {modelEvaluation.by_weight_class?.map((row) => (
+              <div className="evaluation-table-row" key={row.name}>
+                <div>
+                  <strong>{row.name || "Unknown"}</strong>
+                  <span>{row.fight_count} fights</span>
+                </div>
+                <strong>{row.accuracy_percentage || "N/A"}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="evaluation-card">
+          <h2>By year</h2>
+
+          <div className="evaluation-table">
+            {modelEvaluation.by_year?.map((row) => (
+              <div className="evaluation-table-row" key={row.name}>
+                <div>
+                  <strong>{row.name || "Unknown"}</strong>
+                  <span>{row.fight_count} fights</span>
+                </div>
+                <strong>{row.accuracy_percentage || "N/A"}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    {modelEvaluation?.recent_predictions && (
+      <section className="evaluation-card">
+        <h2>Recent tested predictions</h2>
+
+        <div className="evaluation-prediction-list">
+          {modelEvaluation.recent_predictions.map((prediction, index) => (
+            <div
+              className={
+                prediction.prediction_correct
+                  ? "evaluation-prediction-row correct"
+                  : "evaluation-prediction-row incorrect"
+              }
+              key={`${prediction.event_date}-${prediction.fighter_a}-${prediction.fighter_b}-${index}`}
+            >
+              <div>
+                <strong>
+                  {prediction.fighter_a} vs {prediction.fighter_b}
+                </strong>
+                <span>
+                  {prediction.event_date} • {prediction.weight_class}
+                </span>
+              </div>
+
+              <div>
+                <span>Predicted</span>
+                <strong>{prediction.predicted_winner}</strong>
+              </div>
+
+              <div>
+                <span>Actual</span>
+                <strong>{prediction.actual_winner}</strong>
+              </div>
+
+              <div>
+                <span>Confidence</span>
+                <strong>{prediction.confidence_percentage}</strong>
+              </div>
+
+              <span
+                className={
+                  prediction.prediction_correct
+                    ? "status-badge correct"
+                    : "status-badge incorrect"
+                }
+              >
+                {prediction.prediction_correct ? "Correct" : "Wrong"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+  </section>
+)}
 
       {activeView === "update" && (
         <section className="update-layout">
@@ -1208,74 +2362,212 @@ function App() {
           </section>
 
           <section className="update-card report-card">
-            <div className="report-header">
-              <h2>Latest report</h2>
-              <button type="button" onClick={loadLatestReport}>
-                Reload report
-              </button>
-            </div>
+  <div className="report-header">
+    <div>
+      <p className="eyebrow">Last update report</p>
+      <h2>Update summary</h2>
+    </div>
 
-            {!latestReport?.available && (
-              <p>{latestReport?.message ?? "No report loaded yet."}</p>
-            )}
+    <button type="button" onClick={loadLatestReport}>
+      Reload report
+    </button>
+  </div>
 
-            {latestReport?.available && latestReportSummary && (
-              <>
-                <div className="report-meta">
-                  <span>Started: {latestReportStartedAt}</span>
-                  <span>Finished: {latestReportFinishedAt}</span>
-                  <span>Duration: {latestReportDuration}s</span>
-                </div>
+  {!latestReport?.available && (
+    <div className="empty-state compact">
+      <h2>No report yet</h2>
+      <p>{latestReport?.message ?? "Run an update to generate a report."}</p>
+    </div>
+  )}
 
-                <div className="report-grid">
-                  <div>
-                    <span>Completed events</span>
-                    <strong>{latestReportSummary.completed_events_rows}</strong>
-                  </div>
-                  <div>
-                    <span>Event fights</span>
-                    <strong>{latestReportSummary.event_fights_rows}</strong>
-                  </div>
-                  <div>
-                    <span>Fight stat rows</span>
-                    <strong>{latestReportSummary.fight_stats_rows}</strong>
-                  </div>
-                  <div>
-                    <span>Fighter profiles</span>
-                    <strong>{latestReportSummary.fighter_profiles_rows}</strong>
-                  </div>
-                  <div>
-                    <span>Training rows</span>
-                    <strong>{latestReportSummary.training_matchups_rows}</strong>
-                  </div>
-                  <div>
-                    <span>Current fighters</span>
-                    <strong>{latestReportSummary.current_fighter_features_rows}</strong>
-                  </div>
-                  <div>
-                    <span>Upcoming events</span>
-                    <strong>{latestReportSummary.upcoming_events_rows}</strong>
-                  </div>
-                  <div>
-                    <span>Upcoming fights</span>
-                    <strong>{latestReportSummary.upcoming_fights_rows}</strong>
-                  </div>
-                  <div>
-                    <span>Saved predictions</span>
-                    <strong>{latestReportSummary.saved_card_predictions_rows ?? "N/A"}</strong>
-                  </div>
-                </div>
+  {latestReport?.available && latestReportSummary && (
+    <>
+      <div
+        className={
+          latestReportSummary.success
+            ? "update-result-banner success"
+            : "update-result-banner failed"
+        }
+      >
+        <div>
+          <strong>
+            {latestReportSummary.success
+              ? "Latest update completed successfully"
+              : "Latest update finished with failures"}
+          </strong>
 
-                {latestReportSummary.failed_stages?.length > 0 ? (
-                  <pre className="error-box">
-                    Failed stages: {latestReportSummary.failed_stages.join(", ")}
-                  </pre>
-                ) : (
-                  <div className="success-box">Latest update completed successfully.</div>
-                )}
-              </>
-            )}
-          </section>
+          <span>
+            Started {latestReportStartedAt || "N/A"} • Finished{" "}
+            {latestReportFinishedAt || "N/A"} • Duration{" "}
+            {formatDuration(latestReportDuration)}
+          </span>
+        </div>
+      </div>
+
+      <div className="update-summary-grid">
+        <div>
+          <span>Completed events</span>
+          <strong>{formatNumber(latestReportSummary.completed_events_rows)}</strong>
+        </div>
+
+        <div>
+          <span>Event fights</span>
+          <strong>{formatNumber(latestReportSummary.event_fights_rows)}</strong>
+        </div>
+
+        <div>
+          <span>Fight stat rows</span>
+          <strong>{formatNumber(latestReportSummary.fight_stats_rows)}</strong>
+        </div>
+
+        <div>
+          <span>Current fighters</span>
+          <strong>{formatNumber(latestReportSummary.current_fighter_features_rows)}</strong>
+        </div>
+
+        <div>
+          <span>Upcoming events</span>
+          <strong>{formatNumber(latestReportSummary.upcoming_events_rows)}</strong>
+        </div>
+
+        <div>
+          <span>Upcoming fights</span>
+          <strong>{formatNumber(latestReportSummary.upcoming_fights_rows)}</strong>
+        </div>
+
+        <div>
+          <span>Saved predictions</span>
+          <strong>{formatNumber(latestReportSummary.saved_card_predictions_rows)}</strong>
+        </div>
+
+        <div>
+          <span>Training rows</span>
+          <strong>{formatNumber(latestReportSummary.training_matchups_rows)}</strong>
+        </div>
+      </div>
+
+      <div className="update-detail-grid">
+        <div className="update-detail-card">
+          <h3>Fight stats update</h3>
+
+          <div className="detail-row">
+            <span>Missing fights checked</span>
+            <strong>{formatNumber(fightStatsUpdateDetails.missing_fights_checked)}</strong>
+          </div>
+
+          <div className="detail-row">
+            <span>Fights scraped</span>
+            <strong>{formatNumber(fightStatsUpdateDetails.missing_fights_scraped)}</strong>
+          </div>
+
+          <div className="detail-row">
+            <span>Skipped fights</span>
+            <strong>{formatNumber(fightStatsUpdateDetails.skipped_fight_count)}</strong>
+          </div>
+
+          <div className="detail-row">
+            <span>New stat rows</span>
+            <strong>{formatNumber(fightStatsUpdateDetails.new_fighter_stat_rows)}</strong>
+          </div>
+        </div>
+
+        <div className="update-detail-card">
+          <h3>Model training</h3>
+
+          <div className="detail-row">
+            <span>Best model</span>
+            <strong>{trainModelDetails.best_model_name || "N/A"}</strong>
+          </div>
+
+          <div className="detail-row">
+            <span>Fight accuracy</span>
+            <strong>
+              {trainModelDetails.best_model_metrics?.accuracy !== undefined
+                ? `${(trainModelDetails.best_model_metrics.accuracy * 100).toFixed(1)}%`
+                : "N/A"}
+            </strong>
+          </div>
+
+          <div className="detail-row">
+            <span>Brier score</span>
+            <strong>
+              {trainModelDetails.best_model_metrics?.brier_score !== undefined
+                ? Number(trainModelDetails.best_model_metrics.brier_score).toFixed(4)
+                : "N/A"}
+            </strong>
+          </div>
+
+          <div className="detail-row">
+            <span>Log loss</span>
+            <strong>
+              {trainModelDetails.best_model_metrics?.log_loss !== undefined
+                ? Number(trainModelDetails.best_model_metrics.log_loss).toFixed(4)
+                : "N/A"}
+            </strong>
+          </div>
+        </div>
+
+        <div className="update-detail-card">
+          <h3>Future cards</h3>
+
+          <div className="detail-row">
+            <span>Upcoming events</span>
+            <strong>{formatNumber(refreshFutureCardsDetails.events)}</strong>
+          </div>
+
+          <div className="detail-row">
+            <span>Upcoming fights</span>
+            <strong>{formatNumber(refreshFutureCardsDetails.fights)}</strong>
+          </div>
+
+          <div className="detail-row">
+            <span>Cards saved</span>
+            <strong>{formatNumber(saveFuturePredictionsDetails.cards_saved)}</strong>
+          </div>
+
+          <div className="detail-row">
+            <span>Prediction rows saved</span>
+            <strong>{formatNumber(saveFuturePredictionsDetails.total_rows)}</strong>
+          </div>
+        </div>
+      </div>
+
+      {fightStatsUpdateDetails.skipped_fights?.length > 0 && (
+        <div className="skipped-fights-card">
+          <h3>Skipped fights</h3>
+          <p>
+            These fights were detected but skipped because complete stat tables were
+            unavailable.
+          </p>
+
+          <div className="skipped-fight-list">
+            {fightStatsUpdateDetails.skipped_fights.slice(0, 8).map((fight, index) => (
+              <div key={`${fight.fight_url}-${index}`}>
+                <strong>
+                  {fight.fighter_1} vs {fight.fighter_2}
+                </strong>
+                <span>{fight.reason}</span>
+              </div>
+            ))}
+          </div>
+
+          {fightStatsUpdateDetails.skipped_fights.length > 8 && (
+            <p>
+              Showing 8 of {fightStatsUpdateDetails.skipped_fights.length} skipped
+              fights.
+            </p>
+          )}
+        </div>
+      )}
+
+      {latestReportSummary.failed_stages?.length > 0 && (
+        <pre className="error-box">
+          Failed stages: {latestReportSummary.failed_stages.join(", ")}
+        </pre>
+      )}
+    </>
+  )}
+</section>
         </section>
       )}
     </main>
