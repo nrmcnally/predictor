@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import List, Optional
 
 import pandas as pd
-import requests
 from bs4 import BeautifulSoup
+
+from app.data.ufcstats_fetcher import fetch_ufcstats_html
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -60,14 +61,9 @@ def clean_text(value: str) -> str:
 
 
 def get_soup(url: str) -> BeautifulSoup:
-    """
-    Downloads a webpage and turns it into BeautifulSoup HTML.
-
-    Raises an error if the request fails.
-    """
-    response = requests.get(url, headers=HEADERS, timeout=30)
-    response.raise_for_status()
-    return BeautifulSoup(response.text, "html.parser")
+    """Downloads UFCStats HTML and turns it into BeautifulSoup."""
+    html = fetch_ufcstats_html(url)
+    return BeautifulSoup(html, "html.parser")
 
 
 def safe_column_text(columns: list, index: int) -> str:

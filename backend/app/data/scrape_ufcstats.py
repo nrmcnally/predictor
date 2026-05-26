@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import List
 
 import pandas as pd
-import requests
 from bs4 import BeautifulSoup
+
+from app.data.ufcstats_fetcher import fetch_ufcstats_html
 
 
 BASE_URL = "http://www.ufcstats.com"
@@ -62,14 +63,9 @@ def is_future_event(event_date: str) -> bool:
     return event_day > today
 
 def get_soup(url: str) -> BeautifulSoup:
-    """
-    Downloads a webpage and turns it into BeautifulSoup HTML.
-
-    Raises an error if the request fails.
-    """
-    response = requests.get(url, headers=HEADERS, timeout=30)
-    response.raise_for_status()
-    return BeautifulSoup(response.text, "html.parser")
+    """Downloads UFCStats HTML and turns it into BeautifulSoup."""
+    html = fetch_ufcstats_html(url)
+    return BeautifulSoup(html, "html.parser")
 
 
 def fetch_completed_events() -> List[UFCEvent]:

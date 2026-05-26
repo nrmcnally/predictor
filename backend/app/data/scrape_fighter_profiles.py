@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-import requests
 from bs4 import BeautifulSoup
+
+from app.data.ufcstats_fetcher import fetch_ufcstats_html
 
 import re
 
@@ -61,9 +62,9 @@ def clean_text(value: Any) -> str:
 
 
 def get_soup(url: str) -> BeautifulSoup:
-    response = requests.get(url, headers=HEADERS, timeout=30)
-    response.raise_for_status()
-    return BeautifulSoup(response.text, "html.parser")
+    """Downloads UFCStats HTML and turns it into BeautifulSoup."""
+    html = fetch_ufcstats_html(url)
+    return BeautifulSoup(html, "html.parser")
 
 
 def parse_height_to_inches(value: Any) -> float | None:
