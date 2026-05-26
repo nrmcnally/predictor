@@ -2580,3 +2580,168 @@ select:focus {
   color: #667085;
   font-style: italic;
 }
+
+/* Fighter images */
+.fighter-name,
+.fighter-matchup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.fighter-name {
+  max-width: 100%;
+}
+
+.fighter-name-text {
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.fighter-matchup {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.fighter-matchup-vs {
+  color: #667085;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fighter-avatar-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.fighter-avatar {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 900;
+  object-fit: cover;
+  box-shadow: 0 6px 14px rgba(16, 24, 40, 0.08);
+}
+
+.fighter-avatar.sm {
+  width: 34px;
+  height: 34px;
+  font-size: 0.78rem;
+}
+
+.fighter-avatar.lg {
+  width: 54px;
+  height: 54px;
+  font-size: 1rem;
+}
+
+.fighter-avatar.xl {
+  width: 62px;
+  height: 62px;
+  font-size: 1.05rem;
+}
+
+.fighter-avatar.has-image {
+  background: #f2f4f7;
+}
+
+.fighter-avatar.placeholder {
+  background:
+    radial-gradient(circle at top left, rgba(29, 78, 216, 0.16), transparent 70%),
+    #eff6ff;
+}
+
+.winner-card .fighter-name {
+  color: #ffffff;
+}
+
+.winner-card .fighter-name-text {
+  color: #ffffff;
+}
+
+.winner-card .fighter-avatar {
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+}
+
+.fighter-result-header {
+  align-items: center;
+}
+
+.fighter-result-header h3 {
+  min-width: 0;
+}
+
+.fighter-result-header h3 .fighter-name,
+.leaderboard-main h3 .fighter-name {
+  font-size: inherit;
+}
+
+.fighter-result-header h3 .fighter-name {
+  gap: 12px;
+}
+
+.fighter-result-header h3 .fighter-name-text {
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.1;
+}
+
+.fight-row strong .fighter-matchup,
+.fight-row strong .fighter-name {
+  color: #101828;
+}
+
+.fight-pick strong .fighter-name,
+.fight-result-pill strong .fighter-name {
+  justify-content: flex-end;
+  max-width: 170px;
+}
+
+.fight-pick strong .fighter-name-text,
+.fight-result-pill strong .fighter-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-main h3 {
+  margin-bottom: 4px;
+}
+
+@media (max-width: 760px) {
+  .fighter-matchup {
+    display: grid;
+    gap: 6px;
+  }
+
+  .fighter-matchup-vs {
+    margin-left: 42px;
+  }
+
+  .fighter-avatar.xl {
+    width: 54px;
+    height: 54px;
+  }
+
+  .fight-pick strong .fighter-name,
+  .fight-result-pill strong .fighter-name {
+    justify-content: flex-start;
+    max-width: 100%;
+  }
+}

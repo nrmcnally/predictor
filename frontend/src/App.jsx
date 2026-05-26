@@ -57,6 +57,137 @@ function getOddsForFight(oddsRows, fightUrl) {
   );
 }
 
+function normalizeFighterName(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function getFighterInitials(name) {
+  const parts = String(name || "")
+    .replaceAll("-", " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return "?";
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function getFighterImageData(fighterName, fighterImageLookup = {}) {
+  const name = String(fighterName || "").trim();
+  const key = normalizeFighterName(name);
+  const imageData = fighterImageLookup[key] || {};
+
+  const imageUrl =
+    imageData.image_url ||
+    imageData.fighter_image_url ||
+    imageData.url ||
+    "";
+
+  return {
+    name,
+    imageUrl,
+    sourceUrl:
+      imageData.source_url ||
+      imageData.fighter_image_source_url ||
+      "",
+    initials:
+      imageData.initials ||
+      imageData.fighter_initials ||
+      getFighterInitials(name),
+    available:
+      Boolean(imageUrl) ||
+      Boolean(imageData.image_available) ||
+      Boolean(imageData.fighter_image_available),
+  };
+}
+
+function FighterAvatar({
+  name,
+  imageLookup = {},
+  size = "sm",
+}) {
+  const imageData = getFighterImageData(name, imageLookup);
+  const className = `fighter-avatar ${size} ${
+    imageData.imageUrl ? "has-image" : "placeholder"
+  }`;
+
+  if (imageData.imageUrl) {
+    return (
+      <img
+        className={className}
+        src={imageData.imageUrl}
+        alt={`${imageData.name || "Fighter"} headshot`}
+        loading="lazy"
+        onError={(event) => {
+          event.currentTarget.style.display = "none";
+          const fallback = event.currentTarget.nextElementSibling;
+
+          if (fallback) {
+            fallback.style.display = "inline-flex";
+          }
+        }}
+      />
+    );
+  }
+
+  return (
+    <span className={className} aria-hidden="true">
+      {imageData.initials}
+    </span>
+  );
+}
+
+function FighterName({
+  name,
+  imageLookup = {},
+  size = "sm",
+  className = "",
+}) {
+  const imageData = getFighterImageData(name, imageLookup);
+
+  return (
+    <span className={`fighter-name ${className}`}>
+      <span className="fighter-avatar-wrap">
+        <FighterAvatar name={name} imageLookup={imageLookup} size={size} />
+        {imageData.imageUrl && (
+          <span
+            className={`fighter-avatar ${size} placeholder`}
+            style={{ display: "none" }}
+            aria-hidden="true"
+          >
+            {imageData.initials}
+          </span>
+        )}
+      </span>
+      <span className="fighter-name-text">{imageData.name || "Unknown fighter"}</span>
+    </span>
+  );
+}
+
+function FighterMatchup({
+  fighter1,
+  fighter2,
+  imageLookup = {},
+}) {
+  return (
+    <span className="fighter-matchup">
+      <FighterName name={fighter1} imageLookup={imageLookup} />
+      <span className="fighter-matchup-vs">vs</span>
+      <FighterName name={fighter2} imageLookup={imageLookup} />
+    </span>
+  );
+}
+
 function getCalibrationClass(row) {
   if (
     row?.accuracy === null ||
@@ -423,7 +554,7 @@ function parsePercentageText(value) {
   return parsed / 100;
 }
 
-function PredictionDetails({ prediction, showBasicEdges = false }) {
+function PredictionDetails({ prediction, showBasicEdges = false, fighterImageLookup = {} }) {
   const winnerSide = useMemo(() => {
     if (!prediction) {
       return null;
@@ -473,7 +604,7 @@ function PredictionDetails({ prediction, showBasicEdges = false }) {
     <>
       <div className="winner-card">
         <p className="eyebrow">Predicted winner</p>
-        <h2>{prediction.predicted_winner}</h2>
+        <h2><FighterName name={prediction.predicted_winner} imageLookup={fighterImageLookup} size="lg" /></h2>
         <p>{prediction.confidence_label}</p>
         <strong>{prediction.confidence_percentage}</strong>
       </div>
@@ -481,7 +612,7 @@ function PredictionDetails({ prediction, showBasicEdges = false }) {
       <div className="probability-grid">
         <div className={`fighter-result ${winnerSide === "fighter_a" ? "winner" : ""}`}>
           <div className="fighter-result-header">
-            <h3>{prediction.fighter_a}</h3>
+            <h3><FighterName name={prediction.fighter_a} imageLookup={fighterImageLookup} size="xl" /></h3>
             <strong>{prediction.fighter_a_percentage}</strong>
           </div>
           <div className="probability-bar">
@@ -496,7 +627,7 @@ function PredictionDetails({ prediction, showBasicEdges = false }) {
 
         <div className={`fighter-result ${winnerSide === "fighter_b" ? "winner" : ""}`}>
           <div className="fighter-result-header">
-            <h3>{prediction.fighter_b}</h3>
+            <h3><FighterName name={prediction.fighter_b} imageLookup={fighterImageLookup} size="xl" /></h3>
             <strong>{prediction.fighter_b_percentage}</strong>
           </div>
           <div className="probability-bar">
@@ -745,7 +876,7 @@ function FightOddsComparison({ fight, odds }) {
   );
 }
 
-function RecentFightDetails({ fight }) {
+function RecentFightDetails({ fight, fighterImageLookup = {} }) {
   if (!fight) {
     return (
       <div className="empty-state">
@@ -806,7 +937,7 @@ function RecentFightDetails({ fight }) {
           }`}
         >
           <div className="fighter-result-header">
-            <h3>{fight.fighter_1}</h3>
+            <h3><FighterName name={fight.fighter_1} imageLookup={fighterImageLookup} size="xl" /></h3>
             <strong>{fight.fighter_1_percentage || "N/A"}</strong>
           </div>
           <div className="probability-bar">
@@ -825,7 +956,7 @@ function RecentFightDetails({ fight }) {
           }`}
         >
           <div className="fighter-result-header">
-            <h3>{fight.fighter_2}</h3>
+            <h3><FighterName name={fight.fighter_2} imageLookup={fighterImageLookup} size="xl" /></h3>
             <strong>{fight.fighter_2_percentage || "N/A"}</strong>
           </div>
           <div className="probability-bar">
@@ -989,6 +1120,9 @@ function App() {
   const [futureFightOdds, setFutureFightOdds] = useState([]);
   const [futureFightOddsError, setFutureFightOddsError] = useState("");
 
+  const [fighterImageLookup, setFighterImageLookup] = useState({});
+  const [fighterImagesError, setFighterImagesError] = useState("");
+
   useEffect(() => {
     async function loadWeightClasses() {
       try {
@@ -1025,6 +1159,7 @@ function App() {
     loadModelEvaluation();
     loadMethodModelMetrics();
     loadFutureFightOdds();
+    loadFighterImages();
   }, []);
 
   useEffect(() => {
@@ -1128,6 +1263,40 @@ async function loadFutureFightOdds() {
     setFutureFightOdds(data.odds || []);
   } catch (requestError) {
     setFutureFightOddsError(requestError.message);
+  }
+}
+
+async function loadFighterImages() {
+  setFighterImagesError("");
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/fighter-images`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.detail?.message ||
+          data?.detail?.error ||
+          "Failed to load fighter images."
+      );
+    }
+
+    const lookup = {};
+
+    for (const imageData of data.images || []) {
+      const fighter = imageData.fighter || imageData.name;
+
+      if (!fighter) {
+        continue;
+      }
+
+      lookup[normalizeFighterName(fighter)] = imageData;
+    }
+
+    setFighterImageLookup(lookup);
+  } catch (requestError) {
+    setFighterImagesError(requestError.message);
+    setFighterImageLookup({});
   }
 }
 
@@ -1492,6 +1661,7 @@ async function loadLeaderboards() {
 
       if (!data.running) {
         loadLatestReport();
+        loadFighterImages();
       }
     } catch (requestError) {
       setUpdateError(requestError.message);
@@ -1942,6 +2112,7 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
             <PredictionDetails
               prediction={singlePrediction}
               showBasicEdges={showSingleFightEdges}
+              fighterImageLookup={fighterImageLookup}
             />
 
             <MethodPredictionDetails
@@ -2066,14 +2237,23 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                     >
                       <div>
                         <strong>
-                          {fight.fighter_1} vs {fight.fighter_2}
+                          <FighterMatchup
+                            fighter1={fight.fighter_1}
+                            fighter2={fight.fighter_2}
+                            imageLookup={fighterImageLookup}
+                          />
                         </strong>
                         <span>{fight.weight_class}</span>
                       </div>
 
                       {fight.prediction_available ? (
                         <div className="fight-pick">
-                          <strong>{fight.prediction.predicted_winner}</strong>
+                          <strong>
+                            <FighterName
+                              name={fight.prediction.predicted_winner}
+                              imageLookup={fighterImageLookup}
+                            />
+                          </strong>
                           <span>{fight.prediction.confidence_percentage}</span>
                         </div>
                       ) : (
@@ -2095,7 +2275,10 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
           </section>
 
           <section className="results-panel">
-            <PredictionDetails prediction={selectedFightPrediction} />
+            <PredictionDetails
+              prediction={selectedFightPrediction}
+              fighterImageLookup={fighterImageLookup}
+            />
           </section>
         </section>
       )}
@@ -2279,7 +2462,11 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                       >
                         <div>
                           <strong>
-                            {fight.fighter_1} vs {fight.fighter_2}
+                            <FighterMatchup
+                              fighter1={fight.fighter_1}
+                              fighter2={fight.fighter_2}
+                              imageLookup={fighterImageLookup}
+                            />
                           </strong>
                           <span>{fight.weight_class}</span>
 
@@ -2310,7 +2497,12 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
 
                         {fight.actual_result_available ? (
                           <>
-                            <strong>{fight.actual_winner}</strong>
+                            <strong>
+                              <FighterName
+                                name={fight.actual_winner}
+                                imageLookup={fighterImageLookup}
+                              />
+                            </strong>
                             <span>
                               {!fight.prediction_available
                                 ? "No saved prediction"
@@ -2321,7 +2513,16 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                           </>
                         ) : (
                             <>
-                              <strong>{fight.predicted_winner || "No prediction"}</strong>
+                              <strong>
+                                {fight.predicted_winner ? (
+                                  <FighterName
+                                    name={fight.predicted_winner}
+                                    imageLookup={fighterImageLookup}
+                                  />
+                                ) : (
+                                  "No prediction"
+                                )}
+                              </strong>
                               <span>Awaiting result</span>
                             </>
                           )}
@@ -2335,7 +2536,10 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
           </section>
 
           <section className="results-panel">
-            <RecentFightDetails fight={selectedRecentFight} />
+            <RecentFightDetails
+              fight={selectedRecentFight}
+              fighterImageLookup={fighterImageLookup}
+            />
           </section>
         </section>
       )}
@@ -2508,7 +2712,12 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
             </div>
 
             <div className="leaderboard-main">
-              <h3>{row.fighter}</h3>
+              <h3>
+                <FighterName
+                  name={row.fighter}
+                  imageLookup={fighterImageLookup}
+                />
+              </h3>
               <span>
                 {row.weight_class} • {row.prior_fights} UFC fights
               </span>

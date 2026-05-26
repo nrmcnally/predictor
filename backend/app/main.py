@@ -11,6 +11,11 @@ from pathlib import Path
 
 from app.services.method_prediction_service import predict_method_data
 
+from app.services.fighter_image_service import (
+    get_fighter_image_data,
+    load_fighter_image_lookup,
+)
+
 from app.services.odds_service import (
     load_future_fight_odds,
     refresh_future_fight_odds,
@@ -465,6 +470,26 @@ def refresh_future_fight_odds_endpoint() -> dict[str, Any]:
             status_code=500,
             detail={
                 "message": "Failed to refresh future fight odds.",
+                "error": str(error),
+            },
+        )
+    
+@app.get("/fighter-images")
+def fighter_images() -> dict[str, Any]:
+    try:
+        image_lookup = load_fighter_image_lookup()
+
+        return {
+            "available": True,
+            "count": len(image_lookup),
+            "images": list(image_lookup.values()),
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to load fighter images.",
                 "error": str(error),
             },
         )

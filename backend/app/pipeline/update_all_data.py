@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 import traceback
 from datetime import datetime
@@ -10,6 +11,11 @@ from typing import Any, Callable
 import pandas as pd
 
 from app.data.restore_fighter_dobs import restore_fighter_dobs_from_backup
+
+from app.data.scrape_fighter_images import (
+    FIGHTER_IMAGES_CSV,
+    scrape_fighter_images,
+)
 
 from app.data.scrape_ufcstats import (
     fetch_completed_events,
@@ -86,6 +92,47 @@ def restore_fighter_dobs_stage() -> dict[str, Any]:
 
 def seconds_since(start_time: float) -> float:
     return round(time.perf_counter() - start_time, 2)
+
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+
+    if value is None:
+        return default
+
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def env_int(name: str) -> int | None:
+    value = os.environ.get(name, "").strip()
+
+    if not value:
+        return None
+
+    return int(value)
+
+
+def env_float(name: str, default: float) -> float:
+    value = os.environ.get(name, "").strip()
+
+    if not value:
+        return default
+
+    return float(value)
+
+
+def normalize_image_mode(value: str, default: str) -> str:
+    allowed_modes = {"priority", "future", "current", "all"}
+    mode = value.strip().lower() or default
+
+    if mode not in allowed_modes:
+        print(
+            f"Invalid FIGHTER_IMAGE_MODE={value!r}. "
+            f"Using default mode: {default}"
+        )
+        return default
+
+    return mode
+
 
 def build_method_labels_stage() -> dict[str, Any]:
     summary = build_method_label_exploration()
@@ -335,6 +382,43 @@ def stage_build_current_fighter_features() -> dict[str, Any]:
     }
 
 
+
+
+def stage_refresh_fighter_images() -> dict[str, Any]:
+    """
+    Best-effort fighter image enrichment.
+
+    Full rebuild defaults to current roster coverage because current_fighter_features.csv
+    has just been rebuilt. Override with:
+        set FIGHTER_IMAGE_MODE=future
+        set FIGHTER_IMAGE_MODE=priority
+        set FIGHTER_IMAGE_MODE=all
+    """
+    mode = normalize_image_mode(
+        os.environ.get("FIGHTER_IMAGE_MODE", "current"),
+        default="current",
+    )
+
+    try:
+        return {
+            "available": True,
+            **scrape_fighter_images(
+                mode=mode,
+                limit=env_int("FIGHTER_IMAGE_LIMIT"),
+                delay_seconds=env_float("FIGHTER_IMAGE_DELAY_SECONDS", 0.2),
+                force=env_bool("FIGHTER_IMAGE_FORCE", False),
+            ),
+        }
+
+    except Exception as error:
+        return {
+            "available": False,
+            "message": "Skipped fighter image refresh.",
+            "error": str(error),
+            "output_file": str(FIGHTER_IMAGES_CSV),
+        }
+
+
 def stage_refresh_future_cards() -> dict[str, Any]:
     result = refresh_upcoming_cards()
 
@@ -372,6 +456,7 @@ def build_summary_report(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
         "current_fighter_features_rows": count_csv_rows(current_features_path),
         "upcoming_events_rows": count_csv_rows(upcoming_events_path),
         "upcoming_fights_rows": count_csv_rows(upcoming_fights_path),
+        "fighter_images_rows": count_csv_rows(RAW_DATA_DIR / "fighter_images.csv"),
         "failed_stages": failed_stages,
         "success": len(failed_stages) == 0,
     }
@@ -414,6 +499,7 @@ def run_update_all(stop_on_failure: bool = True) -> dict[str, Any]:
         ("Train calibrated model", stage_train_model),
         ("Build current fighter features", stage_build_current_fighter_features),
         ("Refresh future cards", stage_refresh_future_cards),
+        ("Refresh fighter images", stage_refresh_fighter_images),
     ]
 
     stage_reports = []

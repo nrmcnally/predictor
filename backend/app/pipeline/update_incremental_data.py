@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 import traceback
 from dataclasses import asdict
@@ -11,6 +12,11 @@ from typing import Any, Callable
 import pandas as pd
 
 from app.data.restore_fighter_dobs import restore_fighter_dobs_from_backup
+
+from app.data.scrape_fighter_images import (
+    FIGHTER_IMAGES_CSV,
+    scrape_fighter_images,
+)
 
 from app.services.odds_service import refresh_future_fight_odds
 
@@ -113,6 +119,47 @@ def restore_fighter_dobs_stage() -> dict[str, Any]:
 def seconds_since(start_time: float) -> float:
     return round(time.perf_counter() - start_time, 2)
 
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+
+    if value is None:
+        return default
+
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def env_int(name: str) -> int | None:
+    value = os.environ.get(name, "").strip()
+
+    if not value:
+        return None
+
+    return int(value)
+
+
+def env_float(name: str, default: float) -> float:
+    value = os.environ.get(name, "").strip()
+
+    if not value:
+        return default
+
+    return float(value)
+
+
+def normalize_image_mode(value: str, default: str) -> str:
+    allowed_modes = {"priority", "future", "current", "all"}
+    mode = value.strip().lower() or default
+
+    if mode not in allowed_modes:
+        print(
+            f"Invalid FIGHTER_IMAGE_MODE={value!r}. "
+            f"Using default mode: {default}"
+        )
+        return default
+
+    return mode
+
+
 
 def clean_text(value: Any) -> str:
     if value is None or pd.isna(value):
@@ -177,6 +224,43 @@ def refresh_future_fight_odds_stage() -> dict[str, Any]:
             "available": False,
             "message": "Skipped odds refresh. Set ODDS_API_KEY to enable odds.",
             "error": str(error),
+        }
+
+
+
+
+def refresh_fighter_images_stage() -> dict[str, Any]:
+    """
+    Best-effort fighter image enrichment.
+
+    Incremental updates default to future-card coverage so routine updates do not
+    attempt the entire current roster every time. Override with:
+        set FIGHTER_IMAGE_MODE=current
+        set FIGHTER_IMAGE_MODE=priority
+        set FIGHTER_IMAGE_MODE=all
+    """
+    mode = normalize_image_mode(
+        os.environ.get("FIGHTER_IMAGE_MODE", "future"),
+        default="future",
+    )
+
+    try:
+        return {
+            "available": True,
+            **scrape_fighter_images(
+                mode=mode,
+                limit=env_int("FIGHTER_IMAGE_LIMIT"),
+                delay_seconds=env_float("FIGHTER_IMAGE_DELAY_SECONDS", 0.2),
+                force=env_bool("FIGHTER_IMAGE_FORCE", False),
+            ),
+        }
+
+    except Exception as error:
+        return {
+            "available": False,
+            "message": "Skipped fighter image refresh.",
+            "error": str(error),
+            "output_file": str(FIGHTER_IMAGES_CSV),
         }
 
 
@@ -567,6 +651,7 @@ def build_summary(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
         "current_fighter_features_rows": count_csv_rows(PROCESSED_DATA_DIR / "current_fighter_features.csv"),
         "upcoming_events_rows": count_csv_rows(RAW_DATA_DIR / "upcoming_events.csv"),
         "upcoming_fights_rows": count_csv_rows(RAW_DATA_DIR / "upcoming_fights.csv"),
+        "fighter_images_rows": count_csv_rows(RAW_DATA_DIR / "fighter_images.csv"),
         "failed_stages": failed_stages,
         "success": len(failed_stages) == 0,
         "saved_card_predictions_rows": count_csv_rows(PROCESSED_DATA_DIR / "saved_card_predictions.csv"),
@@ -615,9 +700,8 @@ def run_incremental_update(
         ("Build current fighter features", build_current_fighter_features_stage),
         ("Add current age features", add_age_features_stage),
         ("Refresh future cards", refresh_future_cards_stage),
-        ("Refresh future cards", refresh_future_cards_stage),
+        ("Refresh fighter images", refresh_fighter_images_stage),
         ("Refresh future fight odds", refresh_future_fight_odds_stage),
-        ("Save future-card predictions", save_future_card_predictions_stage),
         ("Save future-card predictions", save_future_card_predictions_stage),
 ]
 
