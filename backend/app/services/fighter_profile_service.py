@@ -18,6 +18,7 @@ PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 
 FIGHT_STATS_CSV = RAW_DATA_DIR / "fight_stats.csv"
 CURRENT_FIGHTER_FEATURES_CSV = PROCESSED_DATA_DIR / "current_fighter_features.csv"
+FIGHTER_SNAPSHOTS_CSV = PROCESSED_DATA_DIR / "fighter_snapshots.csv"
 
 
 WEIGHT_CLASS_COLUMNS = [
@@ -713,6 +714,7 @@ def build_profile_stats(fighter_row: pd.Series) -> list[dict[str, Any]]:
 def build_fighter_profile(fighter_name: str) -> dict[str, Any]:
     features_df = load_current_fighter_features()
     fight_stats_df = load_fight_stats()
+    snapshots_df = load_fighter_snapshots()
 
     features_df = add_profile_weight_classes(features_df, fight_stats_df)
 
@@ -731,6 +733,15 @@ def build_fighter_profile(fighter_name: str) -> dict[str, Any]:
     image_data = get_fighter_image_data(fighter, image_lookup)
 
     weight_class = clean_text(fighter_row.get("_profile_weight_class", ""))
+    recent_fights = build_recent_fights(fighter_fight_rows)
+
+    elo_history = build_elo_history(
+        fighter_normalized=fighter_normalized,
+        snapshots_df=snapshots_df,
+        fight_stats_df=fight_stats_df,
+    )
+
+    form_summary = build_form_summary(recent_fights)
 
     profile = {
         "fighter": fighter,
@@ -755,7 +766,164 @@ def build_fighter_profile(fighter_name: str) -> dict[str, Any]:
         "notable_rankings": build_notable_rankings(features_df, fighter_row),
         "profile_stats": build_profile_stats(fighter_row),
         "method_summary": build_method_summary(fighter_fight_rows),
-        "recent_fights": build_recent_fights(fighter_fight_rows),
+
+        # New profile trend/form fields
+        "current_elo": safe_number(fighter_row.get("prior_elo")),
+        "current_elo_formatted": format_stat_value("prior_elo", fighter_row.get("prior_elo")),
+        "form_summary": form_summary,
+        "elo_history": elo_history,
+        "recent_fights": recent_fights,
     }
 
     return profile
+
+def load_fighter_snapshots() -> pd.DataFrame:
+    if not FIGHTER_SNAPSHOTS_CSV.exists():
+        return pd.DataFrame()
+
+    try:
+        df = pd.read_csv(FIGHTER_SNAPSHOTS_CSV)
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame()
+
+    if "fighter" in df.columns:
+        df = df.copy()
+        df["_fighter_normalized"] = df["fighter"].apply(normalize_name)
+
+    return df
+
+
+def build_elo_history(
+    fighter_normalized: str,
+    snapshots_df: pd.DataFrame,
+    fight_stats_df: pd.DataFrame,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    if snapshots_df.empty or "_fighter_normalized" not in snapshots_df.columns:
+        return []
+
+    fighter_rows = snapshots_df[
+        snapshots_df["_fighter_normalized"].eq(fighter_normalized)
+    ].copy()
+
+    if fighter_rows.empty:
+        return []
+
+    if "event_date" in fighter_rows.columns:
+        fighter_rows["_event_date_parsed"] = pd.to_datetime(
+            fighter_rows["event_date"],
+            errors="coerce",
+        )
+        fighter_rows = fighter_rows.sort_values("_event_date_parsed")
+
+    fight_lookup = {}
+
+    if (
+        not fight_stats_df.empty
+        and {"fight_url", "fighter", "opponent", "result", "method"}.issubset(fight_stats_df.columns)
+    ):
+        for _, row in fight_stats_df.iterrows():
+            key = (
+                clean_text(row.get("fight_url", "")),
+                normalize_name(row.get("fighter", "")),
+            )
+
+            fight_lookup[key] = {
+                "opponent": clean_text(row.get("opponent", "")),
+                "result": clean_text(row.get("result", "")),
+                "method": clean_text(row.get("method", "")),
+                "round": clean_text(row.get("round", "")),
+                "time": clean_text(row.get("time", "")),
+            }
+
+    fighter_rows = fighter_rows.reset_index(drop=True)
+
+    current_elo = None
+
+    if not fighter_rows.empty:
+        latest_prior_elo = safe_number(fighter_rows.iloc[-1].get("prior_elo"))
+        current_elo = latest_prior_elo
+
+
+    limited_rows = fighter_rows.tail(limit).reset_index(drop=True)
+
+    history = []
+
+    for index, row in limited_rows.iterrows():
+        fight_url = clean_text(row.get("fight_url", ""))
+        lookup_key = (fight_url, fighter_normalized)
+        fight_details = fight_lookup.get(lookup_key, {})
+
+        prior_elo = safe_number(row.get("prior_elo"))
+
+        next_prior_elo = None
+
+        if index + 1 < len(limited_rows):
+            next_prior_elo = safe_number(limited_rows.iloc[index + 1].get("prior_elo"))
+
+        plotted_elo = next_prior_elo if next_prior_elo is not None else current_elo
+
+        history.append(
+            {
+                "event_name": clean_text(row.get("event_name", "")),
+                "event_date": clean_text(row.get("event_date", "")),
+                "fight_url": fight_url,
+                "opponent": fight_details.get("opponent", clean_text(row.get("opponent", ""))),
+                "result": fight_details.get("result", clean_text(row.get("result", ""))),
+                "method": fight_details.get("method", clean_text(row.get("method", ""))),
+                "round": fight_details.get("round", clean_text(row.get("round", ""))),
+                "time": fight_details.get("time", clean_text(row.get("time", ""))),
+
+                # Existing values
+                "prior_elo": prior_elo,
+                "prior_peak_elo": safe_number(row.get("prior_peak_elo")),
+                "prior_elo_change_last_3": safe_number(row.get("prior_elo_change_last_3")),
+                "prior_elo_fights": safe_number(row.get("prior_elo_fights")),
+
+                # New chart-friendly values
+                "plotted_elo": plotted_elo,
+                "plotted_elo_label": "Post-fight/current Elo",
+            }
+        )
+
+    return history
+
+
+
+def build_form_summary(recent_fights: list[dict[str, Any]]) -> dict[str, Any]:
+    if not recent_fights:
+        return {
+            "last_5_record": "N/A",
+            "current_streak": "N/A",
+            "recent_results": [],
+        }
+
+    recent_results = [
+        clean_text(fight.get("result", "")).lower()
+        for fight in recent_fights[:5]
+    ]
+
+    wins = recent_results.count("win")
+    losses = recent_results.count("loss")
+
+    first_result = recent_results[0] if recent_results else ""
+    streak_count = 0
+
+    for result in recent_results:
+        if result and result == first_result:
+            streak_count += 1
+        else:
+            break
+
+    if first_result == "win":
+        streak = f"{streak_count}-fight win streak"
+    elif first_result == "loss":
+        streak = f"{streak_count}-fight losing streak"
+    else:
+        streak = "No active win/loss streak"
+
+    return {
+        "last_5_record": f"{wins}-{losses}",
+        "current_streak": streak,
+        "recent_results": recent_results,
+    }

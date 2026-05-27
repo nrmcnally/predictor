@@ -178,11 +178,40 @@ function FighterName({
   imageLookup = {},
   size = "sm",
   className = "",
+  onClick,
 }) {
   const imageData = getFighterImageData(name, imageLookup);
+  const isClickable = typeof onClick === "function" && Boolean(imageData.name);
+
+  function handleClick(event) {
+    if (!isClickable) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    onClick(imageData.name);
+  }
+
+  function handleKeyDown(event) {
+    if (!isClickable) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      handleClick(event);
+    }
+  }
 
   return (
-    <span className={`fighter-name ${className}`}>
+    <span
+      className={`fighter-name ${isClickable ? "clickable" : ""} ${className}`}
+      role={isClickable ? "button" : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      title={isClickable ? `Open ${imageData.name} profile` : undefined}
+      onClick={isClickable ? handleClick : undefined}
+      onKeyDown={isClickable ? handleKeyDown : undefined}
+    >
       <span className="fighter-avatar-wrap">
         <FighterAvatar name={name} imageLookup={imageLookup} size={size} />
         {imageData.imageUrl && (
@@ -204,12 +233,21 @@ function FighterMatchup({
   fighter1,
   fighter2,
   imageLookup = {},
+  onFighterClick,
 }) {
   return (
     <span className="fighter-matchup">
-      <FighterName name={fighter1} imageLookup={imageLookup} />
+      <FighterName
+        name={fighter1}
+        imageLookup={imageLookup}
+        onClick={onFighterClick}
+      />
       <span className="fighter-matchup-vs">vs</span>
-      <FighterName name={fighter2} imageLookup={imageLookup} />
+      <FighterName
+        name={fighter2}
+        imageLookup={imageLookup}
+        onClick={onFighterClick}
+      />
     </span>
   );
 }
@@ -903,6 +941,147 @@ function FightOddsComparison({ fight, odds }) {
   );
 }
 
+
+function FighterEloTrendChart({ eloHistory = [] }) {
+  const chartRows = (eloHistory || [])
+    .filter((row) => row?.prior_elo !== null && row?.prior_elo !== undefined && Number.isFinite(Number(row.plotted_elo ?? row.prior_elo)))
+    .slice(-12);
+
+  if (chartRows.length < 2) {
+    return <p className="profile-muted">Not enough Elo history to draw a trend yet.</p>;
+  }
+
+  const width = 720;
+  const height = 260;
+  const padding = { top: 28, right: 30, bottom: 42, left: 54 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  const eloValues = chartRows.map((row) => Number(row.plotted_elo ?? row.prior_elo));
+  const minElo = Math.min(...eloValues);
+  const maxElo = Math.max(...eloValues);
+  const range = Math.max(1, maxElo - minElo);
+  const paddedMin = minElo - range * 0.15;
+  const paddedMax = maxElo + range * 0.15;
+  const paddedRange = Math.max(1, paddedMax - paddedMin);
+
+  const points = chartRows.map((row, index) => {
+    const x = padding.left + (chartRows.length === 1 ? chartWidth / 2 : (index / (chartRows.length - 1)) * chartWidth);
+    const y = padding.top + ((paddedMax - Number(row.plotted_elo ?? row.prior_elo)) / paddedRange) * chartHeight;
+
+    return {
+      ...row,
+      x,
+      y,
+      elo: Number(row.plotted_elo ?? row.prior_elo),
+    };
+  });
+
+  const linePath = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+    .join(" ");
+
+  const firstPoint = points[0];
+  const lastPoint = points[points.length - 1];
+  const netChange = lastPoint.elo - firstPoint.elo;
+  const netChangeLabel = `${netChange >= 0 ? "+" : ""}${netChange.toFixed(0)}`;
+  const recentResults = [...chartRows]
+    .slice(-6)
+    .reverse()
+    .map((row) => String(row.result || "?").trim().slice(0, 1).toUpperCase() || "?");
+
+  const yTicks = [paddedMin, (paddedMin + paddedMax) / 2, paddedMax];
+
+  return (
+    <div>
+      <div className="profile-form-grid" style={{ marginBottom: 16 }}>
+        <div>
+          <span>Current plotted Elo</span>
+          <strong>{lastPoint.elo.toFixed(0)}</strong>
+        </div>
+
+        <div>
+          <span>Trend over shown fights</span>
+          <strong>{netChangeLabel}</strong>
+        </div>
+
+        <div>
+          <span>Recent sequence</span>
+          <strong>{recentResults.length ? recentResults.join(" - ") : "N/A"}</strong>
+        </div>
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label="Fighter Elo trend chart"
+          style={{ width: "100%", minWidth: 540, display: "block" }}
+        >
+          <rect x="0" y="0" width={width} height={height} rx="18" fill="#fcfcfd" />
+
+          {yTicks.map((tick) => {
+            const y = padding.top + ((paddedMax - tick) / paddedRange) * chartHeight;
+
+            return (
+              <g key={tick.toFixed(2)}>
+                <line
+                  x1={padding.left}
+                  x2={width - padding.right}
+                  y1={y}
+                  y2={y}
+                  stroke="#eaecf0"
+                  strokeWidth="1"
+                />
+                <text
+                  x={padding.left - 10}
+                  y={y + 4}
+                  textAnchor="end"
+                  fontSize="12"
+                  fill="#667085"
+                >
+                  {tick.toFixed(0)}
+                </text>
+              </g>
+            );
+          })}
+
+          <path d={linePath} fill="none" stroke="#1d4ed8" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+
+          {points.map((point) => {
+            const result = String(point.result || "").toLowerCase();
+            const fill = result === "win" ? "#067647" : result === "loss" ? "#b42318" : "#667085";
+
+            return (
+              <g key={`${point.fight_url || point.event_date}-${point.opponent || point.elo}`}>
+                <circle cx={point.x} cy={point.y} r="7" fill={fill} stroke="#ffffff" strokeWidth="3">
+                  <title>
+                    {`${point.event_date || "Unknown date"}: ${point.result || "Result unknown"} vs ${point.opponent || "Unknown"} — Elo ${point.elo.toFixed(0)}`}
+                  </title>
+                </circle>
+              </g>
+            );
+          })}
+
+          <text x={padding.left} y={height - 16} fontSize="12" fill="#667085">
+            {firstPoint.event_date || "First shown fight"}
+          </text>
+
+          <text x={width - padding.right} y={height - 16} textAnchor="end" fontSize="12" fill="#667085">
+            {lastPoint.event_date || "Latest shown fight"}
+          </text>
+        </svg>
+      </div>
+
+      <div className="profile-tag-list" style={{ marginTop: 14 }}>
+        <span>Green = win</span>
+        <span>Red = loss</span>
+        <span>Line uses post-fight/current Elo</span>
+      </div>
+    </div>
+  );
+}
+
 function RecentFightDetails({ fight, fighterImageLookup = {} }) {
   if (!fight) {
     return (
@@ -1253,6 +1432,33 @@ function FighterProfileTab({
             </div>
 
             <div className="profile-section-card">
+              <h2>Recent form</h2>
+
+              <div className="profile-form-grid">
+                <div>
+                  <span>Last 5 record</span>
+                  <strong>{fighterProfile.form_summary?.last_5_record || "N/A"}</strong>
+                </div>
+
+                <div>
+                  <span>Current streak</span>
+                  <strong>{fighterProfile.form_summary?.current_streak || "N/A"}</strong>
+                </div>
+
+                <div>
+                  <span>Recent results</span>
+                  <strong>
+                    {fighterProfile.form_summary?.recent_results?.length
+                      ? fighterProfile.form_summary.recent_results
+                          .map((result) => result?.[0]?.toUpperCase() || "?")
+                          .join(" - ")
+                      : "N/A"}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="profile-section-card">
               <h2>Style profile</h2>
 
               <div className="style-score-grid">
@@ -1275,6 +1481,15 @@ function FighterProfileTab({
                   <span key={tag}>{tag}</span>
                 ))}
               </div>
+            </div>
+
+            <div className="profile-section-card">
+              <h2>Elo / form trend</h2>
+              <p className="profile-muted">
+                This chart shows the fighter's Elo, so it gives a quick view of trajectory.
+              </p>
+
+              <FighterEloTrendChart eloHistory={fighterProfile.elo_history || []} />
             </div>
 
             <div className="profile-section-card">
@@ -1344,20 +1559,21 @@ function FighterProfileTab({
               <h2>Recent fight history</h2>
 
               <div className="profile-fight-history">
-                {fighterProfile.recent_fights?.length === 0 && (
-                  <p className="profile-muted">No recent UFC fight rows found.</p>
-                )}
-
                 {fighterProfile.recent_fights?.map((fight) => (
-                  <div className="profile-fight-row" key={fight.fight_url || `${fight.event_date}-${fight.opponent}`}>
+                  <div className="profile-fight-row" key={fight.fight_url}>
                     <div>
-                      <strong>
-                        <FighterName
-                          name={fight.opponent}
-                          imageLookup={fighterImageLookup}
-                          size="sm"
-                        />
-                      </strong>
+                      <button
+                        type="button"
+                        className="profile-fighter-link"
+                        onClick={() => {
+                          setProfileFighter(fight.opponent);
+                          loadFighterProfile(fight.opponent);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        {fight.opponent || "Unknown opponent"}
+                      </button>
+
                       <span>
                         {fight.event_date} • {fight.weight_class} • {fight.event_name}
                       </span>
@@ -1678,6 +1894,21 @@ async function loadFighterProfile(fighterName = profileFighter) {
 }
 
 
+
+
+function openFighterProfile(fighterName) {
+  const cleanedName = String(fighterName || "").trim();
+
+  if (!cleanedName) {
+    return;
+  }
+
+  setProfileFighter(cleanedName);
+  setProfileSearchResults([]);
+  setActiveView("profile");
+  loadFighterProfile(cleanedName);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
 async function loadMethodPrediction(nextFighterA, nextFighterB, nextWeightClass) {
   setMethodPredictionLoading(true);
@@ -2647,6 +2878,7 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                             fighter1={fight.fighter_1}
                             fighter2={fight.fighter_2}
                             imageLookup={fighterImageLookup}
+                            onFighterClick={openFighterProfile}
                           />
                         </strong>
                         <span>{fight.weight_class}</span>
@@ -2872,6 +3104,7 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                               fighter1={fight.fighter_1}
                               fighter2={fight.fighter_2}
                               imageLookup={fighterImageLookup}
+                              onFighterClick={openFighterProfile}
                             />
                           </strong>
                           <span>{fight.weight_class}</span>
@@ -3122,6 +3355,7 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
                 <FighterName
                   name={row.fighter}
                   imageLookup={fighterImageLookup}
+                  onClick={openFighterProfile}
                 />
               </h3>
               <span>

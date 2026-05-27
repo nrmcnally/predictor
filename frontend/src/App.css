@@ -3036,3 +3036,128 @@ select:focus {
     text-align: left;
   }
 }
+
+.profile-fighter-link {
+  border: 0;
+  padding: 0;
+  color: #101828;
+  background: transparent;
+  font: inherit;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-fighter-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.profile-form-grid div {
+  border: 1px solid #eaecf0;
+  border-radius: 18px;
+  padding: 14px;
+  background: #fcfcfd;
+}
+
+.profile-form-grid span {
+  display: block;
+  margin-bottom: 6px;
+  color: #667085;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.profile-form-grid strong {
+  color: #101828;
+  font-size: 1.2rem;
+}
+
+.elo-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.elo-history-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(100px, auto) minmax(120px, auto);
+  gap: 14px;
+  align-items: center;
+  border: 1px solid #eaecf0;
+  border-radius: 18px;
+  padding: 14px;
+  background: #fcfcfd;
+}
+
+.elo-history-row span {
+  display: block;
+  margin-top: 4px;
+  color: #667085;
+  font-size: 0.9rem;
+}
+
+.elo-history-stat {
+  text-align: right;
+}
+
+.elo-history-stat span {
+  margin-top: 0;
+  margin-bottom: 4px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.elo-history-stat strong {
+  color: #1d4ed8;
+  font-size: 1.2rem;
+}
+
+@media (max-width: 760px) {
+  .profile-form-grid,
+  .elo-history-row {
+    grid-template-columns: 1fr;
+  }
+
+  .elo-history-stat {
+    text-align: left;
+  }
+}
+
+.fighter-name.clickable {
+  cursor: pointer;
+}
+
+.fighter-name.clickable:hover .fighter-name-text,
+.fighter-name.clickable:focus-visible .fighter-name-text {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.fighter-name.clickable:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+
+.inline-fighter-link {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.inline-fighter-link:hover,
+.inline-fighter-link:focus-visible {
+  color: #1d4ed8;
+  text-decoration: underline;
+}

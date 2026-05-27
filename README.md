@@ -2,7 +2,7 @@
 
 A full-stack UFC fight prediction app that uses scraped UFCStats data, fighter history, Elo-style ratings, physical profile data, age features, calibrated machine-learning models, and optional betting-odds comparison data to predict individual fights and upcoming UFC cards.
 
-The app includes a FastAPI backend, a React/Vite frontend, an incremental data update pipeline, future-card predictions, saved pre-fight prediction tracking, optional market-odds snapshots, leaderboards, model evaluation tools, and a rule-based “Why this prediction?” explanation panel.
+The app includes a FastAPI backend, a React/Vite frontend, an incremental data update pipeline, future-card predictions, saved pre-fight prediction tracking, optional market-odds snapshots, fighter profile pages with photos and Elo trends, leaderboards, model evaluation tools, and a rule-based “Why this prediction?” explanation panel.
 
 ---
 
@@ -30,6 +30,16 @@ The app includes a FastAPI backend, a React/Vite frontend, an incremental data u
 - Recent Cards tab that compares saved pre-fight predictions against actual results
   - Saves odds snapshots with pre-fight predictions when `ODDS_API_KEY` is configured
   - Later compares model pick vs. market favorite vs. actual winner
+- Fighter Profile tab
+  - Fighter photo or initials fallback
+  - Current Elo, peak Elo, UFC record, win rate, age, height, and reach
+  - Recent form summary
+  - Elo/form trend graph
+  - Style assumptions based on available striking, grappling, and defense features
+  - Notable top-10 rankings overall or by weight class when available
+  - Recent fight history with clickable opponent navigation
+- Fighter images in Single Fight, Future Cards, Recent Cards, Leaderboards, and Fighter Profile views
+- Clickable fighter names in navigation-oriented areas to open Fighter Profile pages
 - Leaderboards by overall ranking and weight class
 - Model Evaluation tab
   - Fight accuracy
@@ -62,6 +72,7 @@ The app includes a FastAPI backend, a React/Vite frontend, an incremental data u
 - requests
 - joblib
 - Uvicorn
+- Playwright, used as a fallback when UFCStats returns a browser-check page
 
 ### Frontend
 
@@ -124,8 +135,16 @@ pip install -r requirements.txt
 If `requirements.txt` is missing, install the main packages manually:
 
 ```cmd
-pip install fastapi uvicorn pandas scikit-learn xgboost beautifulsoup4 requests joblib python-multipart
+pip install fastapi uvicorn pandas scikit-learn xgboost beautifulsoup4 requests joblib python-multipart playwright
 ```
+
+Install the Playwright Chromium browser dependency:
+
+```cmd
+python -m playwright install chromium
+```
+
+This is required because UFCStats may return a JavaScript/browser-check page to normal `requests` calls. The scraper tries `requests` first, then uses Playwright as a fallback when needed.
 
 ---
 
@@ -273,6 +292,7 @@ backend/data/processed/*.csv
 backend/data/reports/*.csv
 backend/data/reports/*.json
 backend/data/raw/current_mma_odds.json
+backend/data/raw/fighter_images.csv
 backend/data/processed/future_fight_odds.csv
 backend/models/*.joblib
 backend/models/*.json
@@ -356,7 +376,8 @@ The normal update path is incremental. It:
 13. Adds current age features
 14. Refreshes future cards
 15. Refreshes future fight odds if `ODDS_API_KEY` is configured
-16. Saves future-card prediction snapshots, including odds snapshots when available
+16. Refreshes fighter image URLs for relevant future/current fighters when configured in the update script
+17. Saves future-card prediction snapshots, including odds snapshots when available
 
 Command-line version:
 
@@ -365,6 +386,39 @@ cd backend
 .venv\Scripts\activate
 python -m app.pipeline.update_incremental_data
 ```
+
+## Fighter Image Refresh
+
+Fighter images are stored in:
+
+```text
+backend/data/raw/fighter_images.csv
+```
+
+The app uses this CSV as a local lookup file. If an image is missing, the frontend falls back to initials.
+
+Refresh images for upcoming/saved-card fighters:
+
+```cmd
+cd backend
+.venv\Scripts\activate
+python -m app.data.scrape_fighter_images --mode future
+```
+
+Refresh images for the broader current fighter feature set:
+
+```cmd
+python -m app.data.scrape_fighter_images --mode current
+```
+
+Useful options:
+
+```cmd
+python -m app.data.scrape_fighter_images --mode current --limit 100
+python -m app.data.scrape_fighter_images --mode future --force
+```
+
+Image scraping uses UFC.com athlete profile pages and their `og:image` metadata. Some fighters may need manual slug fixes when UFC.com uses a non-obvious athlete URL.
 
 Do **not** use the full rebuild unless scraper or feature-generation logic changes.
 
@@ -415,6 +469,28 @@ Includes:
   - Detailed method breakdown
 
 Method prediction is intentionally separate from winner prediction. It should be treated as directional fight-ending context, not a guaranteed exact finish prediction.
+
+## Fighter Profile
+
+Shows a fighter-level scouting page.
+
+Includes:
+
+- Fighter photo or initials fallback
+- Current Elo and peak Elo
+- UFC record and win rate
+- Age, height, and reach when available
+- Recent form summary
+- Elo/form trend graph
+- Style profile based on available striking, grappling, and defensive statistics
+- Notable top-10 rankings overall or within weight class when available
+- Method tendencies
+- Stat snapshot
+- Recent fight history
+
+Opponents in the recent fight history can be clicked to load that opponent’s Fighter Profile.
+
+Some style labels and notable rankings are heuristic, data-derived summaries. They are not official UFC labels and should be treated as directional scouting context.
 
 ## Future Cards
 
@@ -557,6 +633,22 @@ cd backend
 python -m app.services.odds_service
 ```
 
+## Refresh Fighter Images
+
+Future/saved-card fighters:
+
+```cmd
+cd backend
+.venv\Scripts\activate
+python -m app.data.scrape_fighter_images --mode future
+```
+
+Current fighter feature set:
+
+```cmd
+python -m app.data.scrape_fighter_images --mode current
+```
+
 ## Run Full Rebuild
 
 ```cmd
@@ -655,6 +747,26 @@ cd frontend
 npm install
 ```
 
+## UFCStats Scraping Returns `Loading…` or `Checking your browser…`
+
+UFCStats may serve a browser-check page to normal `requests` calls. The scraper now uses Playwright as a fallback, but Playwright must be installed in the active backend environment.
+
+From the backend folder:
+
+```cmd
+.venv\Scripts\activate
+pip install playwright
+python -m playwright install chromium
+```
+
+Quick diagnostic:
+
+```cmd
+python -c "from bs4 import BeautifulSoup; from app.data.ufcstats_fetcher import fetch_ufcstats_html,is_browser_check_html; html=fetch_ufcstats_html('http://ufcstats.com/statistics/events/completed?page=all'); soup=BeautifulSoup(html,'html.parser'); print('browser_check:',is_browser_check_html(html)); print('title:',soup.title.get_text(' ',strip=True) if soup.title else 'NO TITLE'); print('event links:',len(soup.select('a[href*=\"/event-details/\"]')))"
+```
+
+A healthy response should show `browser_check: False`, title `Stats | UFC`, and hundreds of event links.
+
 ## Backend Starts but Predictions Fail
 
 The model or data files are probably missing.
@@ -734,12 +846,50 @@ Expected generated files:
 
 ```text
 backend/data/raw/current_mma_odds.json
+backend/data/raw/fighter_images.csv
 backend/data/processed/future_fight_odds.csv
 ```
 
 These generated files should stay ignored by Git.
 
 If Future Cards shows odds but Recent Cards does not, that usually means the card was saved before odds were added. Run the incremental update again before the event to save a new snapshot that includes odds.
+
+## Fighter Images Are Missing
+
+Fighter images are optional. Missing images fall back to initials.
+
+Check whether the image CSV exists:
+
+```cmd
+cd backend
+.venv\Scripts\activate
+python -c "import pandas as pd; df=pd.read_csv('data/raw/fighter_images.csv'); print(df.shape); print(df.head().to_string())"
+```
+
+Refresh images:
+
+```cmd
+python -m app.data.scrape_fighter_images --mode future
+python -m app.data.scrape_fighter_images --mode current
+```
+
+If one fighter is missing, UFC.com may use an unusual athlete slug. You can manually add a row to `backend/data/raw/fighter_images.csv` with:
+
+```text
+fighter,image_url,source_url,slug,page_title
+```
+
+## Fighter Profile Tab Does Not Load
+
+Check that the backend is running and the endpoint responds:
+
+```cmd
+cd backend
+.venv\Scripts\activate
+python -c "import requests; r=requests.get('http://127.0.0.1:8000/fighter-profile', params={'fighter':'Khamzat Chimaev'}); print(r.status_code); print(r.text[:500])"
+```
+
+If this fails, verify that `backend/data/processed/current_fighter_features.csv`, `backend/data/raw/fight_stats.csv`, and the trained model/data pipeline outputs exist.
 
 ## Frontend Loads but Cannot Reach API
 
@@ -762,9 +912,10 @@ http://localhost:5173
 Possible future improvements:
 
 - Weight-class movement and size-context features
-- Fighter profile pages
 - Export card predictions
 - Deployment packaging
 - More detailed model diagnostics
+- Fighter comparison mode
+- Better profile charts and tooltips
 - Model-vs-market evaluation for saved odds snapshots
 - Better handling for fighters with limited UFC history
