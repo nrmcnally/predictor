@@ -48,6 +48,7 @@ from app.features.add_physical_features import (
     add_physical_features_to_snapshots,
     save_snapshots,
 )
+from app.features.add_weight_size_features import add_weight_size_features
 from app.features.build_matchups import (
     load_fighter_snapshots,
     build_matchup_training_rows,
@@ -325,6 +326,10 @@ def stage_add_physical_features() -> dict[str, Any]:
     }
 
 
+def stage_add_weight_size_features() -> dict[str, Any]:
+    return add_weight_size_features()
+
+
 def stage_build_matchups() -> dict[str, Any]:
     snapshots_df = load_fighter_snapshots()
     matchups_df = build_matchup_training_rows(snapshots_df)
@@ -492,6 +497,7 @@ def run_update_all(stop_on_failure: bool = True) -> dict[str, Any]:
         ("Build fighter snapshots", stage_build_fighter_snapshots),
         ("Add Elo features", stage_add_elo_features),
         ("Add physical features", stage_add_physical_features),
+        ("Add weight/size features", stage_add_weight_size_features),
         ("Build matchup training rows", stage_build_matchups),
         ("Build method labels", build_method_labels_stage),
         ("Build method training data", build_method_training_data_stage),

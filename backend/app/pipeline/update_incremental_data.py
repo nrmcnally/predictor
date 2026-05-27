@@ -64,6 +64,7 @@ from app.features.add_physical_features import (
     add_physical_features_to_snapshots,
     save_snapshots,
 )
+from app.features.add_weight_size_features import add_weight_size_features
 
 from app.features.build_matchups import (
     load_fighter_snapshots,
@@ -565,6 +566,10 @@ def add_physical_features_stage() -> dict[str, Any]:
     }
 
 
+def add_weight_size_features_stage() -> dict[str, Any]:
+    return add_weight_size_features()
+
+
 def build_matchups_stage() -> dict[str, Any]:
     snapshots_df = load_fighter_snapshots()
     matchups_df = build_matchup_training_rows(snapshots_df)
@@ -691,6 +696,7 @@ def run_incremental_update(
         ("Build fighter snapshots", build_fighter_snapshots_stage),
         ("Add Elo features", add_elo_features_stage),
         ("Add physical features", add_physical_features_stage),
+        ("Add weight/size features", add_weight_size_features_stage),
         ("Add age features", add_age_features_stage),
         ("Build matchup training rows", build_matchups_stage),
         ("Build method labels", build_method_labels_stage),

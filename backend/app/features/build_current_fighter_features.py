@@ -19,6 +19,10 @@ from app.features.add_elo_features import (
     expected_score,
     method_multiplier,
 )
+from app.features.add_weight_size_features import (
+    add_weight_size_features_to_current_features,
+    load_fighter_profiles,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -246,6 +250,14 @@ def build_current_features(
             how="left",
         )
 
+    profiles_df = load_fighter_profiles()
+
+    current_df = add_weight_size_features_to_current_features(
+        profiles_df=profiles_df,
+        current_features_df=current_df,
+        fight_stats_df=engineered_df,
+    )
+
     return current_df
 
 
@@ -290,6 +302,10 @@ def main() -> None:
         "prior_elo",
         "height_inches",
         "reach_inches",
+        "listed_weight_lbs",
+        "listed_weight_minus_class_lbs",
+        "prior_common_weight_class_lbs",
+        "current_vs_common_weight_class_lbs_delta",
         "is_southpaw",
         "is_switch_stance",
     ]

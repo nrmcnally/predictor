@@ -7,7 +7,19 @@ from pathlib import Path
 from typing import Any
 
 import joblib
+import numpy as np
 import pandas as pd
+
+from app.features.add_weight_size_features import (
+    WEIGHT_SIZE_FEATURE_COLUMNS,
+    build_division_average_lookup,
+    build_profile_lookup,
+    build_weight_size_feature_row,
+    load_fight_stats as load_weight_size_fight_stats,
+    load_fighter_profiles as load_weight_size_fighter_profiles,
+    normalize_name as normalize_weight_size_name,
+    sorted_fight_stats,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -186,6 +198,93 @@ def get_fighter_row(features_df: pd.DataFrame, fighter_name: str) -> pd.Series:
     )
 
 
+@lru_cache(maxsize=1)
+def load_weight_size_prediction_context():
+    """
+    Loads context needed to recalculate weight/size features at prediction time.
+
+    current_fighter_features.csv represents each fighter's latest known feature row.
+    For a future matchup, the requested prediction weight class can differ from
+    the fighter's most recent historical division. We recalculate these columns
+    against the requested matchup division so weight-class movement is modeled
+    as transition/context, not as a literal stale body-weight penalty.
+    """
+    try:
+        profiles_df = load_weight_size_fighter_profiles()
+        fight_stats_df = load_weight_size_fight_stats()
+    except FileNotFoundError:
+        return {}, {}, {}
+
+    profile_lookup = build_profile_lookup(profiles_df)
+    division_average_lookup = build_division_average_lookup(
+        profiles_df=profiles_df,
+        fight_stats_df=fight_stats_df,
+    )
+
+    historical_classes_by_fighter: dict[str, list[str]] = {}
+
+    for _, fight_row in sorted_fight_stats(fight_stats_df).iterrows():
+        fighter = clean_text(fight_row.get("fighter", ""))
+        historical_weight_class = clean_text(fight_row.get("weight_class", ""))
+
+        if not fighter or not historical_weight_class:
+            continue
+
+        fighter_key = normalize_weight_size_name(fighter)
+        historical_classes_by_fighter.setdefault(fighter_key, []).append(historical_weight_class)
+
+    return profile_lookup, division_average_lookup, historical_classes_by_fighter
+
+
+def apply_prediction_weight_class_context(
+    fighter_row: pd.Series,
+    prediction_weight_class: str,
+) -> pd.Series:
+    """
+    Returns a copy of a fighter's current feature row adjusted for this matchup's
+    requested weight class.
+
+    This keeps height/reach/skill/Elo current, but recalculates columns like
+    current_vs_recent_weight_class_lbs_delta using the prediction weight class.
+    That way a fighter moving from 170 to 185 is treated as moving up in class,
+    not as literally still being a 170 lb fighter in a 185 lb matchup.
+    """
+    row = fighter_row.copy()
+    fighter = clean_text(row.get("fighter", ""))
+    prediction_weight_class = clean_text(prediction_weight_class)
+
+    if not fighter or not prediction_weight_class:
+        return row
+
+    profile_lookup, division_average_lookup, historical_classes_by_fighter = (
+        load_weight_size_prediction_context()
+    )
+
+    history = historical_classes_by_fighter.get(
+        normalize_weight_size_name(fighter),
+        [],
+    )
+
+    feature_values = build_weight_size_feature_row(
+        fighter=fighter,
+        current_weight_class=prediction_weight_class,
+        historical_weight_classes=history,
+        profile_lookup=profile_lookup,
+        division_average_lookup=division_average_lookup,
+    )
+
+    for column in WEIGHT_SIZE_FEATURE_COLUMNS:
+        if column not in feature_values:
+            continue
+
+        value = feature_values[column]
+        row[column] = np.nan if value is None else value
+
+    row["weight_class"] = prediction_weight_class
+
+    return row
+
+
 def build_model_input_row(
     fighter_a_row: pd.Series,
     fighter_b_row: pd.Series,
@@ -201,21 +300,23 @@ def build_model_input_row(
 
         base_column = feature.removeprefix("diff_")
 
-        fighter_a_value = fighter_a_row.get(base_column, pd.NA)
-        fighter_b_value = fighter_b_row.get(base_column, pd.NA)
+        fighter_a_value = optional_float(fighter_a_row.get(base_column))
+        fighter_b_value = optional_float(fighter_b_row.get(base_column))
 
-        row[feature] = fighter_a_value - fighter_b_value
+        if fighter_a_value is None or fighter_b_value is None:
+            row[feature] = np.nan
+        else:
+            row[feature] = fighter_a_value - fighter_b_value
 
     for feature in categorical_features:
         if feature == "weight_class":
-            row[feature] = weight_class
+            row[feature] = clean_text(weight_class)
         else:
-            row[feature] = pd.NA
+            row[feature] = ""
 
     feature_order = numeric_features + categorical_features
 
     return pd.DataFrame([row], columns=feature_order)
-
 
 def predict_direct_probability(
     model,
@@ -286,7 +387,18 @@ def build_basic_matchup_edges(
             "unit": unit,
         }
 
-    edges = [
+    def should_show_edge(edge: dict[str, Any], minimum_abs_difference: float | None = None) -> bool:
+        if minimum_abs_difference is None:
+            return True
+
+        difference = edge.get("difference")
+
+        if difference is None or pd.isna(difference):
+            return False
+
+        return abs(float(difference)) >= minimum_abs_difference
+
+    core_edges = [
         make_edge(
             label="Elo edge",
             column="prior_elo",
@@ -312,24 +424,74 @@ def build_basic_matchup_edges(
             column="height_inches",
             unit="in",
         ),
-        make_edge(
-            label="Striking differential edge",
-            column="avg_sig_str_differential_per_15",
-            unit="sig str/15",
+    ]
+
+    # Visible size edges are limited to actual size/size-for-division context.
+    # Weight-class movement remains available to the model as a feature, but it
+    # is intentionally hidden from the basic edge list because movement is
+    # contextual/uncertain rather than a direct sided advantage.
+    conditional_weight_size_edges = [
+        (
+            make_edge(
+                label="Listed weight edge",
+                column="listed_weight_lbs",
+                unit="lbs",
+            ),
+            5.0,
         ),
-        make_edge(
-            label="Takedown differential edge",
-            column="avg_td_landed_per_15",
-            unit="TD/15",
+        (
+            make_edge(
+                label="Size-for-division edge",
+                column="listed_weight_vs_weight_class_avg_lbs",
+                unit="lbs vs div avg",
+            ),
+            5.0,
         ),
-        make_edge(
-            label="Age edge",
-            column="age_years",
-            unit="yrs",
+        (
+            make_edge(
+                label="Height vs division edge",
+                column="height_vs_weight_class_avg_inches",
+                unit="in vs div avg",
+            ),
+            1.5,
+        ),
+        (
+            make_edge(
+                label="Reach vs division edge",
+                column="reach_vs_weight_class_avg_inches",
+                unit="in vs div avg",
+            ),
+            2.0,
         ),
     ]
 
-    return edges
+    core_edges.extend(
+        edge
+        for edge, minimum_abs_difference in conditional_weight_size_edges
+        if should_show_edge(edge, minimum_abs_difference)
+    )
+
+    core_edges.extend(
+        [
+            make_edge(
+                label="Striking differential edge",
+                column="avg_sig_str_differential_per_15",
+                unit="sig str/15",
+            ),
+            make_edge(
+                label="Takedown differential edge",
+                column="avg_td_landed_per_15",
+                unit="TD/15",
+            ),
+            make_edge(
+                label="Age edge",
+                column="age_years",
+                unit="yrs",
+            ),
+        ]
+    )
+
+    return core_edges
 
 def get_edge_by_label(
     edges: list[dict[str, Any]],
@@ -569,6 +731,80 @@ def build_matchup_insights(
         insights=insights,
         fighter_a=fighter_a,
         fighter_b=fighter_b,
+        edge=get_edge_by_label(edges, "Listed weight edge"),
+        minimum_threshold=5.0,
+        moderate_threshold=10.0,
+        strong_threshold=20.0,
+        title="Listed weight / size edge",
+        advantage_template=(
+            "{advantaged_fighter} is listed {value} heavier, which may indicate a "
+            "size or strength edge if the listed weights are accurate."
+        ),
+        concern_template=(
+            "{disadvantaged_fighter} is listed {value} lighter, which may matter in "
+            "physical exchanges, clinches, and grappling sequences."
+        ),
+    )
+
+    add_sided_insight(
+        insights=insights,
+        fighter_a=fighter_a,
+        fighter_b=fighter_b,
+        edge=get_edge_by_label(edges, "Size-for-division edge"),
+        minimum_threshold=5.0,
+        moderate_threshold=10.0,
+        strong_threshold=20.0,
+        title="Size relative to division",
+        advantage_template=(
+            "{advantaged_fighter} profiles {value} larger relative to the division average, "
+            "which may point to a size-for-weight-class advantage."
+        ),
+        concern_template=(
+            "{disadvantaged_fighter} profiles {value} smaller relative to the division average."
+        ),
+    )
+
+    add_sided_insight(
+        insights=insights,
+        fighter_a=fighter_a,
+        fighter_b=fighter_b,
+        edge=get_edge_by_label(edges, "Height vs division edge"),
+        minimum_threshold=1.5,
+        moderate_threshold=2.5,
+        strong_threshold=4.0,
+        title="Height relative to division",
+        advantage_template=(
+            "{advantaged_fighter} is {value} taller relative to the division average, "
+            "which can support range, clinch frames, and defensive looks."
+        ),
+        concern_template=(
+            "{disadvantaged_fighter} is {value} shorter relative to the division average."
+        ),
+    )
+
+    add_sided_insight(
+        insights=insights,
+        fighter_a=fighter_a,
+        fighter_b=fighter_b,
+        edge=get_edge_by_label(edges, "Reach vs division edge"),
+        minimum_threshold=2.0,
+        moderate_threshold=3.0,
+        strong_threshold=5.0,
+        title="Reach relative to division",
+        advantage_template=(
+            "{advantaged_fighter} is {value} longer relative to the division average, "
+            "which may help with distance management."
+        ),
+        concern_template=(
+            "{disadvantaged_fighter} is {value} shorter in reach relative to the division average."
+        ),
+    )
+
+
+    add_sided_insight(
+        insights=insights,
+        fighter_a=fighter_a,
+        fighter_b=fighter_b,
         edge=get_edge_by_label(edges, "Striking differential edge"),
         minimum_threshold=5.0,
         moderate_threshold=12.0,
@@ -680,6 +916,15 @@ def predict_fight_data(
     fighter_a_row = get_fighter_row(features_df, fighter_a)
     fighter_b_row = get_fighter_row(features_df, fighter_b)
 
+    fighter_a_row = apply_prediction_weight_class_context(
+        fighter_row=fighter_a_row,
+        prediction_weight_class=weight_class,
+    )
+    fighter_b_row = apply_prediction_weight_class_context(
+        fighter_row=fighter_b_row,
+        prediction_weight_class=weight_class,
+    )
+
     fighter_a_direct_probability = predict_direct_probability(
         model=model,
         fighter_a_row=fighter_a_row,
@@ -757,3 +1002,4 @@ def clear_prediction_cache() -> None:
     """
     load_current_features.cache_clear()
     load_model_and_features.cache_clear()
+    load_weight_size_prediction_context.cache_clear()

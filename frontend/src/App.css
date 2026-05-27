@@ -3161,3 +3161,2396 @@ select:focus {
   color: #1d4ed8;
   text-decoration: underline;
 }
+
+.model-market-evaluation-section {
+  display: grid;
+  gap: 18px;
+}
+
+.model-market-evaluation-section .recent-info-box {
+  margin-top: 16px;
+}
+
+.model-market-evaluation-section .recent-info-box p {
+  margin: 0 0 8px;
+}
+
+.model-market-evaluation-section .recent-info-box p:last-child {
+  margin-bottom: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sleek remodel + theme system                                               */
+/* -------------------------------------------------------------------------- */
+:root {
+  --app-bg: #eef2f8;
+  --app-bg-2: #f8fbff;
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-solid: #ffffff;
+  --surface-soft: #f8fafc;
+  --surface-raised: rgba(255, 255, 255, 0.94);
+  --border: rgba(15, 23, 42, 0.10);
+  --border-strong: rgba(29, 78, 216, 0.28);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --accent-soft: #dbeafe;
+  --accent-softer: #eff6ff;
+  --success: #059669;
+  --success-soft: #dcfce7;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --warning: #d97706;
+  --warning-soft: #fef3c7;
+  --shadow-card: 0 24px 70px rgba(15, 23, 42, 0.10);
+  --shadow-soft: 0 12px 34px rgba(15, 23, 42, 0.08);
+  --shadow-button: 0 16px 36px rgba(37, 99, 235, 0.25);
+  --blur-surface: blur(18px) saturate(130%);
+}
+
+html[data-theme="dark"] {
+  --app-bg: #050816;
+  --app-bg-2: #0b1220;
+  --surface: rgba(15, 23, 42, 0.74);
+  --surface-solid: #0f172a;
+  --surface-soft: #111827;
+  --surface-raised: rgba(30, 41, 59, 0.88);
+  --border: rgba(148, 163, 184, 0.18);
+  --border-strong: rgba(96, 165, 250, 0.38);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-strong: #3b82f6;
+  --accent-soft: rgba(96, 165, 250, 0.18);
+  --accent-softer: rgba(96, 165, 250, 0.12);
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, 0.16);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.15);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.14);
+  --shadow-card: 0 28px 80px rgba(0, 0, 0, 0.40);
+  --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.32);
+  --shadow-button: 0 16px 36px rgba(37, 99, 235, 0.28);
+}
+
+html {
+  background: var(--app-bg);
+}
+
+body {
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 10% -10%, rgba(37, 99, 235, 0.22), transparent 34rem),
+    radial-gradient(circle at 90% 0%, rgba(14, 165, 233, 0.13), transparent 30rem),
+    linear-gradient(180deg, var(--app-bg-2), var(--app-bg));
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 12% -8%, rgba(37, 99, 235, 0.30), transparent 34rem),
+    radial-gradient(circle at 92% 2%, rgba(14, 165, 233, 0.14), transparent 30rem),
+    radial-gradient(circle at 50% 100%, rgba(30, 41, 59, 0.80), transparent 42rem),
+    linear-gradient(180deg, #050816, #0b1020 48%, #050816);
+}
+
+.app-shell {
+  width: min(1260px, calc(100% - 36px));
+  padding: 32px 0 48px;
+}
+
+.hero {
+  align-items: center;
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-radius: 34px;
+  padding: 30px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.70), rgba(255, 255, 255, 0.42)),
+    var(--surface);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: var(--blur-surface);
+}
+
+html[data-theme="dark"] .hero {
+  background:
+    linear-gradient(135deg, rgba(30, 41, 59, 0.88), rgba(15, 23, 42, 0.58)),
+    var(--surface);
+}
+
+h1 {
+  color: var(--text-primary);
+  font-size: clamp(2.4rem, 5vw, 4.95rem);
+  letter-spacing: -0.075em;
+}
+
+h2,
+h3 {
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+}
+
+p,
+.hero-copy {
+  color: var(--text-secondary);
+}
+
+.eyebrow {
+  color: var(--accent);
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.status-card,
+.theme-toggle,
+.view-tabs,
+.compact-dashboard-toggle,
+.dashboard-card,
+.predict-card,
+.results-panel,
+.edges-card,
+.fighter-result,
+.empty-state,
+.cards-sidebar,
+.card-fights-panel,
+.update-card,
+.report-grid div,
+.update-status-grid div,
+.recent-result-card,
+.insights-card,
+.explanation-section,
+.method-card,
+.method-section,
+.leaderboard-controls-card,
+.leaderboard-results-card,
+.evaluation-controls-card,
+.evaluation-card,
+.profile-search-card,
+.fighter-profile-panel,
+.profile-section-card,
+.fighter-profile-hero-card {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: var(--blur-surface);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 13px 15px;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  font-weight: 900;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+  background: var(--accent-softer);
+  outline: none;
+}
+
+.view-tabs {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+  overflow-x: auto;
+  gap: 6px;
+  margin-bottom: 22px;
+  border-radius: 999px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(20px) saturate(160%);
+}
+
+html[data-theme="dark"] .view-tabs {
+  background: rgba(15, 23, 42, 0.74);
+}
+
+.view-tabs button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 15px;
+  color: var(--text-secondary);
+  background: transparent;
+  box-shadow: none;
+  transition: color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.view-tabs button:hover {
+  color: var(--text-primary);
+  background: var(--surface-raised);
+}
+
+.view-tabs button.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+  box-shadow: var(--shadow-button);
+}
+
+input,
+select,
+textarea {
+  border-color: var(--border);
+  color: var(--text-primary);
+  background: var(--surface-solid);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+input::placeholder {
+  color: var(--text-muted);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+label,
+.edge-row strong,
+.detail-row strong,
+.leaderboard-score strong,
+.leaderboard-supporting-stats strong,
+.evaluation-summary-grid strong,
+.profile-headline-grid strong,
+.profile-stat-grid strong,
+.method-row-label strong,
+.method-metric-grid strong,
+.update-summary-grid strong,
+.recent-card-summary-grid strong,
+.future-card-summary-grid strong,
+.dashboard-card strong,
+.fight-row strong,
+.event-card strong {
+  color: var(--text-primary);
+}
+
+.edge-row span,
+.detail-row span,
+.leaderboard-main span,
+.leaderboard-score span,
+.leaderboard-supporting-stats span,
+.evaluation-summary-grid span,
+.evaluation-table-row span,
+.profile-headline-grid span,
+.profile-stat-grid span,
+.method-summary-row span,
+.method-row-label span,
+.update-summary-grid span,
+.recent-card-summary-grid span,
+.future-card-summary-grid span,
+.dashboard-card span,
+.dashboard-card em,
+.fight-row span,
+.event-card span,
+.event-card em,
+.profile-muted,
+.profile-note,
+.method-note,
+.evaluation-card-note,
+.odds-comparison span,
+.odds-comparison small {
+  color: var(--text-muted);
+}
+
+.primary-button,
+.probability-fill,
+.progress-fill,
+.method-bar-fill {
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+  box-shadow: var(--shadow-button);
+}
+
+.primary-button,
+.secondary-button,
+.cards-sidebar-header button,
+.selected-card-header button,
+.report-header button,
+.example-fight-row button,
+.suggestions button,
+.event-card,
+.fight-row,
+.compact-dashboard-toggle,
+.inline-fighter-link,
+.profile-fighter-link {
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.primary-button:hover:not(:disabled),
+.secondary-button:hover,
+.cards-sidebar-header button:hover,
+.selected-card-header button:hover,
+.report-header button:hover,
+.example-fight-row button:hover,
+.suggestions button:hover,
+.event-card:hover,
+.fight-row:hover,
+.compact-dashboard-toggle:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-soft);
+}
+
+.secondary-button,
+.cards-sidebar-header button,
+.selected-card-header button,
+.report-header button,
+.example-fight-row button,
+.suggestions button {
+  border-color: var(--border);
+  color: var(--text-primary);
+  background: var(--surface-raised);
+}
+
+.secondary-button:hover,
+.cards-sidebar-header button:hover,
+.selected-card-header button:hover,
+.report-header button:hover,
+.example-fight-row button:hover,
+.suggestions button:hover {
+  color: var(--accent);
+  background: var(--accent-softer);
+}
+
+.edge-row,
+.future-card-summary-grid div,
+.recent-card-summary-grid div,
+.update-summary-grid div,
+.update-detail-card,
+.skipped-fights-card,
+.evaluation-summary-grid div,
+.evaluation-table-row,
+.evaluation-prediction-row,
+.evaluation-compact-prediction-row,
+.evaluation-threshold-row,
+.evaluation-calibration-row,
+.leaderboard-row,
+.leaderboard-supporting-stats div,
+.profile-headline-grid div,
+.style-score-grid div,
+.profile-stat-grid div,
+.method-summary-grid > div,
+.profile-fight-row,
+.odds-comparison,
+.method-metric-grid div,
+.fight-row,
+.event-card {
+  border-color: var(--border);
+  background: var(--surface-soft);
+}
+
+.event-card:hover,
+.event-card.active,
+.fight-row:hover,
+.fight-row.active,
+.fighter-result.winner {
+  border-color: var(--border-strong);
+  background: var(--accent-softer);
+}
+
+.winner-card,
+.fighter-profile-hero-card {
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(96, 165, 250, 0.45), transparent 28rem),
+    linear-gradient(135deg, #1d4ed8 0%, #0f172a 68%, #020617 100%);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.22);
+}
+
+.winner-card p,
+.fighter-profile-hero-card .profile-note {
+  color: rgba(219, 234, 254, 0.92);
+}
+
+.probability-bar,
+.method-bar-track,
+.progress-bar {
+  background: rgba(148, 163, 184, 0.28);
+}
+
+.status-dot {
+  background: var(--success);
+  box-shadow: 0 0 0 5px var(--success-soft), 0 0 22px rgba(52, 211, 153, 0.35);
+}
+
+.status-badge.completed,
+.status-badge.correct,
+.fight-result-pill.correct,
+.profile-result-pill.win,
+.insight-summary.supporting_reason,
+.success-box,
+.update-result-banner.success {
+  color: var(--success);
+  background: var(--success-soft);
+  border-color: rgba(52, 211, 153, 0.28);
+}
+
+.status-badge.incorrect,
+.fight-result-pill.incorrect,
+.profile-result-pill.loss,
+.error-box,
+.update-result-banner.failed,
+.recent-result-card.incorrect {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: rgba(248, 113, 113, 0.30);
+}
+
+.insight-summary.caution,
+.warning-card,
+.skipped-fights-card,
+.status-badge.partial {
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-color: rgba(251, 191, 36, 0.28);
+}
+
+.status-badge.waiting,
+.status-badge.no-prediction,
+.fight-result-pill.waiting,
+.profile-result-pill.other,
+.odds-comparison.muted {
+  color: var(--text-secondary);
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.recent-info-box,
+.insight-summary.opposing_path,
+.notable-ranking-card,
+.profile-badge-row span,
+.profile-tag-list span,
+.leaderboard-rank,
+.confidence-badge.moderate,
+.status-badge.partial {
+  color: var(--accent);
+  background: var(--accent-softer);
+  border-color: var(--border-strong);
+}
+
+.fighter-avatar {
+  border-color: var(--border);
+  color: var(--accent);
+  background: var(--accent-softer);
+}
+
+.fighter-name.clickable:hover .fighter-name-text,
+.inline-fighter-link:hover,
+.profile-fighter-link:hover {
+  color: var(--accent);
+}
+
+html[data-theme="dark"] svg rect {
+  fill: #111827;
+}
+
+html[data-theme="dark"] svg text {
+  fill: #94a3b8;
+}
+
+html[data-theme="dark"] svg line {
+  stroke: rgba(148, 163, 184, 0.20);
+}
+
+html[data-theme="dark"] .winner-card .eyebrow,
+html[data-theme="dark"] .fighter-profile-hero-card .eyebrow,
+html[data-theme="dark"] .winner-card .fighter-name-text {
+  color: #dbeafe;
+}
+
+html[data-theme="dark"] .odds-comparison strong,
+html[data-theme="dark"] .method-row-label strong,
+html[data-theme="dark"] .leaderboard-main h3,
+html[data-theme="dark"] .fighter-name-text {
+  color: var(--text-primary);
+}
+
+html[data-theme="dark"] img {
+  filter: saturate(0.96) contrast(1.02);
+}
+
+@media (max-width: 860px) {
+  .hero {
+    padding: 22px;
+  }
+
+  .hero-actions {
+    justify-content: flex-start;
+  }
+
+  .view-tabs {
+    border-radius: 22px;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dark mode hardening pass: reduce bright surfaces + dim accent colors        */
+/* -------------------------------------------------------------------------- */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --app-bg: #05070f;
+  --app-bg-2: #090d18;
+  --surface: rgba(12, 18, 32, 0.78);
+  --surface-solid: #0d1424;
+  --surface-soft: #111827;
+  --surface-raised: rgba(18, 27, 44, 0.94);
+  --border: rgba(148, 163, 184, 0.14);
+  --border-strong: rgba(122, 162, 216, 0.32);
+  --text-primary: #e6edf7;
+  --text-secondary: #a9b7ca;
+  --text-muted: #7f8da2;
+  --accent: #7aa2d8;
+  --accent-strong: #5277c2;
+  --accent-soft: rgba(122, 162, 216, 0.14);
+  --accent-softer: rgba(122, 162, 216, 0.09);
+  --success: #75b798;
+  --success-soft: rgba(117, 183, 152, 0.12);
+  --danger: #df8585;
+  --danger-soft: rgba(223, 133, 133, 0.12);
+  --warning: #d3a756;
+  --warning-soft: rgba(211, 167, 86, 0.12);
+  --shadow-card: 0 26px 78px rgba(0, 0, 0, 0.48);
+  --shadow-soft: 0 16px 42px rgba(0, 0, 0, 0.34);
+  --shadow-button: 0 14px 32px rgba(82, 119, 194, 0.22);
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 10% -8%, rgba(82, 119, 194, 0.22), transparent 34rem),
+    radial-gradient(circle at 92% 2%, rgba(45, 88, 140, 0.12), transparent 32rem),
+    radial-gradient(circle at 50% 104%, rgba(15, 23, 42, 0.92), transparent 44rem),
+    linear-gradient(180deg, #05070f, #090d18 48%, #05070f);
+}
+
+html[data-theme="dark"] .hero {
+  background:
+    linear-gradient(135deg, rgba(18, 27, 44, 0.92), rgba(9, 13, 24, 0.74)),
+    var(--surface);
+}
+
+html[data-theme="dark"] .winner-card,
+html[data-theme="dark"] .fighter-profile-hero-card {
+  border-color: rgba(122, 162, 216, 0.24);
+  background:
+    radial-gradient(circle at 14% 0%, rgba(122, 162, 216, 0.24), transparent 28rem),
+    linear-gradient(135deg, #172441 0%, #0d1424 62%, #060914 100%);
+  box-shadow: 0 28px 82px rgba(0, 0, 0, 0.42);
+}
+
+html[data-theme="dark"] .view-tabs,
+html[data-theme="dark"] .compact-dashboard-toggle,
+html[data-theme="dark"] .status-card,
+html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .dashboard-card,
+html[data-theme="dark"] .predict-card,
+html[data-theme="dark"] .results-panel,
+html[data-theme="dark"] .cards-sidebar,
+html[data-theme="dark"] .card-fights-panel,
+html[data-theme="dark"] .update-card,
+html[data-theme="dark"] .evaluation-card,
+html[data-theme="dark"] .evaluation-controls-card,
+html[data-theme="dark"] .leaderboard-controls-card,
+html[data-theme="dark"] .leaderboard-results-card,
+html[data-theme="dark"] .profile-search-card,
+html[data-theme="dark"] .fighter-profile-panel,
+html[data-theme="dark"] .profile-section-card,
+html[data-theme="dark"] .method-card,
+html[data-theme="dark"] .insights-card,
+html[data-theme="dark"] .edges-card,
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .recent-result-card,
+html[data-theme="dark"] .fighter-result {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .secondary-button,
+html[data-theme="dark"] .cards-sidebar-header button,
+html[data-theme="dark"] .selected-card-header button,
+html[data-theme="dark"] .report-header button,
+html[data-theme="dark"] .example-fight-row button,
+html[data-theme="dark"] .suggestions button {
+  border-color: var(--border);
+  color: var(--text-primary);
+  background: #0b1220;
+}
+
+html[data-theme="dark"] .edge-row,
+html[data-theme="dark"] .event-card,
+html[data-theme="dark"] .fight-row,
+html[data-theme="dark"] .future-card-summary-grid div,
+html[data-theme="dark"] .recent-card-summary-grid div,
+html[data-theme="dark"] .update-summary-grid div,
+html[data-theme="dark"] .update-detail-card,
+html[data-theme="dark"] .skipped-fights-card,
+html[data-theme="dark"] .skipped-fight-list div,
+html[data-theme="dark"] .evaluation-summary-grid div,
+html[data-theme="dark"] .evaluation-table-row,
+html[data-theme="dark"] .evaluation-prediction-row,
+html[data-theme="dark"] .evaluation-compact-prediction-row,
+html[data-theme="dark"] .evaluation-threshold-row,
+html[data-theme="dark"] .evaluation-calibration-row,
+html[data-theme="dark"] .leaderboard-row,
+html[data-theme="dark"] .leaderboard-supporting-stats div,
+html[data-theme="dark"] .profile-headline-grid div,
+html[data-theme="dark"] .style-score-grid div,
+html[data-theme="dark"] .profile-stat-grid div,
+html[data-theme="dark"] .method-summary-grid > div,
+html[data-theme="dark"] .profile-fight-row,
+html[data-theme="dark"] .odds-comparison,
+html[data-theme="dark"] .method-metric-grid div,
+html[data-theme="dark"] .method-section,
+html[data-theme="dark"] .explanation-section,
+html[data-theme="dark"] .fighter-insight-column {
+  border-color: var(--border);
+  background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .event-card:hover,
+html[data-theme="dark"] .event-card.active,
+html[data-theme="dark"] .fight-row:hover,
+html[data-theme="dark"] .fight-row.active,
+html[data-theme="dark"] .fighter-result.winner,
+html[data-theme="dark"] .secondary-button:hover,
+html[data-theme="dark"] .suggestions button:hover,
+html[data-theme="dark"] .example-fight-row button:hover,
+html[data-theme="dark"] .cards-sidebar-header button:hover,
+html[data-theme="dark"] .selected-card-header button:hover,
+html[data-theme="dark"] .report-header button:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  background: var(--accent-softer);
+}
+
+html[data-theme="dark"] .primary-button,
+html[data-theme="dark"] .probability-fill,
+html[data-theme="dark"] .progress-fill,
+html[data-theme="dark"] .method-bar-fill,
+html[data-theme="dark"] .view-tabs button.active {
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+  box-shadow: var(--shadow-button);
+}
+
+html[data-theme="dark"] .confidence-badge.high,
+html[data-theme="dark"] .confidence-badge.strong,
+html[data-theme="dark"] .status-badge.completed,
+html[data-theme="dark"] .status-badge.correct,
+html[data-theme="dark"] .fight-result-pill.correct,
+html[data-theme="dark"] .profile-result-pill.win,
+html[data-theme="dark"] .insight-summary.supporting_reason,
+html[data-theme="dark"] .insight-item,
+html[data-theme="dark"] .success-box,
+html[data-theme="dark"] .update-result-banner.success,
+html[data-theme="dark"] .recent-result-card.correct {
+  color: var(--success);
+  background: var(--success-soft);
+  border-color: rgba(117, 183, 152, 0.22);
+}
+
+html[data-theme="dark"] .confidence-badge.moderate,
+html[data-theme="dark"] .status-badge.partial,
+html[data-theme="dark"] .recent-info-box,
+html[data-theme="dark"] .insight-summary.opposing_path,
+html[data-theme="dark"] .notable-ranking-card,
+html[data-theme="dark"] .profile-badge-row span,
+html[data-theme="dark"] .profile-tag-list span,
+html[data-theme="dark"] .leaderboard-rank,
+html[data-theme="dark"] .fighter-avatar,
+html[data-theme="dark"] .fighter-profile-avatar {
+  color: var(--accent);
+  background: var(--accent-softer);
+  border-color: var(--border-strong);
+}
+
+html[data-theme="dark"] .confidence-badge.close,
+html[data-theme="dark"] .insight-summary.caution,
+html[data-theme="dark"] .insight-item.concern,
+html[data-theme="dark"] .warning-card,
+html[data-theme="dark"] .skipped-fights-card {
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-color: rgba(211, 167, 86, 0.22);
+}
+
+html[data-theme="dark"] .confidence-badge.unavailable,
+html[data-theme="dark"] .status-badge.incorrect,
+html[data-theme="dark"] .fight-result-pill.incorrect,
+html[data-theme="dark"] .profile-result-pill.loss,
+html[data-theme="dark"] .error-box,
+html[data-theme="dark"] .update-result-banner.failed,
+html[data-theme="dark"] .recent-result-card.incorrect {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: rgba(223, 133, 133, 0.24);
+}
+
+html[data-theme="dark"] .status-badge.waiting,
+html[data-theme="dark"] .status-badge.no-prediction,
+html[data-theme="dark"] .fight-result-pill.waiting,
+html[data-theme="dark"] .fight-result-pill.no-prediction,
+html[data-theme="dark"] .profile-result-pill.other,
+html[data-theme="dark"] .odds-comparison.muted,
+html[data-theme="dark"] .confidence-badge.unknown {
+  color: var(--text-secondary);
+  background: rgba(148, 163, 184, 0.10);
+  border-color: var(--border);
+}
+
+html[data-theme="dark"] .profile-fighter-link,
+html[data-theme="dark"] .inline-fighter-link {
+  color: var(--text-primary);
+  background: transparent;
+}
+
+html[data-theme="dark"] .profile-fighter-link:hover,
+html[data-theme="dark"] .inline-fighter-link:hover,
+html[data-theme="dark"] .fighter-name.clickable:hover .fighter-name-text {
+  color: var(--accent);
+}
+
+html[data-theme="dark"] svg rect {
+  fill: #101827;
+}
+
+html[data-theme="dark"] svg path {
+  stroke: var(--accent);
+}
+
+html[data-theme="dark"] svg circle {
+  filter: saturate(0.82) brightness(0.92);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Remodel v3: profile/recent dark-mode hardening + leaderboard avatars        */
+/* -------------------------------------------------------------------------- */
+:root {
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --surface-subtle: rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme="dark"] {
+  --surface-subtle: rgba(15, 23, 42, 0.58);
+}
+
+/* Make the overall shell feel less like disconnected cards and more like an app */
+.app-shell {
+  max-width: 1320px;
+}
+
+.hero {
+  padding: 26px 28px;
+}
+
+.hero-copy {
+  max-width: 760px;
+}
+
+.view-tabs {
+  border: 1px solid var(--border);
+}
+
+.view-tabs button {
+  font-size: 0.9rem;
+}
+
+.predict-card,
+.results-panel,
+.cards-sidebar,
+.card-fights-panel,
+.update-card,
+.evaluation-card,
+.evaluation-controls-card,
+.leaderboard-controls-card,
+.leaderboard-results-card,
+.profile-search-card,
+.fighter-profile-panel,
+.profile-section-card,
+.method-card,
+.insights-card,
+.edges-card,
+.recent-result-card,
+.fighter-result,
+.empty-state {
+  border-radius: var(--radius-xl);
+}
+
+.event-card,
+.fight-row,
+.edge-row,
+.profile-fight-row,
+.leaderboard-row,
+.evaluation-table-row,
+.evaluation-compact-prediction-row,
+.odds-comparison,
+.profile-headline-grid div,
+.profile-stat-grid div,
+.style-score-grid div,
+.method-summary-grid > div,
+.recent-card-summary-grid div,
+.future-card-summary-grid div {
+  border-radius: var(--radius-lg);
+}
+
+/* Leaderboard profile pictures: larger and more premium-looking */
+.leaderboard-row {
+  grid-template-columns: 58px minmax(230px, 1.15fr) 110px minmax(300px, 1.75fr);
+  align-items: center;
+}
+
+.leaderboard-main h3 .fighter-name {
+  gap: 12px;
+  align-items: center;
+}
+
+.leaderboard-main h3 .fighter-avatar.sm {
+  width: 48px;
+  height: 48px;
+  font-size: 0.92rem;
+  border-width: 2px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+}
+
+.leaderboard-main h3 .fighter-name-text {
+  font-size: 1.04rem;
+  letter-spacing: -0.02em;
+}
+
+html[data-theme="dark"] .leaderboard-main h3 .fighter-avatar.sm {
+  border-color: rgba(122, 162, 216, 0.34);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.32);
+}
+
+/* Fighter Profile tab: remove leftover light surfaces and make hierarchy cleaner */
+.fighter-profile-layout {
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+}
+
+.fighter-profile-panel {
+  gap: 16px;
+}
+
+.fighter-profile-hero-card {
+  overflow: hidden;
+  position: relative;
+}
+
+.fighter-profile-hero-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -8% -42% 28%;
+  height: 180px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.10);
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+.fighter-profile-hero-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-section-card h2,
+.leaderboard-results-card h2,
+.evaluation-card h2,
+.card-fights-panel h2 {
+  letter-spacing: -0.035em;
+}
+
+.profile-headline-grid div,
+.profile-stat-grid div,
+.style-score-grid div,
+.method-summary-grid > div,
+.profile-fight-row,
+.notable-ranking-card {
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.profile-headline-grid div:hover,
+.profile-stat-grid div:hover,
+.style-score-grid div:hover,
+.method-summary-grid > div:hover,
+.profile-fight-row:hover,
+.notable-ranking-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+html[data-theme="dark"] .profile-search-card,
+html[data-theme="dark"] .fighter-profile-panel,
+html[data-theme="dark"] .profile-section-card {
+  background:
+    linear-gradient(180deg, rgba(18, 27, 44, 0.88), rgba(10, 15, 28, 0.86)),
+    var(--surface);
+}
+
+html[data-theme="dark"] .profile-headline-grid div,
+html[data-theme="dark"] .profile-stat-grid div,
+html[data-theme="dark"] .style-score-grid div,
+html[data-theme="dark"] .method-summary-grid > div,
+html[data-theme="dark"] .profile-fight-row {
+  background: rgba(10, 15, 28, 0.88);
+  border-color: rgba(148, 163, 184, 0.13);
+}
+
+html[data-theme="dark"] .profile-headline-grid div:hover,
+html[data-theme="dark"] .profile-stat-grid div:hover,
+html[data-theme="dark"] .style-score-grid div:hover,
+html[data-theme="dark"] .method-summary-grid > div:hover,
+html[data-theme="dark"] .profile-fight-row:hover {
+  background: rgba(18, 27, 44, 0.96);
+  border-color: rgba(122, 162, 216, 0.28);
+}
+
+html[data-theme="dark"] .fighter-profile-hero-card {
+  background:
+    radial-gradient(circle at 15% 0%, rgba(122, 162, 216, 0.18), transparent 23rem),
+    radial-gradient(circle at 90% 25%, rgba(117, 183, 152, 0.08), transparent 18rem),
+    linear-gradient(135deg, #121b2c 0%, #0a0f1c 62%, #05070f 100%);
+}
+
+html[data-theme="dark"] .profile-badge-row span,
+html[data-theme="dark"] .profile-tag-list span,
+html[data-theme="dark"] .notable-ranking-card {
+  background: rgba(122, 162, 216, 0.10);
+  border: 1px solid rgba(122, 162, 216, 0.18);
+  color: #9fbce4;
+}
+
+html[data-theme="dark"] .notable-ranking-card strong {
+  color: #b9d0ef;
+}
+
+html[data-theme="dark"] .profile-result-pill.win {
+  color: #8fc9aa;
+  background: rgba(117, 183, 152, 0.11);
+}
+
+html[data-theme="dark"] .profile-result-pill.loss {
+  color: #e09a9a;
+  background: rgba(223, 133, 133, 0.11);
+}
+
+html[data-theme="dark"] .profile-result-pill.other {
+  color: var(--text-secondary);
+  background: rgba(148, 163, 184, 0.09);
+}
+
+/* Recent Cards tab: deeper dark-mode surfaces and more professional result cards */
+.recent-result-card {
+  overflow: hidden;
+  position: relative;
+}
+
+.recent-result-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--border-strong);
+  opacity: 0.85;
+}
+
+.recent-result-card.correct::before {
+  background: var(--success);
+}
+
+.recent-result-card.incorrect::before {
+  background: var(--danger);
+}
+
+.recent-result-card.waiting::before,
+.recent-result-card.no-prediction::before {
+  background: var(--text-muted);
+}
+
+.recent-card-summary-grid div,
+.recent-info-box,
+.recent-fight-subline span,
+.fight-result-pill.improved,
+.recent-result-card,
+.odds-comparison {
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.recent-card-summary-grid div:hover,
+.fight-result-pill.improved:hover,
+.odds-comparison:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+html[data-theme="dark"] .recent-result-card {
+  background:
+    linear-gradient(180deg, rgba(18, 27, 44, 0.88), rgba(10, 15, 28, 0.86)),
+    var(--surface);
+}
+
+html[data-theme="dark"] .recent-result-card.correct {
+  color: var(--text-primary);
+  border-color: rgba(117, 183, 152, 0.22);
+  background:
+    linear-gradient(180deg, rgba(117, 183, 152, 0.08), rgba(10, 15, 28, 0.88)),
+    var(--surface);
+}
+
+html[data-theme="dark"] .recent-result-card.incorrect {
+  color: var(--text-primary);
+  border-color: rgba(223, 133, 133, 0.22);
+  background:
+    linear-gradient(180deg, rgba(223, 133, 133, 0.08), rgba(10, 15, 28, 0.88)),
+    var(--surface);
+}
+
+html[data-theme="dark"] .recent-result-card.waiting,
+html[data-theme="dark"] .recent-result-card.no-prediction {
+  color: var(--text-primary);
+  border-color: rgba(148, 163, 184, 0.14);
+  background:
+    linear-gradient(180deg, rgba(148, 163, 184, 0.06), rgba(10, 15, 28, 0.88)),
+    var(--surface);
+}
+
+html[data-theme="dark"] .recent-card-summary,
+html[data-theme="dark"] .recent-card-summary-grid div,
+html[data-theme="dark"] .recent-info-box,
+html[data-theme="dark"] .recent-fight-subline span,
+html[data-theme="dark"] .odds-comparison {
+  background: rgba(10, 15, 28, 0.88);
+  border-color: rgba(148, 163, 184, 0.13);
+}
+
+html[data-theme="dark"] .recent-info-box {
+  color: #9fbce4;
+  background: rgba(122, 162, 216, 0.09);
+  border-color: rgba(122, 162, 216, 0.18);
+}
+
+html[data-theme="dark"] .fight-result-pill.improved.correct {
+  color: #8fc9aa;
+  background: rgba(117, 183, 152, 0.11);
+}
+
+html[data-theme="dark"] .fight-result-pill.improved.incorrect {
+  color: #e09a9a;
+  background: rgba(223, 133, 133, 0.11);
+}
+
+html[data-theme="dark"] .fight-result-pill.improved.waiting,
+html[data-theme="dark"] .fight-result-pill.improved.no-prediction {
+  color: var(--text-secondary);
+  background: rgba(148, 163, 184, 0.09);
+}
+
+/* A more polished professional feel for all dense lists */
+.fight-row,
+.event-card,
+.leaderboard-row,
+.profile-fight-row,
+.evaluation-table-row,
+.evaluation-compact-prediction-row {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.38) inset;
+}
+
+html[data-theme="dark"] .fight-row,
+html[data-theme="dark"] .event-card,
+html[data-theme="dark"] .leaderboard-row,
+html[data-theme="dark"] .profile-fight-row,
+html[data-theme="dark"] .evaluation-table-row,
+html[data-theme="dark"] .evaluation-compact-prediction-row {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.035) inset;
+}
+
+@media (max-width: 1100px) {
+  .leaderboard-row {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .leaderboard-main h3 .fighter-avatar.sm {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Modern dashboard shell pass                                                */
+/* -------------------------------------------------------------------------- */
+.app-shell {
+  width: min(1240px, calc(100% - 32px));
+  padding: 22px 0 46px;
+}
+
+.app-topbar {
+  position: sticky;
+  top: 14px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  background: color-mix(in srgb, var(--surface-raised) 86%, transparent);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: var(--blur-surface);
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.32), transparent 38%),
+    linear-gradient(135deg, var(--accent), var(--accent-strong));
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  box-shadow: var(--shadow-button);
+}
+
+.brand-lockup .eyebrow {
+  margin-bottom: 2px;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+}
+
+.brand-lockup strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 1rem;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.hero-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.status-card.compact {
+  min-width: 0;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  box-shadow: none;
+}
+
+.page-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 520px);
+  gap: 22px;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 34px;
+  padding: clamp(22px, 3vw, 34px);
+  margin-bottom: 16px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 38%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--success) 10%, transparent), transparent 34%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-raised) 94%, transparent), color-mix(in srgb, var(--surface) 90%, transparent));
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.page-hero h1 {
+  max-width: 780px;
+  margin-bottom: 10px;
+  font-size: clamp(2rem, 4.2vw, 4.05rem);
+  line-height: 0.96;
+}
+
+.page-hero .hero-copy {
+  max-width: 760px;
+  color: var(--text-secondary);
+}
+
+.page-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-self: end;
+}
+
+.hero-metric {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--surface-solid) 62%, transparent);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  min-width: 0;
+}
+
+.hero-metric span,
+.hero-metric em {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.hero-metric strong {
+  display: block;
+  margin: 6px 0 4px;
+  color: var(--text-primary);
+  font-size: clamp(1.05rem, 1.7vw, 1.45rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  overflow-wrap: anywhere;
+}
+
+.hero-metric em {
+  font-style: normal;
+  font-weight: 700;
+}
+
+.view-tabs.app-nav {
+  position: sticky;
+  top: 92px;
+  z-index: 35;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 8px;
+  margin-bottom: 14px;
+  background: color-mix(in srgb, var(--surface-raised) 86%, transparent);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: var(--blur-surface);
+}
+
+.view-tabs.app-nav button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 18px;
+  padding: 10px 14px;
+  color: var(--text-muted);
+  background: transparent;
+  box-shadow: none;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.view-tabs.app-nav button:hover {
+  color: var(--text-primary);
+  background: var(--surface-soft);
+  transform: translateY(-1px);
+}
+
+.view-tabs.app-nav button.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.compact-dashboard {
+  margin-bottom: 18px;
+}
+
+.compact-dashboard-toggle {
+  border-radius: 24px;
+  padding: 12px 14px;
+}
+
+.layout,
+.cards-layout,
+.fighter-profile-layout,
+.leaderboards-layout,
+.evaluation-layout,
+.update-layout {
+  animation: tabFadeIn 0.22s ease both;
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* More subdued dark-mode palette and less neon accents. */
+html[data-theme="dark"] {
+  --app-bg: #070a12;
+  --app-bg-2: #0b1020;
+  --surface: rgba(18, 24, 38, 0.72);
+  --surface-solid: #111827;
+  --surface-soft: #151d2f;
+  --surface-raised: rgba(19, 27, 43, 0.88);
+  --border: rgba(148, 163, 184, 0.16);
+  --border-strong: rgba(125, 153, 196, 0.34);
+  --text-primary: #eef2f7;
+  --text-secondary: #b7c2d4;
+  --text-muted: #8492a8;
+  --accent: #6f8fcb;
+  --accent-strong: #5478b7;
+  --accent-soft: rgba(111, 143, 203, 0.16);
+  --accent-softer: rgba(111, 143, 203, 0.10);
+  --success: #73b997;
+  --success-soft: rgba(115, 185, 151, 0.13);
+  --danger: #d07474;
+  --danger-soft: rgba(208, 116, 116, 0.13);
+  --warning: #d6ad63;
+  --warning-soft: rgba(214, 173, 99, 0.12);
+  --shadow-card: 0 28px 80px rgba(0, 0, 0, 0.44);
+  --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.34);
+  --shadow-button: 0 16px 36px rgba(48, 72, 112, 0.24);
+}
+
+html[data-theme="dark"] .app-topbar,
+html[data-theme="dark"] .view-tabs.app-nav,
+html[data-theme="dark"] .page-hero {
+  background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+  border-color: rgba(148, 163, 184, 0.15);
+}
+
+html[data-theme="dark"] .page-hero {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(111, 143, 203, 0.16), transparent 38%),
+    radial-gradient(circle at 100% 0%, rgba(115, 185, 151, 0.08), transparent 34%),
+    linear-gradient(145deg, rgba(17, 24, 39, 0.94), rgba(11, 16, 32, 0.88));
+}
+
+html[data-theme="dark"] .hero-metric {
+  background: rgba(15, 23, 42, 0.62);
+  border-color: rgba(148, 163, 184, 0.14);
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .brand-mark,
+html[data-theme="dark"] .view-tabs.app-nav button.active,
+html[data-theme="dark"] .primary-button,
+html[data-theme="dark"] .probability-fill,
+html[data-theme="dark"] .method-bar-fill,
+html[data-theme="dark"] .progress-fill {
+  background: linear-gradient(135deg, #6f8fcb, #405f9d);
+}
+
+html[data-theme="dark"] .winner-card,
+html[data-theme="dark"] .fighter-profile-hero-card {
+  background:
+    radial-gradient(circle at top left, rgba(111, 143, 203, 0.20), transparent 42%),
+    linear-gradient(135deg, rgba(42, 58, 86, 0.96), rgba(12, 18, 32, 0.98));
+}
+
+html[data-theme="dark"] .confidence-badge.high,
+html[data-theme="dark"] .confidence-badge.strong,
+html[data-theme="dark"] .status-badge.completed,
+html[data-theme="dark"] .status-badge.correct,
+html[data-theme="dark"] .fight-result-pill.correct,
+html[data-theme="dark"] .profile-result-pill.win {
+  color: #ccebdc;
+  background: rgba(115, 185, 151, 0.14);
+}
+
+html[data-theme="dark"] .confidence-badge.moderate,
+html[data-theme="dark"] .status-badge.partial,
+html[data-theme="dark"] .profile-badge-row span,
+html[data-theme="dark"] .profile-tag-list span,
+html[data-theme="dark"] .notable-ranking-card {
+  color: #c1d1ef;
+  background: rgba(111, 143, 203, 0.13);
+  border-color: rgba(111, 143, 203, 0.20);
+}
+
+html[data-theme="dark"] .confidence-badge.close,
+html[data-theme="dark"] .insight-summary.caution,
+html[data-theme="dark"] .insight-item.concern,
+html[data-theme="dark"] .skipped-fights-card,
+html[data-theme="dark"] .confidence-badge.unavailable {
+  color: #e8c88a;
+  background: rgba(214, 173, 99, 0.11);
+  border-color: rgba(214, 173, 99, 0.18);
+}
+
+html[data-theme="dark"] .status-badge.incorrect,
+html[data-theme="dark"] .fight-result-pill.incorrect,
+html[data-theme="dark"] .profile-result-pill.loss,
+html[data-theme="dark"] .recent-result-card.incorrect {
+  color: #f0b2b2;
+  background: rgba(208, 116, 116, 0.12);
+  border-color: rgba(208, 116, 116, 0.18);
+}
+
+html[data-theme="dark"] .recent-result-card.correct {
+  background: rgba(115, 185, 151, 0.10);
+  border-color: rgba(115, 185, 151, 0.20);
+}
+
+@media (max-width: 980px) {
+  .app-topbar,
+  .page-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .app-topbar,
+  .page-hero,
+  .page-hero-stats {
+    display: grid;
+  }
+
+  .hero-actions {
+    justify-content: flex-start;
+  }
+
+  .page-hero-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .view-tabs.app-nav {
+    top: 102px;
+  }
+}
+
+@media (max-width: 680px) {
+  .app-shell {
+    width: min(100% - 20px, 1240px);
+    padding-top: 12px;
+  }
+
+  .app-topbar,
+  .page-hero {
+    border-radius: 22px;
+  }
+
+  .page-hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .view-tabs.app-nav {
+    position: static;
+    border-radius: 20px;
+  }
+
+  .hero-actions {
+    display: grid;
+    width: 100%;
+  }
+
+  .theme-toggle,
+  .status-card.compact {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Mantine migration step 2: command-center shell */
+:root {
+  --command-bg: #f5f7fb;
+  --command-surface: rgba(255, 255, 255, 0.86);
+  --command-surface-solid: #ffffff;
+  --command-border: rgba(15, 23, 42, 0.09);
+  --command-text: #101828;
+  --command-muted: #667085;
+  --command-accent: #2563eb;
+  --command-accent-soft: #eff6ff;
+  --command-shadow: 0 18px 55px rgba(16, 24, 40, 0.08);
+}
+
+:root[data-mantine-color-scheme="dark"] {
+  --command-bg: #070b14;
+  --command-surface: rgba(15, 23, 42, 0.72);
+  --command-surface-solid: #0f172a;
+  --command-border: rgba(148, 163, 184, 0.18);
+  --command-text: #e5edf8;
+  --command-muted: #94a3b8;
+  --command-accent: #7aa2ff;
+  --command-accent-soft: rgba(37, 99, 235, 0.14);
+  --command-shadow: 0 22px 70px rgba(0, 0, 0, 0.36);
+}
+
+:root[data-mantine-color-scheme="dark"] body {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.15), transparent 34rem),
+    radial-gradient(circle at 82% 12%, rgba(20, 184, 166, 0.08), transparent 24rem),
+    var(--command-bg);
+}
+
+.mantine-command-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 34rem),
+    radial-gradient(circle at 90% 10%, rgba(14, 165, 233, 0.08), transparent 28rem),
+    var(--command-bg);
+  color: var(--command-text);
+}
+
+.command-header {
+  border-bottom: 1px solid var(--command-border);
+  background: color-mix(in srgb, var(--command-surface-solid) 82%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.command-brand-title {
+  margin: 0;
+  color: var(--command-text);
+  font-size: 1.08rem;
+  letter-spacing: -0.035em;
+}
+
+.command-navbar {
+  border-right: 1px solid var(--command-border);
+  background: color-mix(in srgb, var(--command-surface-solid) 78%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.nav-product-card,
+.nav-status-card,
+.command-page-hero,
+.command-dashboard {
+  border-color: var(--command-border) !important;
+  background: var(--command-surface) !important;
+  box-shadow: var(--command-shadow);
+}
+
+.command-nav-link {
+  border-radius: 16px;
+  color: var(--command-text);
+  font-weight: 750;
+}
+
+.command-nav-link:hover {
+  background: var(--command-accent-soft);
+}
+
+.command-nav-link[data-active="true"] {
+  background: var(--command-accent-soft);
+  color: var(--command-accent);
+}
+
+.nav-status-icon {
+  color: var(--command-muted);
+}
+
+.command-main {
+  background: transparent;
+}
+
+.command-main-inner {
+  display: grid;
+  gap: 18px;
+  width: min(1320px, 100%);
+  margin: 0 auto;
+}
+
+.command-content {
+  min-width: 0;
+}
+
+.command-page-hero {
+  overflow: hidden;
+  position: relative;
+}
+
+.command-page-hero::before {
+  content: "";
+  position: absolute;
+  inset: -40% auto auto 56%;
+  width: 460px;
+  height: 460px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.14), transparent 68%);
+  pointer-events: none;
+}
+
+.command-page-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 740px;
+}
+
+.command-page-title {
+  margin: 0 0 10px;
+  color: var(--command-text);
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+
+.command-hero-metrics {
+  position: relative;
+  z-index: 1;
+  min-width: min(430px, 100%);
+}
+
+.hero-metric {
+  min-width: 0;
+  border-color: var(--command-border) !important;
+  background: color-mix(in srgb, var(--command-surface-solid) 78%, transparent) !important;
+}
+
+.hero-metric span,
+.hero-metric em,
+.hero-metric .mantine-Text-root:first-child {
+  color: var(--command-muted);
+}
+
+.api-status-badge .status-dot {
+  width: 8px;
+  height: 8px;
+  box-shadow: none;
+}
+
+.command-dashboard {
+  padding: 0;
+  overflow: hidden;
+}
+
+:root[data-mantine-color-scheme="dark"] .predict-card,
+:root[data-mantine-color-scheme="dark"] .results-panel,
+:root[data-mantine-color-scheme="dark"] .cards-sidebar,
+:root[data-mantine-color-scheme="dark"] .card-fights-panel,
+:root[data-mantine-color-scheme="dark"] .update-card,
+:root[data-mantine-color-scheme="dark"] .leaderboard-controls-card,
+:root[data-mantine-color-scheme="dark"] .leaderboard-results-card,
+:root[data-mantine-color-scheme="dark"] .evaluation-controls-card,
+:root[data-mantine-color-scheme="dark"] .evaluation-card,
+:root[data-mantine-color-scheme="dark"] .profile-search-card,
+:root[data-mantine-color-scheme="dark"] .fighter-profile-panel,
+:root[data-mantine-color-scheme="dark"] .profile-section-card,
+:root[data-mantine-color-scheme="dark"] .edges-card,
+:root[data-mantine-color-scheme="dark"] .insights-card,
+:root[data-mantine-color-scheme="dark"] .method-card,
+:root[data-mantine-color-scheme="dark"] .fighter-result,
+:root[data-mantine-color-scheme="dark"] .empty-state {
+  border-color: var(--command-border);
+  background: var(--command-surface);
+  box-shadow: var(--command-shadow);
+}
+
+:root[data-mantine-color-scheme="dark"] input,
+:root[data-mantine-color-scheme="dark"] select {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.78);
+  color: var(--command-text);
+}
+
+:root[data-mantine-color-scheme="dark"] .event-card,
+:root[data-mantine-color-scheme="dark"] .fight-row,
+:root[data-mantine-color-scheme="dark"] .edge-row,
+:root[data-mantine-color-scheme="dark"] .dashboard-card,
+:root[data-mantine-color-scheme="dark"] .future-card-summary-grid div,
+:root[data-mantine-color-scheme="dark"] .recent-card-summary-grid div,
+:root[data-mantine-color-scheme="dark"] .profile-headline-grid div,
+:root[data-mantine-color-scheme="dark"] .style-score-grid div,
+:root[data-mantine-color-scheme="dark"] .profile-stat-grid div,
+:root[data-mantine-color-scheme="dark"] .method-summary-grid > div,
+:root[data-mantine-color-scheme="dark"] .leaderboard-row,
+:root[data-mantine-color-scheme="dark"] .leaderboard-supporting-stats div,
+:root[data-mantine-color-scheme="dark"] .evaluation-summary-grid div,
+:root[data-mantine-color-scheme="dark"] .evaluation-table-row,
+:root[data-mantine-color-scheme="dark"] .evaluation-prediction-row,
+:root[data-mantine-color-scheme="dark"] .evaluation-compact-prediction-row,
+:root[data-mantine-color-scheme="dark"] .evaluation-calibration-row,
+:root[data-mantine-color-scheme="dark"] .evaluation-threshold-row,
+:root[data-mantine-color-scheme="dark"] .method-section,
+:root[data-mantine-color-scheme="dark"] .odds-comparison {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.58);
+}
+
+:root[data-mantine-color-scheme="dark"] h1,
+:root[data-mantine-color-scheme="dark"] h2,
+:root[data-mantine-color-scheme="dark"] h3,
+:root[data-mantine-color-scheme="dark"] strong,
+:root[data-mantine-color-scheme="dark"] .fighter-name-text,
+:root[data-mantine-color-scheme="dark"] .event-card strong,
+:root[data-mantine-color-scheme="dark"] .leaderboard-main h3,
+:root[data-mantine-color-scheme="dark"] .profile-fighter-link {
+  color: var(--command-text);
+}
+
+:root[data-mantine-color-scheme="dark"] p,
+:root[data-mantine-color-scheme="dark"] span,
+:root[data-mantine-color-scheme="dark"] em,
+:root[data-mantine-color-scheme="dark"] .hero-copy,
+:root[data-mantine-color-scheme="dark"] .profile-muted,
+:root[data-mantine-color-scheme="dark"] .edge-row span {
+  color: var(--command-muted);
+}
+
+:root[data-mantine-color-scheme="dark"] .winner-card,
+:root[data-mantine-color-scheme="dark"] .fighter-profile-hero-card {
+  background:
+    linear-gradient(135deg, rgba(30, 64, 175, 0.72), rgba(2, 6, 23, 0.94)),
+    #0f172a;
+}
+
+@media (max-width: 980px) {
+  .command-page-hero .mantine-Group-root {
+    display: grid;
+  }
+
+  .command-hero-metrics {
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  .command-hero-metrics {
+    grid-template-columns: 1fr !important;
+  }
+
+  .command-page-hero {
+    padding: 20px !important;
+  }
+
+  .command-page-title {
+    font-size: clamp(1.9rem, 12vw, 2.7rem);
+  }
+}
+/* Mantine migration: Single Fight tab */
+.single-fight-command-grid {
+  align-items: start;
+}
+
+.mantine-command-card {
+  background: light-dark(rgba(255, 255, 255, 0.9), rgba(17, 24, 39, 0.78));
+  border-color: light-dark(rgba(15, 23, 42, 0.08), rgba(148, 163, 184, 0.16));
+  backdrop-filter: blur(18px);
+}
+
+.mantine-single-form {
+  position: sticky;
+  top: calc(var(--mantine-header-height, 72px) + 20px);
+}
+
+.single-fight-results-stack {
+  min-width: 0;
+}
+
+.mantine-suggestions {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mantine-suggestions button {
+  width: 100%;
+  border: 1px solid light-dark(rgba(15, 23, 42, 0.08), rgba(148, 163, 184, 0.14));
+  border-radius: var(--mantine-radius-md);
+  padding: 9px 12px;
+  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-gray-2));
+  background: light-dark(rgba(248, 250, 252, 0.95), rgba(15, 23, 42, 0.7));
+  text-align: left;
+  font-weight: 700;
+  transition: 0.15s ease;
+}
+
+.mantine-suggestions button:hover {
+  transform: translateY(-1px);
+  border-color: light-dark(var(--mantine-color-blue-3), rgba(96, 165, 250, 0.38));
+  background: light-dark(var(--mantine-color-blue-0), rgba(30, 64, 175, 0.25));
+}
+
+.mantine-error-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font: inherit;
+}
+
+@media (max-width: 992px) {
+  .mantine-single-form {
+    position: static;
+  }
+}
+/* Mantine migration: Single Fight tab */
+.single-fight-command-grid {
+  align-items: start;
+}
+
+.mantine-command-card {
+  background: light-dark(rgba(255, 255, 255, 0.9), rgba(17, 24, 39, 0.78));
+  border-color: light-dark(rgba(15, 23, 42, 0.08), rgba(148, 163, 184, 0.16));
+  backdrop-filter: blur(18px);
+}
+
+.mantine-single-form {
+  position: sticky;
+  top: calc(var(--mantine-header-height, 72px) + 20px);
+}
+
+.single-fight-results-stack {
+  min-width: 0;
+}
+
+.mantine-suggestions {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mantine-suggestions button {
+  width: 100%;
+  border: 1px solid light-dark(rgba(15, 23, 42, 0.08), rgba(148, 163, 184, 0.14));
+  border-radius: var(--mantine-radius-md);
+  padding: 9px 12px;
+  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-gray-2));
+  background: light-dark(rgba(248, 250, 252, 0.95), rgba(15, 23, 42, 0.7));
+  text-align: left;
+  font-weight: 700;
+  transition: 0.15s ease;
+}
+
+.mantine-suggestions button:hover {
+  transform: translateY(-1px);
+  border-color: light-dark(var(--mantine-color-blue-3), rgba(96, 165, 250, 0.38));
+  background: light-dark(var(--mantine-color-blue-0), rgba(30, 64, 175, 0.25));
+}
+
+.mantine-error-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font: inherit;
+}
+
+@media (max-width: 992px) {
+  .mantine-single-form {
+    position: static;
+  }
+}
+/* Mantine migration: Single Fight tab */
+.single-fight-command-grid {
+  align-items: start;
+}
+
+.mantine-command-card {
+  background: light-dark(rgba(255, 255, 255, 0.9), rgba(17, 24, 39, 0.78));
+  border-color: light-dark(rgba(15, 23, 42, 0.08), rgba(148, 163, 184, 0.16));
+  backdrop-filter: blur(18px);
+}
+
+.mantine-single-form {
+  position: sticky;
+  top: calc(var(--mantine-header-height, 72px) + 20px);
+}
+
+.single-fight-results-stack {
+  min-width: 0;
+}
+
+.mantine-suggestions {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mantine-suggestions button {
+  width: 100%;
+  border: 1px solid light-dark(rgba(15, 23, 42, 0.08), rgba(148, 163, 184, 0.14));
+  border-radius: var(--mantine-radius-md);
+  padding: 9px 12px;
+  color: light-dark(var(--mantine-color-gray-8), var(--mantine-color-gray-2));
+  background: light-dark(rgba(248, 250, 252, 0.95), rgba(15, 23, 42, 0.7));
+  text-align: left;
+  font-weight: 700;
+  transition: 0.15s ease;
+}
+
+.mantine-suggestions button:hover {
+  transform: translateY(-1px);
+  border-color: light-dark(var(--mantine-color-blue-3), rgba(96, 165, 250, 0.38));
+  background: light-dark(var(--mantine-color-blue-0), rgba(30, 64, 175, 0.25));
+}
+
+.mantine-error-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font: inherit;
+}
+
+@media (max-width: 992px) {
+  .mantine-single-form {
+    position: static;
+  }
+}
+/* Mantine migration: Future Cards tab */
+.mantine-page-grid {
+  min-width: 0;
+}
+
+.mantine-panel {
+  background: light-dark(rgba(255, 255, 255, 0.92), rgba(18, 24, 38, 0.82));
+  border-color: light-dark(rgba(15, 23, 42, 0.08), rgba(148, 163, 184, 0.18));
+  box-shadow: 0 18px 45px light-dark(rgba(15, 23, 42, 0.08), rgba(0, 0, 0, 0.24));
+}
+
+.sticky-panel {
+  position: sticky;
+  top: 84px;
+}
+
+.mantine-list-button {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  background: light-dark(rgba(248, 250, 252, 0.8), rgba(15, 23, 42, 0.54));
+  transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease;
+}
+
+.mantine-list-button:hover,
+.mantine-list-button.active {
+  transform: translateY(-1px);
+  border-color: var(--mantine-color-blue-5);
+  background: light-dark(rgba(239, 246, 255, 0.95), rgba(30, 41, 59, 0.86));
+}
+
+.mantine-summary-metric {
+  background: light-dark(rgba(248, 250, 252, 0.82), rgba(15, 23, 42, 0.54));
+}
+
+.mantine-fight-card {
+  min-width: 0;
+  background: light-dark(rgba(248, 250, 252, 0.82), rgba(15, 23, 42, 0.54));
+  transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease;
+}
+
+.mantine-fight-card.clickable {
+  cursor: pointer;
+}
+
+.mantine-fight-card:hover,
+.mantine-fight-card.active {
+  transform: translateY(-1px);
+  border-color: var(--mantine-color-blue-5);
+  background: light-dark(rgba(239, 246, 255, 0.92), rgba(30, 41, 59, 0.86));
+}
+
+.mantine-pick-stack {
+  flex: 0 0 auto;
+  max-width: 190px;
+}
+
+.mantine-pick-stack .fighter-name {
+  justify-content: flex-end;
+}
+
+.mantine-pick-stack .fighter-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mantine-fight-odds-wrap {
+  margin-top: 12px;
+}
+
+.mantine-fight-odds-wrap .odds-comparison {
+  margin-top: 0;
+}
+
+@media (max-width: 62em) {
+  .sticky-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 48em) {
+  .mantine-fight-card .mantine-Group-root {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mantine-pick-stack {
+    align-items: flex-start !important;
+    max-width: 100%;
+  }
+
+  .mantine-pick-stack .fighter-name {
+    justify-content: flex-start;
+  }
+}
+/* Mantine migration: Future Cards tab */
+.mantine-page-grid {
+  min-width: 0;
+}
+
+.mantine-panel {
+  background: light-dark(rgba(255, 255, 255, 0.92), rgba(18, 24, 38, 0.82));
+  border-color: light-dark(rgba(15, 23, 42, 0.08), rgba(148, 163, 184, 0.18));
+  box-shadow: 0 18px 45px light-dark(rgba(15, 23, 42, 0.08), rgba(0, 0, 0, 0.24));
+}
+
+.sticky-panel {
+  position: sticky;
+  top: 84px;
+}
+
+.mantine-list-button {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  background: light-dark(rgba(248, 250, 252, 0.8), rgba(15, 23, 42, 0.54));
+  transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease;
+}
+
+.mantine-list-button:hover,
+.mantine-list-button.active {
+  transform: translateY(-1px);
+  border-color: var(--mantine-color-blue-5);
+  background: light-dark(rgba(239, 246, 255, 0.95), rgba(30, 41, 59, 0.86));
+}
+
+.mantine-summary-metric {
+  background: light-dark(rgba(248, 250, 252, 0.82), rgba(15, 23, 42, 0.54));
+}
+
+.mantine-fight-card {
+  min-width: 0;
+  background: light-dark(rgba(248, 250, 252, 0.82), rgba(15, 23, 42, 0.54));
+  transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease;
+}
+
+.mantine-fight-card.clickable {
+  cursor: pointer;
+}
+
+.mantine-fight-card:hover,
+.mantine-fight-card.active {
+  transform: translateY(-1px);
+  border-color: var(--mantine-color-blue-5);
+  background: light-dark(rgba(239, 246, 255, 0.92), rgba(30, 41, 59, 0.86));
+}
+
+.mantine-pick-stack {
+  flex: 0 0 auto;
+  max-width: 190px;
+}
+
+.mantine-pick-stack .fighter-name {
+  justify-content: flex-end;
+}
+
+.mantine-pick-stack .fighter-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mantine-fight-odds-wrap {
+  margin-top: 12px;
+}
+
+.mantine-fight-odds-wrap .odds-comparison {
+  margin-top: 0;
+}
+
+@media (max-width: 62em) {
+  .sticky-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 48em) {
+  .mantine-fight-card .mantine-Group-root {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mantine-pick-stack {
+    align-items: flex-start !important;
+    max-width: 100%;
+  }
+
+  .mantine-pick-stack .fighter-name {
+    justify-content: flex-start;
+  }
+}
+/* Mantine migration: Recent Cards */
+.mantine-recent-page .mantine-recent-score-card {
+  min-width: 210px;
+  text-align: right;
+  background: light-dark(rgba(248, 250, 252, 0.9), rgba(15, 23, 42, 0.72));
+}
+
+.mantine-recent-page .mantine-recent-fight-card {
+  text-align: left;
+}
+
+.mantine-recent-page .mantine-recent-fight-card.active {
+  border-color: var(--mantine-color-blue-5);
+  box-shadow: 0 12px 35px light-dark(rgba(37, 99, 235, 0.13), rgba(96, 165, 250, 0.12));
+}
+
+.mantine-recent-page .mantine-empty-mini {
+  background: light-dark(rgba(248, 250, 252, 0.9), rgba(15, 23, 42, 0.7));
+}
+
+@media (max-width: 760px) {
+  .mantine-recent-page .mantine-recent-score-card {
+    width: 100%;
+    text-align: left;
+  }
+}
+/* Mantine migration: Fighter Profile tab */
+.mantine-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.mantine-profile-search-card {
+  position: sticky;
+  top: calc(var(--app-shell-header-height, 64px) + 18px);
+  background: light-dark(rgba(255, 255, 255, 0.86), rgba(15, 23, 42, 0.82));
+  backdrop-filter: blur(18px);
+}
+
+.mantine-profile-panel {
+  min-width: 0;
+}
+
+.mantine-empty-panel {
+  min-height: 440px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  color: var(--mantine-color-dimmed);
+  background: light-dark(rgba(255, 255, 255, 0.86), rgba(15, 23, 42, 0.78));
+}
+
+.mantine-profile-hero {
+  overflow: hidden;
+  position: relative;
+  color: white;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(96, 165, 250, 0.34), transparent 28rem),
+    linear-gradient(135deg, rgba(30, 64, 175, 0.96), rgba(2, 6, 23, 0.98));
+  border: 1px solid light-dark(rgba(37, 99, 235, 0.18), rgba(148, 163, 184, 0.18));
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.22);
+}
+
+.mantine-profile-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -12% -40% 45%;
+  height: 260px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.16);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.mantine-profile-hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.mantine-profile-avatar {
+  border: 4px solid rgba(255, 255, 255, 0.68);
+  box-shadow: 0 18px 50px rgba(2, 6, 23, 0.32);
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
+}
+
+.mantine-profile-title {
+  color: white;
+  font-size: clamp(2.4rem, 5vw, 4.2rem);
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+}
+
+.mantine-profile-metric,
+.mantine-profile-section {
+  background: light-dark(rgba(255, 255, 255, 0.84), rgba(15, 23, 42, 0.78));
+  backdrop-filter: blur(12px);
+}
+
+.mantine-ranking-card {
+  background: light-dark(rgba(239, 246, 255, 0.8), rgba(30, 41, 59, 0.72));
+}
+
+.mantine-profile-fight-row {
+  background: light-dark(rgba(252, 252, 253, 0.9), rgba(15, 23, 42, 0.68));
+  transition:
+    border-color 0.16s ease,
+    transform 0.16s ease,
+    background 0.16s ease;
+}
+
+.mantine-profile-fight-row:hover {
+  transform: translateY(-1px);
+  border-color: light-dark(var(--mantine-color-blue-3), var(--mantine-color-blue-7));
+}
+
+.mantine-profile-opponent-button {
+  height: auto;
+  color: light-dark(var(--mantine-color-dark-8), var(--mantine-color-gray-1));
+  font-weight: 900;
+}
+
+.mantine-profile-result-badge {
+  flex: 0 0 auto;
+  max-width: 260px;
+  white-space: normal;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .mantine-profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .mantine-profile-search-card {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .mantine-profile-hero-content {
+    display: grid !important;
+    justify-items: start;
+  }
+
+  .mantine-profile-title {
+    font-size: 2.35rem;
+  }
+
+  .mantine-profile-fight-row .mantine-Group-root {
+    align-items: flex-start;
+    display: grid;
+  }
+
+  .mantine-profile-result-badge {
+    max-width: 100%;
+    justify-self: start;
+  }
+}
+/* Mantine migration: remaining tabs polish */
+.mantine-leaderboards-page,
+.mantine-evaluation-page,
+.mantine-update-page {
+  width: 100%;
+}
+
+.mantine-dashboard-metric,
+.mantine-evaluation-metric,
+.mantine-update-metric,
+.mantine-profile-metric {
+  background: light-dark(rgba(255, 255, 255, 0.86), rgba(18, 25, 38, 0.9));
+}
+
+.mantine-leaderboard-row {
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.mantine-leaderboard-row:hover {
+  transform: translateY(-1px);
+  border-color: light-dark(var(--mantine-color-blue-3), var(--mantine-color-blue-8));
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.10);
+}
+
+.mantine-leaderboard-rank {
+  min-width: 58px;
+  height: 42px;
+}
+
+.mantine-leaderboard-fighter {
+  flex: 1;
+  min-width: 0;
+}
+
+.mantine-leaderboard-fighter .fighter-name {
+  gap: 12px;
+}
+
+.mantine-leaderboard-fighter .fighter-avatar.xl {
+  width: 72px;
+  height: 72px;
+  font-size: 1.15rem;
+}
+
+.mantine-leaderboard-score {
+  min-width: 110px;
+  text-align: right;
+  background: light-dark(var(--mantine-color-gray-0), rgba(11, 18, 32, 0.7));
+}
+
+.mantine-market-fight-row,
+.mantine-skipped-fights-card,
+.mantine-elo-chart-surface {
+  background: light-dark(rgba(255, 255, 255, 0.88), rgba(13, 20, 32, 0.92));
+}
+
+.mantine-update-detail-row + .mantine-update-detail-row {
+  border-top: 1px solid light-dark(var(--mantine-color-gray-2), rgba(148, 163, 184, 0.16));
+}
+
+/* Fix for Fighter Profile Elo/form trend labels in dark mode */
+.mantine-elo-trend-chart .mantine-profile-metric,
+.mantine-profile-section .mantine-profile-metric {
+  color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-gray-0));
+}
+
+.mantine-elo-trend-chart .mantine-profile-metric [data-size="xs"],
+.mantine-profile-section .mantine-profile-metric [data-size="xs"] {
+  color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-gray-4));
+}
+
+@media (max-width: 760px) {
+  .mantine-leaderboard-row > .mantine-Group-root {
+    align-items: flex-start;
+  }
+
+  .mantine-leaderboard-score {
+    width: 100%;
+    text-align: left;
+  }
+
+  .mantine-leaderboard-fighter .fighter-avatar.xl {
+    width: 58px;
+    height: 58px;
+  }
+}

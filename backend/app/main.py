@@ -61,6 +61,8 @@ from app.services.model_evaluation_service import get_model_evaluation
 
 from app.services.fighter_profile_service import build_fighter_profile
 
+from app.services.model_market_evaluation_service import build_model_market_evaluation
+
 app = FastAPI(
     title="UFC Fight Predictor API",
     description="Predicts UFC fight winner probabilities using historical fight data.",
@@ -514,6 +516,20 @@ def fighter_profile(fighter: str) -> dict[str, Any]:
             status_code=500,
             detail={
                 "message": "Failed to load fighter profile.",
+                "error": str(error),
+            },
+        )
+    
+@app.get("/model-vs-market-evaluation")
+def model_vs_market_evaluation() -> dict[str, Any]:
+    try:
+        return build_model_market_evaluation()
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to build model-vs-market evaluation.",
                 "error": str(error),
             },
         )
