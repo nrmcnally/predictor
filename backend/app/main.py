@@ -59,6 +59,8 @@ from app.services.leaderboard_service import (
 
 from app.services.model_evaluation_service import get_model_evaluation
 
+from app.services.fighter_profile_service import build_fighter_profile
+
 app = FastAPI(
     title="UFC Fight Predictor API",
     description="Predicts UFC fight winner probabilities using historical fight data.",
@@ -490,6 +492,28 @@ def fighter_images() -> dict[str, Any]:
             status_code=500,
             detail={
                 "message": "Failed to load fighter images.",
+                "error": str(error),
+            },
+        )
+    
+@app.get("/fighter-profile")
+def fighter_profile(fighter: str) -> dict[str, Any]:
+    try:
+        return build_fighter_profile(fighter)
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "message": str(error),
+            },
+        )
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to load fighter profile.",
                 "error": str(error),
             },
         )

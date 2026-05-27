@@ -72,6 +72,16 @@ def build_slug_candidates(fighter: str) -> list[str]:
     # Common UFC.com variations.
     cleaned = normalize_name(fighter)
 
+    # Handle names like O'Malley where UFC.com may remove the apostrophe
+    # without inserting a hyphen: Sean O'Malley -> sean-omalley
+    if "'" in fighter or "’" in fighter:
+        no_apostrophe = (
+            clean_text(fighter)
+            .replace("'", "")
+            .replace("’", "")
+        )
+        candidates.append(slugify_name(no_apostrophe))
+
     suffixes = [" jr", " sr", " ii", " iii", " iv"]
 
     for suffix in suffixes:

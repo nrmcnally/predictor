@@ -82,6 +82,32 @@ function getFighterInitials(name) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
+function formatProfileScore(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) {
+    return "N/A";
+  }
+
+  return `${(Number(value) * 100).toFixed(1)}%`;
+}
+
+function getProfileResultClass(result = "") {
+  const normalized = String(result).toLowerCase();
+
+  if (normalized === "win") {
+    return "win";
+  }
+
+  if (normalized === "loss") {
+    return "loss";
+  }
+
+  return "other";
+}
+
+function getMethodSummaryTotal(summary = {}) {
+  return Object.values(summary).reduce((total, value) => total + Number(value || 0), 0);
+}
+
 function getFighterImageData(fighterName, fighterImageLookup = {}) {
   const name = String(fighterName || "").trim();
   const key = normalizeFighterName(name);
@@ -479,6 +505,7 @@ function formatStatLabel(value = "") {
     height_inches: "Height",
     reach_inches: "Reach",
     reach_minus_height_inches: "Reach minus height",
+    age_years: "Age",
   };
 
   return labels[value] ?? value.replaceAll("_", " ");
@@ -1049,6 +1076,313 @@ function RecentFightDetails({ fight, fighterImageLookup = {} }) {
   );
 }
 
+
+function FighterProfileTab({
+  profileFighter,
+  setProfileFighter,
+  profileSearchResults,
+  setProfileSearchResults,
+  fighterProfile,
+  fighterProfileLoading,
+  fighterProfileError,
+  searchFighters,
+  loadFighterProfile,
+  setFighterA,
+  setFighterB,
+  setActiveView,
+  fighterImageLookup = {},
+}) {
+  const image = fighterProfile?.image ?? {};
+  const headline = fighterProfile?.headline_stats ?? {};
+  const styleProfile = fighterProfile?.style_profile ?? {};
+  const methodSummary = fighterProfile?.method_summary ?? {};
+  const profileImageUrl = image.fighter_image_url || image.image_url || "";
+  const profileInitials =
+    image.fighter_initials ||
+    image.initials ||
+    getFighterInitials(fighterProfile?.fighter || profileFighter);
+
+  return (
+    <section className="fighter-profile-layout">
+      <aside className="profile-search-card">
+        <p className="eyebrow">Fighter profile</p>
+        <h2>Scout a fighter</h2>
+        <p>
+          Search a fighter to view current model stats, style assumptions, notable
+          rankings, method tendencies, and recent UFC fight history.
+        </p>
+
+        <label>
+          Fighter
+          <input
+            value={profileFighter}
+            onChange={(event) => {
+              setProfileFighter(event.target.value);
+              searchFighters(event.target.value, setProfileSearchResults);
+            }}
+            placeholder="Example: Khamzat Chimaev"
+          />
+        </label>
+
+        {profileSearchResults.length > 0 && (
+          <div className="suggestions">
+            {profileSearchResults.map((name) => (
+              <button
+                type="button"
+                key={name}
+                onClick={() => {
+                  setProfileFighter(name);
+                  setProfileSearchResults([]);
+                  loadFighterProfile(name);
+                }}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <button
+          className="primary-button"
+          type="button"
+          disabled={fighterProfileLoading || !profileFighter.trim()}
+          onClick={() => loadFighterProfile(profileFighter)}
+        >
+          {fighterProfileLoading ? "Loading profile..." : "Load profile"}
+        </button>
+
+        {fighterProfileError && <pre className="error-box">{fighterProfileError}</pre>}
+
+        {fighterProfile && (
+          <div className="profile-action-grid">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setFighterA(fighterProfile.fighter);
+                setActiveView("single");
+              }}
+            >
+              Use as Fighter A
+            </button>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setFighterB(fighterProfile.fighter);
+                setActiveView("single");
+              }}
+            >
+              Use as Fighter B
+            </button>
+          </div>
+        )}
+      </aside>
+
+      <section className="fighter-profile-panel">
+        {!fighterProfile && !fighterProfileLoading && (
+          <div className="empty-state">
+            <h2>No fighter selected</h2>
+            <p>Search for a fighter to open their profile.</p>
+          </div>
+        )}
+
+        {fighterProfileLoading && (
+          <div className="empty-state">
+            <h2>Loading fighter profile...</h2>
+            <p>Pulling current stats, rankings, and fight history.</p>
+          </div>
+        )}
+
+        {fighterProfile && (
+          <>
+            <div className="fighter-profile-hero-card">
+              <div className="fighter-profile-avatar large">
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt={`${fighterProfile.fighter} headshot`} />
+                ) : (
+                  <span>{profileInitials}</span>
+                )}
+              </div>
+
+              <div>
+                <p className="eyebrow">{fighterProfile.weight_class || "Weight class unknown"}</p>
+                <h2>{fighterProfile.fighter}</h2>
+
+                <div className="profile-badge-row">
+                  <span>{styleProfile.style_label || "Style unknown"}</span>
+                  {styleProfile.tags?.slice(0, 4).map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+
+                {styleProfile.note && <p className="profile-note">{styleProfile.note}</p>}
+              </div>
+            </div>
+
+            <div className="profile-headline-grid">
+              <div>
+                <span>Elo</span>
+                <strong>{headline.elo_formatted || "N/A"}</strong>
+              </div>
+              <div>
+                <span>Peak Elo</span>
+                <strong>{headline.peak_elo_formatted || "N/A"}</strong>
+              </div>
+              <div>
+                <span>UFC record</span>
+                <strong>
+                  {headline.ufc_wins ?? "?"}-{headline.ufc_losses ?? "?"}
+                </strong>
+              </div>
+              <div>
+                <span>Win rate</span>
+                <strong>{headline.win_rate_formatted || "N/A"}</strong>
+              </div>
+              <div>
+                <span>Age</span>
+                <strong>{headline.age_formatted || "N/A"}</strong>
+              </div>
+              <div>
+                <span>Height / Reach</span>
+                <strong>
+                  {headline.height || "N/A"} / {headline.reach || "N/A"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="profile-section-card">
+              <h2>Style profile</h2>
+
+              <div className="style-score-grid">
+                <div>
+                  <span>Striking</span>
+                  <strong>{styleProfile.score_percentages?.striking || "N/A"}</strong>
+                </div>
+                <div>
+                  <span>Grappling</span>
+                  <strong>{styleProfile.score_percentages?.grappling || "N/A"}</strong>
+                </div>
+                <div>
+                  <span>Defense</span>
+                  <strong>{styleProfile.score_percentages?.defense || "N/A"}</strong>
+                </div>
+              </div>
+
+              <div className="profile-tag-list">
+                {styleProfile.tags?.map((tag) => (
+                  <span key={tag}>{tag}</span>
+                ))}
+              </div>
+            </div>
+
+            <div className="profile-section-card">
+              <h2>Notable rankings</h2>
+
+              {fighterProfile.notable_rankings?.length === 0 && (
+                <p className="profile-muted">
+                  No top-10 overall or weight-class rankings found among qualified fighters.
+                </p>
+              )}
+
+              <div className="notable-ranking-list">
+                {fighterProfile.notable_rankings?.map((ranking) => (
+                  <div
+                    className="notable-ranking-card"
+                    key={`${ranking.metric}-${ranking.scope}-${ranking.scope_label}`}
+                  >
+                    <span>{ranking.category}</span>
+                    <strong>#{ranking.rank}</strong>
+                    <p>{ranking.description}</p>
+                    <em>{ranking.formatted_value}</em>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="profile-section-card">
+              <h2>Method tendencies</h2>
+
+              <div className="method-summary-grid">
+                {["wins", "losses", "all"].map((bucket) => {
+                  const summary = methodSummary[bucket] || {};
+                  const total = getMethodSummaryTotal(summary);
+
+                  return (
+                    <div key={bucket}>
+                      <h3>{bucket === "all" ? "All fights" : bucket}</h3>
+
+                      {total === 0 && <p className="profile-muted">No data</p>}
+
+                      {Object.entries(summary).map(([method, count]) => (
+                        <div className="method-summary-row" key={`${bucket}-${method}`}>
+                          <span>{method}</span>
+                          <strong>{count}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="profile-section-card">
+              <h2>Stat snapshot</h2>
+
+              <div className="profile-stat-grid">
+                {fighterProfile.profile_stats?.map((stat) => (
+                  <div key={stat.key}>
+                    <span>{formatStatLabel(stat.key)}</span>
+                    <strong>{stat.formatted_value}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="profile-section-card">
+              <h2>Recent fight history</h2>
+
+              <div className="profile-fight-history">
+                {fighterProfile.recent_fights?.length === 0 && (
+                  <p className="profile-muted">No recent UFC fight rows found.</p>
+                )}
+
+                {fighterProfile.recent_fights?.map((fight) => (
+                  <div className="profile-fight-row" key={fight.fight_url || `${fight.event_date}-${fight.opponent}`}>
+                    <div>
+                      <strong>
+                        <FighterName
+                          name={fight.opponent}
+                          imageLookup={fighterImageLookup}
+                          size="sm"
+                        />
+                      </strong>
+                      <span>
+                        {fight.event_date} • {fight.weight_class} • {fight.event_name}
+                      </span>
+                    </div>
+
+                    <div className={`profile-result-pill ${getProfileResultClass(fight.result)}`}>
+                      <strong>{fight.result || "N/A"}</strong>
+                      <span>
+                        {fight.method_category}
+                        {fight.round && ` • R${fight.round}`}
+                        {fight.time && ` • ${fight.time}`}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+    </section>
+  );
+}
+
+
 function App() {
   const [activeView, setActiveView] = useState("single");
 
@@ -1123,6 +1457,12 @@ function App() {
   const [fighterImageLookup, setFighterImageLookup] = useState({});
   const [fighterImagesError, setFighterImagesError] = useState("");
 
+  const [profileFighter, setProfileFighter] = useState("Khamzat Chimaev");
+  const [profileSearchResults, setProfileSearchResults] = useState([]);
+  const [fighterProfile, setFighterProfile] = useState(null);
+  const [fighterProfileLoading, setFighterProfileLoading] = useState(false);
+  const [fighterProfileError, setFighterProfileError] = useState("");
+
   useEffect(() => {
     async function loadWeightClasses() {
       try {
@@ -1160,6 +1500,7 @@ function App() {
     loadMethodModelMetrics();
     loadFutureFightOdds();
     loadFighterImages();
+    loadFighterProfile("Khamzat Chimaev");
   }, []);
 
   useEffect(() => {
@@ -1299,6 +1640,44 @@ async function loadFighterImages() {
     setFighterImageLookup({});
   }
 }
+
+
+async function loadFighterProfile(fighterName = profileFighter) {
+  const cleanedName = String(fighterName || "").trim();
+
+  if (!cleanedName) {
+    return;
+  }
+
+  setFighterProfileLoading(true);
+  setFighterProfileError("");
+
+  try {
+    const params = new URLSearchParams({
+      fighter: cleanedName,
+    });
+
+    const response = await fetch(`${API_BASE_URL}/fighter-profile?${params}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.detail?.message ||
+          data?.detail?.error ||
+          "Failed to load fighter profile."
+      );
+    }
+
+    setFighterProfile(data);
+    setProfileFighter(data.fighter || cleanedName);
+  } catch (requestError) {
+    setFighterProfileError(requestError.message);
+  } finally {
+    setFighterProfileLoading(false);
+  }
+}
+
+
 
 async function loadMethodPrediction(nextFighterA, nextFighterB, nextWeightClass) {
   setMethodPredictionLoading(true);
@@ -1855,6 +2234,14 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
 
         <button
           type="button"
+          className={activeView === "profile" ? "active" : ""}
+          onClick={() => setActiveView("profile")}
+        >
+          Fighter profile
+        </button>
+
+        <button
+          type="button"
           className={activeView === "cards" ? "active" : ""}
           onClick={() => setActiveView("cards")}
         >
@@ -2122,6 +2509,25 @@ const dashboardModelName = trainModelDetails.best_model_name || "N/A";
             />
           </section>
         </section>
+      )}
+
+
+      {activeView === "profile" && (
+        <FighterProfileTab
+          profileFighter={profileFighter}
+          setProfileFighter={setProfileFighter}
+          profileSearchResults={profileSearchResults}
+          setProfileSearchResults={setProfileSearchResults}
+          fighterProfile={fighterProfile}
+          fighterProfileLoading={fighterProfileLoading}
+          fighterProfileError={fighterProfileError}
+          searchFighters={searchFighters}
+          loadFighterProfile={loadFighterProfile}
+          setFighterA={setFighterA}
+          setFighterB={setFighterB}
+          setActiveView={setActiveView}
+          fighterImageLookup={fighterImageLookup}
+        />
       )}
 
       {activeView === "cards" && (
