@@ -5554,3 +5554,245 @@ html[data-theme="dark"] .recent-result-card.correct {
     height: 58px;
   }
 }
+
+/* Fix probability cards overflowing in narrow Future/Recent detail panels */
+.probability-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.fighter-result {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.fighter-result-header {
+  min-width: 0;
+}
+
+.fighter-result-header h3,
+.fighter-result-header .fighter-name,
+.fighter-result-header .fighter-name-text {
+  min-width: 0;
+}
+
+.fighter-result-header .fighter-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* In narrow card-detail panels, stack the two fighter probability cards */
+.results-panel .probability-grid,
+.mantine-card-detail .probability-grid,
+.card-detail-panel .probability-grid {
+  grid-template-columns: 1fr;
+}
+
+/* Future/Recent detail-panel probability cards: show avatar + percent only */
+.mantine-page-grid .sticky-panel .probability-grid .fighter-result-header h3 {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  max-width: 72px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.mantine-page-grid .sticky-panel .probability-grid .fighter-result-header .fighter-name {
+  gap: 0;
+  max-width: none;
+}
+
+.mantine-page-grid .sticky-panel .probability-grid .fighter-result-header .fighter-name-text {
+  display: none !important;
+  width: 0 !important;
+  max-width: 0 !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+}
+
+.mantine-page-grid .sticky-panel .probability-grid .fighter-result-header strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.app-brand-logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: transparent;
+  flex: 0 0 auto;
+}
+
+.command-navbar .nav-product-card::before {
+  content: "";
+  display: block;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 12px;
+  background-image: url("/fight-iq-logo.png");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}/* Fight IQ branding */
+.command-brand-logo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 10px 22px rgba(34, 139, 230, 0.28));
+}
+
+.nav-product-logo {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 10px 22px rgba(34, 139, 230, 0.24));
+}
+
+.command-brand-title {
+  letter-spacing: -0.04em;
+}
+
+@media (max-width: 520px) {
+  .command-brand-logo {
+    width: 38px;
+    height: 38px;
+  }
+
+  .nav-product-logo {
+    width: 46px;
+    height: 46px;
+  }
+}
+
+.brand-card-logo-tile,
+.brand-card-logo-image {
+  display: none !important;
+}
+
+/* Remove old sidebar logo injected by CSS pseudo-element */
+.command-navbar .nav-product-card::before,
+.nav-product-card::before {
+  display: none !important;
+  content: none !important;
+  background-image: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+}
+
+/* Fix brown/washed dark-mode surfaces in Leaderboards, Evaluation, and Update Data */
+[data-mantine-color-scheme="dark"] .leaderboards-tab,
+[data-mantine-color-scheme="dark"] .evaluation-tab,
+[data-mantine-color-scheme="dark"] .update-data-tab,
+[data-mantine-color-scheme="dark"] .mantine-leaderboards-tab,
+[data-mantine-color-scheme="dark"] .mantine-evaluation-tab,
+[data-mantine-color-scheme="dark"] .mantine-update-data-tab {
+  color: var(--mantine-color-gray-1);
+}
+
+/* Broad card/panel reset for the migrated Mantine tabs */
+[data-mantine-color-scheme="dark"] .leaderboards-tab .mantine-Paper-root,
+[data-mantine-color-scheme="dark"] .evaluation-tab .mantine-Paper-root,
+[data-mantine-color-scheme="dark"] .update-data-tab .mantine-Paper-root,
+[data-mantine-color-scheme="dark"] .mantine-leaderboards-tab .mantine-Paper-root,
+[data-mantine-color-scheme="dark"] .mantine-evaluation-tab .mantine-Paper-root,
+[data-mantine-color-scheme="dark"] .mantine-update-data-tab .mantine-Paper-root {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(11, 18, 32, 0.98)) !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  color: var(--mantine-color-gray-1) !important;
+}
+
+/* Inputs/selects inside those tabs */
+[data-mantine-color-scheme="dark"] .leaderboards-tab input,
+[data-mantine-color-scheme="dark"] .leaderboards-tab select,
+[data-mantine-color-scheme="dark"] .leaderboards-tab .mantine-Input-input,
+[data-mantine-color-scheme="dark"] .evaluation-tab input,
+[data-mantine-color-scheme="dark"] .evaluation-tab select,
+[data-mantine-color-scheme="dark"] .evaluation-tab .mantine-Input-input,
+[data-mantine-color-scheme="dark"] .update-data-tab input,
+[data-mantine-color-scheme="dark"] .update-data-tab select,
+[data-mantine-color-scheme="dark"] .update-data-tab .mantine-Input-input,
+[data-mantine-color-scheme="dark"] .mantine-leaderboards-tab input,
+[data-mantine-color-scheme="dark"] .mantine-leaderboards-tab select,
+[data-mantine-color-scheme="dark"] .mantine-leaderboards-tab .mantine-Input-input {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: var(--mantine-color-gray-1) !important;
+}
+
+/* Leaderboard rows/cards specifically */
+[data-mantine-color-scheme="dark"] .leaderboard-card,
+[data-mantine-color-scheme="dark"] .leaderboard-row,
+[data-mantine-color-scheme="dark"] .leaderboard-rank-card,
+[data-mantine-color-scheme="dark"] .ranking-card,
+[data-mantine-color-scheme="dark"] .fighter-ranking-card {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(11, 18, 32, 0.98)) !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+/* Metric/stat boxes inside those sections */
+[data-mantine-color-scheme="dark"] .leaderboards-tab .metric-card,
+[data-mantine-color-scheme="dark"] .leaderboards-tab .stat-card,
+[data-mantine-color-scheme="dark"] .evaluation-tab .metric-card,
+[data-mantine-color-scheme="dark"] .evaluation-tab .stat-card,
+[data-mantine-color-scheme="dark"] .update-data-tab .metric-card,
+[data-mantine-color-scheme="dark"] .update-data-tab .stat-card,
+[data-mantine-color-scheme="dark"] .dashboard-card {
+  background: rgba(15, 23, 42, 0.94) !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  color: var(--mantine-color-gray-1) !important;
+}
+
+/* Global dark-mode Mantine surface reset inside the main app content */
+[data-mantine-color-scheme="dark"] .command-content .mantine-Paper-root,
+[data-mantine-color-scheme="dark"] .command-content .mantine-Card-root,
+[data-mantine-color-scheme="dark"] .command-content [class*="mantine-Paper"],
+[data-mantine-color-scheme="dark"] .command-content [class*="mantine-Card"] {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.98),
+    rgba(9, 15, 28, 0.98)
+  ) !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  color: var(--mantine-color-gray-1) !important;
+}
+
+/* Nested panels/stat boxes that may not be Mantine Paper */
+[data-mantine-color-scheme="dark"] .command-content .metric-card,
+[data-mantine-color-scheme="dark"] .command-content .stat-card,
+[data-mantine-color-scheme="dark"] .command-content .dashboard-card,
+[data-mantine-color-scheme="dark"] .command-content .leaderboard-card,
+[data-mantine-color-scheme="dark"] .command-content .leaderboard-row,
+[data-mantine-color-scheme="dark"] .command-content .ranking-card,
+[data-mantine-color-scheme="dark"] .command-content .fighter-ranking-card,
+[data-mantine-color-scheme="dark"] .command-content .model-card,
+[data-mantine-color-scheme="dark"] .command-content .update-card {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  color: var(--mantine-color-gray-1) !important;
+}
+
+/* Inputs/selects inside main app content */
+[data-mantine-color-scheme="dark"] .command-content .mantine-Input-input,
+[data-mantine-color-scheme="dark"] .command-content input,
+[data-mantine-color-scheme="dark"] .command-content select,
+[data-mantine-color-scheme="dark"] .command-content textarea {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: var(--mantine-color-gray-1) !important;
+}
+
+/* Mantine field labels/descriptions in dark mode */
+[data-mantine-color-scheme="dark"] .command-content .mantine-InputWrapper-label,
+[data-mantine-color-scheme="dark"] .command-content .mantine-InputWrapper-description,
+[data-mantine-color-scheme="dark"] .command-content .mantine-Text-root {
+  color: inherit;
+}

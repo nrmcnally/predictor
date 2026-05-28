@@ -21,7 +21,6 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
-  IconActivity,
   IconCalendarStats,
   IconChartBar,
   IconDatabase,
@@ -1380,7 +1379,7 @@ const activeViewDetails = {
       "Check model metrics, calibration buckets, recent predictions, method model metrics, and market comparison results.",
   },
 }[activeView] ?? {
-  eyebrow: "UFC fight predictor",
+  eyebrow: "Fight IQ",
   title: "Predict fight win probabilities",
   description:
     "Uses scraped UFCStats data, Elo-style features, physical profile data, historical fight stats, and a calibrated model.",
@@ -1431,16 +1430,18 @@ function selectView(nextView) {
               aria-label="Toggle navigation"
             />
 
-            <ThemeIcon size={42} radius="xl" variant="gradient" gradient={{ from: "blue", to: "cyan" }}>
-              <IconActivity size={22} />
-            </ThemeIcon>
+            <img
+              src="/fight-iq-mark.png"
+              alt="Fight IQ logo"
+              className="command-brand-logo"
+            />
 
             <Box>
               <Text size="xs" tt="uppercase" fw={800} c="dimmed" lh={1}>
-                Fight predictor
+                MMA analytics
               </Text>
               <Title order={3} className="command-brand-title">
-                UFC Predictor
+                Fight IQ
               </Title>
             </Box>
           </Group>
@@ -1475,13 +1476,24 @@ function selectView(nextView) {
       <AppShell.Navbar className="command-navbar" p="md">
         <AppShell.Section>
           <Paper className="nav-product-card" p="md" radius="xl" withBorder>
-            <Text size="xs" tt="uppercase" fw={800} c="dimmed">
-              Command center
-            </Text>
-            <Text fw={900} size="lg">
-              UFC Analytics
-            </Text>
-            <Text size="sm" c="dimmed" mt={4}>
+            <Group gap="sm" align="center" wrap="nowrap">
+              <img
+                src="/fight-iq-mark.png"
+                alt="Fight IQ logo"
+                className="nav-product-logo"
+              />
+
+              <Box>
+                <Text size="xs" tt="uppercase" fw={800} c="dimmed">
+                  Command center
+                </Text>
+                <Text fw={900} size="lg">
+                  Fight IQ
+                </Text>
+              </Box>
+            </Group>
+
+            <Text size="sm" c="dimmed" mt="sm">
               Predictions, cards, profiles, and model review.
             </Text>
           </Paper>
