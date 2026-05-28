@@ -63,6 +63,12 @@ from app.features.build_current_fighter_features import (
 )
 from app.models.train_calibrated_models import main as train_calibrated_models
 from app.services.future_card_service import refresh_upcoming_cards
+from app.services.prediction_service import clear_prediction_cache
+from app.services.saved_prediction_service import (
+    SAVED_CARD_PREDICTIONS_CSV,
+    SAVED_MODEL_PREDICTIONS_CSV,
+    save_predictions_for_all_future_cards,
+)
 
 from app.analysis.explore_method_labels import build_method_label_exploration
 from app.features.build_method_training_data import build_method_training_data
@@ -434,6 +440,18 @@ def stage_refresh_future_cards() -> dict[str, Any]:
     }
 
 
+def stage_save_future_card_predictions() -> dict[str, Any]:
+    clear_prediction_cache()
+
+    result = save_predictions_for_all_future_cards()
+
+    return {
+        **result,
+        "saved_predictions_file": str(SAVED_CARD_PREDICTIONS_CSV),
+        "saved_model_predictions_file": str(SAVED_MODEL_PREDICTIONS_CSV),
+    }
+
+
 def build_summary_report(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
     completed_events_path = RAW_DATA_DIR / "completed_events.csv"
     event_fights_path = RAW_DATA_DIR / "event_fights.csv"
@@ -462,6 +480,8 @@ def build_summary_report(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
         "upcoming_events_rows": count_csv_rows(upcoming_events_path),
         "upcoming_fights_rows": count_csv_rows(upcoming_fights_path),
         "fighter_images_rows": count_csv_rows(RAW_DATA_DIR / "fighter_images.csv"),
+        "saved_card_predictions_rows": count_csv_rows(SAVED_CARD_PREDICTIONS_CSV),
+        "saved_model_predictions_rows": count_csv_rows(SAVED_MODEL_PREDICTIONS_CSV),
         "failed_stages": failed_stages,
         "success": len(failed_stages) == 0,
     }
@@ -505,6 +525,7 @@ def run_update_all(stop_on_failure: bool = True) -> dict[str, Any]:
         ("Train calibrated model", stage_train_model),
         ("Build current fighter features", stage_build_current_fighter_features),
         ("Refresh future cards", stage_refresh_future_cards),
+        ("Save future-card predictions", stage_save_future_card_predictions),
         ("Refresh fighter images", stage_refresh_fighter_images),
     ]
 

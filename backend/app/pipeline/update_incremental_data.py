@@ -25,6 +25,7 @@ from app.services.prediction_service import clear_prediction_cache
 from app.services.saved_prediction_service import (
     save_predictions_for_all_future_cards,
     SAVED_CARD_PREDICTIONS_CSV,
+    SAVED_MODEL_PREDICTIONS_CSV,
 )
 
 from app.data.scrape_ufcstats import (
@@ -660,6 +661,7 @@ def build_summary(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
         "failed_stages": failed_stages,
         "success": len(failed_stages) == 0,
         "saved_card_predictions_rows": count_csv_rows(PROCESSED_DATA_DIR / "saved_card_predictions.csv"),
+        "saved_model_predictions_rows": count_csv_rows(PROCESSED_DATA_DIR / "saved_model_predictions.csv"),
     }
 
 
@@ -813,6 +815,7 @@ def save_future_card_predictions_stage() -> dict[str, Any]:
     return {
         **result,
         "saved_predictions_file": str(SAVED_CARD_PREDICTIONS_CSV),
+        "saved_model_predictions_file": str(SAVED_MODEL_PREDICTIONS_CSV),
     }
 
 

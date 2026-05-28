@@ -10,8 +10,13 @@ import pandas as pd
 from app.services.odds_service import FUTURE_FIGHT_ODDS_CSV
 
 from app.services.future_card_service import (
+    get_future_card,
     get_future_card_predictions,
     get_future_cards,
+)
+from app.services.prediction_service import (
+    FighterNotFoundError,
+    predict_fight_all_models,
 )
 
 
@@ -21,6 +26,7 @@ PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 MODELS_DIR = PROJECT_ROOT / "models"
 
 SAVED_CARD_PREDICTIONS_CSV = PROCESSED_DATA_DIR / "saved_card_predictions.csv"
+SAVED_MODEL_PREDICTIONS_CSV = PROCESSED_DATA_DIR / "saved_model_predictions.csv"
 CALIBRATED_METRICS_PATH = MODELS_DIR / "calibrated_model_metrics.json"
 
 
@@ -75,6 +81,194 @@ def read_saved_predictions() -> pd.DataFrame:
 def write_saved_predictions(df: pd.DataFrame) -> None:
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     df.to_csv(SAVED_CARD_PREDICTIONS_CSV, index=False)
+
+
+def read_saved_model_predictions() -> pd.DataFrame:
+    if not SAVED_MODEL_PREDICTIONS_CSV.exists():
+        return pd.DataFrame()
+
+    try:
+        return pd.read_csv(SAVED_MODEL_PREDICTIONS_CSV)
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame()
+
+
+def write_saved_model_predictions(df: pd.DataFrame) -> None:
+    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    df.to_csv(SAVED_MODEL_PREDICTIONS_CSV, index=False)
+
+
+def build_model_prediction_rows_for_card(
+    event_id: str,
+    saved_at: str | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Builds one saved prediction row per model per future fight.
+
+    This is separate from saved_card_predictions.csv so the Recent Cards UI can
+    keep using the selected/default model, while the Evaluation tab can later
+    compare every model prospectively against actual future results.
+    """
+    card = get_future_card(event_id)
+    odds_lookup = load_future_odds_lookup()
+    saved_at = saved_at or now_iso()
+
+    rows: list[dict[str, Any]] = []
+
+    for fight in card["fights"]:
+        fight_url = normalize_fight_url(fight["fight_url"])
+        fight_id = clean_text(fight["fight_id"])
+        odds_data = odds_lookup.get(fight_url, {})
+
+        try:
+            all_model_payload = predict_fight_all_models(
+                fighter_a=fight["fighter_1"],
+                fighter_b=fight["fighter_2"],
+                weight_class=fight["weight_class"],
+            )
+
+            for prediction in all_model_payload.get("model_predictions", []):
+                model_name = clean_text(prediction.get("model_name", ""))
+
+                rows.append(
+                    {
+                        "saved_at": saved_at,
+                        "snapshot_id": f"{card['event_id']}::{fight_id}::{model_name}::{saved_at}",
+
+                        "event_id": card["event_id"],
+                        "event_name": card["event_name"],
+                        "event_date": card["event_date"],
+                        "event_location": card["event_location"],
+                        "event_url": card["event_url"],
+
+                        "fight_id": fight_id,
+                        "fight_url": fight["fight_url"],
+                        "fighter_1": fight["fighter_1"],
+                        "fighter_2": fight["fighter_2"],
+                        "weight_class": fight["weight_class"],
+
+                        "model_name": model_name,
+                        "is_best_model": bool(prediction.get("is_best_model", False)),
+                        "model_metrics_json": json.dumps(prediction.get("model_metrics", {})),
+
+                        "prediction_available": True,
+                        "error_json": "",
+                        "predicted_winner": prediction.get("predicted_winner", ""),
+                        "fighter_1_probability": prediction.get("fighter_a_probability"),
+                        "fighter_2_probability": prediction.get("fighter_b_probability"),
+                        "fighter_1_percentage": prediction.get("fighter_a_percentage", ""),
+                        "fighter_2_percentage": prediction.get("fighter_b_percentage", ""),
+                        "confidence": prediction.get("confidence"),
+                        "confidence_percentage": prediction.get("confidence_percentage", ""),
+                        "confidence_label": prediction.get("confidence_label", ""),
+
+                        "odds_available": odds_data.get("odds_available", False),
+                        "odds_bookmaker": odds_data.get("odds_bookmaker", ""),
+                        "odds_last_update": odds_data.get("odds_last_update", ""),
+                        "bookmakers_matched": odds_data.get("bookmakers_matched"),
+                        "fighter_1_odds_american": odds_data.get("fighter_1_odds_american"),
+                        "fighter_2_odds_american": odds_data.get("fighter_2_odds_american"),
+                        "fighter_1_market_probability": odds_data.get("fighter_1_market_probability"),
+                        "fighter_2_market_probability": odds_data.get("fighter_2_market_probability"),
+                        "fighter_1_market_percentage": odds_data.get("fighter_1_market_percentage", ""),
+                        "fighter_2_market_percentage": odds_data.get("fighter_2_market_percentage", ""),
+                        "market_favorite": odds_data.get("market_favorite", ""),
+                        "market_favorite_probability": odds_data.get("market_favorite_probability"),
+                        "market_favorite_percentage": odds_data.get("market_favorite_percentage", ""),
+                    }
+                )
+
+        except FighterNotFoundError as error:
+            rows.append(
+                {
+                    "saved_at": saved_at,
+                    "snapshot_id": f"{card['event_id']}::{fight_id}::unavailable::{saved_at}",
+                    "event_id": card["event_id"],
+                    "event_name": card["event_name"],
+                    "event_date": card["event_date"],
+                    "event_location": card["event_location"],
+                    "event_url": card["event_url"],
+                    "fight_id": fight_id,
+                    "fight_url": fight["fight_url"],
+                    "fighter_1": fight["fighter_1"],
+                    "fighter_2": fight["fighter_2"],
+                    "weight_class": fight["weight_class"],
+                    "model_name": "",
+                    "is_best_model": False,
+                    "model_metrics_json": "{}",
+                    "prediction_available": False,
+                    "error_json": json.dumps(
+                        {
+                            "message": f"Could not find fighter: {error.fighter_name}",
+                            "suggestions": error.suggestions,
+                        }
+                    ),
+                }
+            )
+
+        except Exception as error:
+            rows.append(
+                {
+                    "saved_at": saved_at,
+                    "snapshot_id": f"{card['event_id']}::{fight_id}::failed::{saved_at}",
+                    "event_id": card["event_id"],
+                    "event_name": card["event_name"],
+                    "event_date": card["event_date"],
+                    "event_location": card["event_location"],
+                    "event_url": card["event_url"],
+                    "fight_id": fight_id,
+                    "fight_url": fight["fight_url"],
+                    "fighter_1": fight["fighter_1"],
+                    "fighter_2": fight["fighter_2"],
+                    "weight_class": fight["weight_class"],
+                    "model_name": "",
+                    "is_best_model": False,
+                    "model_metrics_json": "{}",
+                    "prediction_available": False,
+                    "error_json": json.dumps(
+                        {
+                            "message": "All-model prediction failed.",
+                            "details": str(error),
+                        }
+                    ),
+                }
+            )
+
+    return rows
+
+
+def save_model_predictions_for_card(
+    event_id: str,
+    saved_at: str | None = None,
+) -> dict[str, Any]:
+    existing_df = read_saved_model_predictions()
+    new_rows = build_model_prediction_rows_for_card(event_id=event_id, saved_at=saved_at)
+    new_df = pd.DataFrame(new_rows)
+
+    if existing_df.empty:
+        combined_df = new_df
+    else:
+        # Keep one latest prospective model snapshot per future card.
+        existing_df = existing_df[
+            existing_df["event_id"].astype(str) != str(event_id)
+        ].copy()
+        combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+
+    write_saved_model_predictions(combined_df)
+
+    prediction_available_count = (
+        int(new_df["prediction_available"].sum())
+        if not new_df.empty and "prediction_available" in new_df.columns
+        else 0
+    )
+
+    return {
+        "event_id": event_id,
+        "saved_model_rows": int(len(new_df)),
+        "model_prediction_available_count": prediction_available_count,
+        "model_prediction_unavailable_count": int(len(new_df) - prediction_available_count),
+        "output_file": str(SAVED_MODEL_PREDICTIONS_CSV),
+    }
 
 
 def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
@@ -156,8 +350,11 @@ def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
 
 def save_predictions_for_card(event_id: str) -> dict[str, Any]:
     existing_df = read_saved_predictions()
+    saved_at = now_iso()
 
     new_rows = build_saved_prediction_rows_for_card(event_id)
+    for row in new_rows:
+        row["saved_at"] = saved_at
     new_df = pd.DataFrame(new_rows)
 
     if existing_df.empty:
@@ -176,6 +373,11 @@ def save_predictions_for_card(event_id: str) -> dict[str, Any]:
 
     write_saved_predictions(combined_df)
 
+    model_prediction_result = save_model_predictions_for_card(
+        event_id=event_id,
+        saved_at=saved_at,
+    )
+
     prediction_available_count = int(new_df["prediction_available"].sum()) if not new_df.empty else 0
 
     return {
@@ -184,6 +386,10 @@ def save_predictions_for_card(event_id: str) -> dict[str, Any]:
         "prediction_available_count": prediction_available_count,
         "prediction_unavailable_count": int(len(new_df) - prediction_available_count),
         "output_file": str(SAVED_CARD_PREDICTIONS_CSV),
+        "saved_model_rows": model_prediction_result["saved_model_rows"],
+        "model_prediction_available_count": model_prediction_result["model_prediction_available_count"],
+        "model_prediction_unavailable_count": model_prediction_result["model_prediction_unavailable_count"],
+        "model_predictions_output_file": model_prediction_result["output_file"],
     }
 
 
@@ -194,6 +400,9 @@ def save_predictions_for_all_future_cards() -> dict[str, Any]:
     total_rows = 0
     total_available = 0
     total_unavailable = 0
+    total_model_rows = 0
+    total_model_available = 0
+    total_model_unavailable = 0
 
     for card in cards:
         event_id = card["event_id"]
@@ -204,14 +413,21 @@ def save_predictions_for_all_future_cards() -> dict[str, Any]:
         total_rows += result["saved_rows"]
         total_available += result["prediction_available_count"]
         total_unavailable += result["prediction_unavailable_count"]
+        total_model_rows += result.get("saved_model_rows", 0)
+        total_model_available += result.get("model_prediction_available_count", 0)
+        total_model_unavailable += result.get("model_prediction_unavailable_count", 0)
 
     return {
         "cards_saved": len(saved_cards),
         "total_rows": total_rows,
         "total_prediction_available": total_available,
         "total_prediction_unavailable": total_unavailable,
+        "total_model_prediction_rows": total_model_rows,
+        "total_model_prediction_available": total_model_available,
+        "total_model_prediction_unavailable": total_model_unavailable,
         "cards": saved_cards,
         "output_file": str(SAVED_CARD_PREDICTIONS_CSV),
+        "model_predictions_output_file": str(SAVED_MODEL_PREDICTIONS_CSV),
     }
 
 

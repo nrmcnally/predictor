@@ -55,3 +55,6 @@ backend/models/*.json
 /backend/data/reports/method_label_summary.json
 /start_app.bat
 /start_app.local.bat
+
+# Generated backend model artifacts
+backend/models/

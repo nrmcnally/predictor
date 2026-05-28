@@ -30,6 +30,8 @@ MODELS_DIR = PROJECT_ROOT / "models"
 CURRENT_FIGHTER_FEATURES_CSV = PROCESSED_DATA_DIR / "current_fighter_features.csv"
 BEST_MODEL_PATH = MODELS_DIR / "best_winner_model.joblib"
 FEATURES_PATH = MODELS_DIR / "model_features.json"
+MODEL_REGISTRY_PATH = MODELS_DIR / "model_registry.json"
+WINNER_MODELS_DIR = MODELS_DIR / "winner_models"
 
 
 class FighterNotFoundError(ValueError):
@@ -124,6 +126,66 @@ def load_model_and_features():
     categorical_features = feature_payload["categorical_features"]
 
     return model, numeric_features, categorical_features
+
+
+@lru_cache(maxsize=1)
+def load_all_prediction_models_and_features():
+    """
+    Loads every saved winner model plus the feature list used at training time.
+
+    Newer training runs save a model_registry.json and one joblib file per model
+    in models/winner_models/. Older projects only have best_winner_model.joblib,
+    so this function falls back to that single model when the registry is absent.
+    """
+    if not FEATURES_PATH.exists():
+        raise FileNotFoundError(
+            f"Missing {FEATURES_PATH}. "
+            "Run train_calibrated_models.py first."
+        )
+
+    with open(FEATURES_PATH, "r", encoding="utf-8") as file:
+        feature_payload = json.load(file)
+
+    numeric_features = feature_payload["numeric_features"]
+    categorical_features = feature_payload["categorical_features"]
+
+    models: dict[str, Any] = {}
+    model_metadata: dict[str, Any] = {}
+    best_model_name = "best_winner_model"
+
+    if MODEL_REGISTRY_PATH.exists():
+        with open(MODEL_REGISTRY_PATH, "r", encoding="utf-8") as file:
+            registry_payload = json.load(file)
+
+        best_model_name = clean_text(registry_payload.get("best_model_name", ""))
+        registry_models = registry_payload.get("models", {})
+
+        for model_name, metadata in registry_models.items():
+            relative_path = clean_text(metadata.get("path", ""))
+            model_path = MODELS_DIR / relative_path if relative_path else WINNER_MODELS_DIR / f"{model_name}.joblib"
+
+            if not model_path.exists():
+                continue
+
+            models[model_name] = joblib.load(model_path)
+            model_metadata[model_name] = metadata
+
+    if not models:
+        if not BEST_MODEL_PATH.exists():
+            raise FileNotFoundError(
+                f"Missing {BEST_MODEL_PATH}. "
+                "Run train_calibrated_models.py first."
+            )
+
+        models[best_model_name] = joblib.load(BEST_MODEL_PATH)
+        model_metadata[best_model_name] = {
+            "model_name": best_model_name,
+            "path": str(BEST_MODEL_PATH),
+            "is_best_model": True,
+            "metrics": {},
+        }
+
+    return models, model_metadata, best_model_name, numeric_features, categorical_features
 
 
 def search_fighters(query: str, limit: int = 10) -> list[str]:
@@ -905,13 +967,17 @@ def build_matchup_insights(
         )
     return insights
 
-def predict_fight_data(
+def predict_fight_data_for_model(
     fighter_a: str,
     fighter_b: str,
     weight_class: str,
+    model_name: str,
+    model,
+    numeric_features: list[str],
+    categorical_features: list[str],
+    include_explanations: bool = False,
 ) -> dict[str, Any]:
     features_df = load_current_features()
-    model, numeric_features, categorical_features = load_model_and_features()
 
     fighter_a_row = get_fighter_row(features_df, fighter_a)
     fighter_b_row = get_fighter_row(features_df, fighter_b)
@@ -963,19 +1029,8 @@ def predict_fight_data(
         else fighter_b_clean
     )
 
-    basic_matchup_edges = build_basic_matchup_edges(
-        fighter_a_row=fighter_a_row,
-        fighter_b_row=fighter_b_row,
-    )
-
-    matchup_insights = build_matchup_insights(
-        fighter_a=fighter_a_clean,
-        fighter_b=fighter_b_clean,
-        predicted_winner=predicted_winner,
-        edges=basic_matchup_edges,
-    )
-
-    return {
+    prediction_payload: dict[str, Any] = {
+        "model_name": model_name,
         "fighter_a": fighter_a_clean,
         "fighter_b": fighter_b_clean,
         "weight_class": weight_class,
@@ -989,8 +1044,301 @@ def predict_fight_data(
         "confidence": confidence,
         "confidence_percentage": format_percent(confidence),
         "confidence_label": get_confidence_label(confidence),
-        "basic_matchup_edges": basic_matchup_edges,
-        "matchup_insights": matchup_insights,
+    }
+
+    if include_explanations:
+        basic_matchup_edges = build_basic_matchup_edges(
+            fighter_a_row=fighter_a_row,
+            fighter_b_row=fighter_b_row,
+        )
+
+        matchup_insights = build_matchup_insights(
+            fighter_a=fighter_a_clean,
+            fighter_b=fighter_b_clean,
+            predicted_winner=predicted_winner,
+            edges=basic_matchup_edges,
+        )
+
+        prediction_payload["basic_matchup_edges"] = basic_matchup_edges
+        prediction_payload["matchup_insights"] = matchup_insights
+
+    return prediction_payload
+
+
+def build_probability_prediction_payload(
+    *,
+    model_name: str,
+    fighter_a: str,
+    fighter_b: str,
+    weight_class: str,
+    fighter_a_probability: float,
+    fighter_b_probability: float,
+    fighter_a_direct_score: float | None = None,
+    fighter_b_direct_score: float | None = None,
+) -> dict[str, Any]:
+    fighter_a_probability = float(np.clip(fighter_a_probability, 0.0, 1.0))
+    fighter_b_probability = float(np.clip(fighter_b_probability, 0.0, 1.0))
+
+    total = fighter_a_probability + fighter_b_probability
+
+    if total > 0:
+        fighter_a_probability = fighter_a_probability / total
+        fighter_b_probability = fighter_b_probability / total
+    else:
+        fighter_a_probability = 0.5
+        fighter_b_probability = 0.5
+
+    confidence = max(fighter_a_probability, fighter_b_probability)
+
+    predicted_winner = (
+        fighter_a
+        if fighter_a_probability >= fighter_b_probability
+        else fighter_b
+    )
+
+    return {
+        "model_name": model_name,
+        "fighter_a": fighter_a,
+        "fighter_b": fighter_b,
+        "weight_class": weight_class,
+        "fighter_a_probability": fighter_a_probability,
+        "fighter_b_probability": fighter_b_probability,
+        "fighter_a_percentage": format_percent(fighter_a_probability),
+        "fighter_b_percentage": format_percent(fighter_b_probability),
+        "fighter_a_direct_score": (
+            fighter_a_probability
+            if fighter_a_direct_score is None
+            else fighter_a_direct_score
+        ),
+        "fighter_b_direct_score": (
+            fighter_b_probability
+            if fighter_b_direct_score is None
+            else fighter_b_direct_score
+        ),
+        "predicted_winner": predicted_winner,
+        "confidence": confidence,
+        "confidence_percentage": format_percent(confidence),
+        "confidence_label": get_confidence_label(confidence),
+    }
+
+
+def calculate_elo_probability(
+    fighter_a_elo: float | None,
+    fighter_b_elo: float | None,
+) -> float:
+    """
+    Standard Elo expected-score probability.
+
+    Missing Elo values fall back to 1500 so the baseline remains available
+    even for fighters with limited historical data.
+    """
+    fighter_a_elo = 1500.0 if fighter_a_elo is None else float(fighter_a_elo)
+    fighter_b_elo = 1500.0 if fighter_b_elo is None else float(fighter_b_elo)
+
+    return 1.0 / (1.0 + 10.0 ** ((fighter_b_elo - fighter_a_elo) / 400.0))
+
+
+def predict_elo_baseline(
+    fighter_a: str,
+    fighter_b: str,
+    weight_class: str,
+) -> dict[str, Any]:
+    """
+    Simple non-ML benchmark based only on current prior Elo.
+
+    This is intentionally included in all-model snapshots so the trained
+    models can be compared against a transparent baseline over future fights.
+    """
+    features_df = load_current_features()
+
+    fighter_a_row = get_fighter_row(features_df, fighter_a)
+    fighter_b_row = get_fighter_row(features_df, fighter_b)
+
+    fighter_a_row = apply_prediction_weight_class_context(
+        fighter_row=fighter_a_row,
+        prediction_weight_class=weight_class,
+    )
+    fighter_b_row = apply_prediction_weight_class_context(
+        fighter_row=fighter_b_row,
+        prediction_weight_class=weight_class,
+    )
+
+    fighter_a_clean = clean_text(fighter_a_row["fighter"])
+    fighter_b_clean = clean_text(fighter_b_row["fighter"])
+
+    fighter_a_elo = optional_float(fighter_a_row.get("prior_elo"))
+    fighter_b_elo = optional_float(fighter_b_row.get("prior_elo"))
+
+    fighter_a_probability = calculate_elo_probability(
+        fighter_a_elo=fighter_a_elo,
+        fighter_b_elo=fighter_b_elo,
+    )
+
+    return build_probability_prediction_payload(
+        model_name="elo_baseline",
+        fighter_a=fighter_a_clean,
+        fighter_b=fighter_b_clean,
+        weight_class=clean_text(weight_class),
+        fighter_a_probability=fighter_a_probability,
+        fighter_b_probability=1.0 - fighter_a_probability,
+    )
+
+
+def build_ensemble_average_prediction(
+    model_predictions: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """
+    Average a stable set of model probabilities into one ensemble prediction.
+
+    We prefer calibrated models plus the Elo baseline. If those are not
+    available for some reason, we fall back to all non-ensemble predictions.
+    """
+    if not model_predictions:
+        return None
+
+    preferred_model_names = [
+        "calibrated_logistic_regression",
+        "calibrated_random_forest",
+        "calibrated_extra_trees",
+        "calibrated_hist_gradient_boosting",
+        "calibrated_xgboost",
+        "elo_baseline",
+    ]
+
+    predictions_by_name = {
+        clean_text(prediction.get("model_name", "")): prediction
+        for prediction in model_predictions
+    }
+
+    selected_predictions = [
+        predictions_by_name[model_name]
+        for model_name in preferred_model_names
+        if model_name in predictions_by_name
+    ]
+
+    if not selected_predictions:
+        selected_predictions = [
+            prediction
+            for prediction in model_predictions
+            if clean_text(prediction.get("model_name", "")) != "ensemble_average"
+        ]
+
+    fighter_a_probabilities = [
+        optional_float(prediction.get("fighter_a_probability"))
+        for prediction in selected_predictions
+    ]
+    fighter_b_probabilities = [
+        optional_float(prediction.get("fighter_b_probability"))
+        for prediction in selected_predictions
+    ]
+
+    fighter_a_probabilities = [
+        value for value in fighter_a_probabilities if value is not None
+    ]
+    fighter_b_probabilities = [
+        value for value in fighter_b_probabilities if value is not None
+    ]
+
+    if not fighter_a_probabilities or not fighter_b_probabilities:
+        return None
+
+    first_prediction = selected_predictions[0]
+    fighter_a_probability = float(np.mean(fighter_a_probabilities))
+    fighter_b_probability = float(np.mean(fighter_b_probabilities))
+
+    ensemble_prediction = build_probability_prediction_payload(
+        model_name="ensemble_average",
+        fighter_a=clean_text(first_prediction.get("fighter_a", "")),
+        fighter_b=clean_text(first_prediction.get("fighter_b", "")),
+        weight_class=clean_text(first_prediction.get("weight_class", "")),
+        fighter_a_probability=fighter_a_probability,
+        fighter_b_probability=fighter_b_probability,
+    )
+
+    ensemble_prediction["ensemble_members"] = [
+        clean_text(prediction.get("model_name", ""))
+        for prediction in selected_predictions
+    ]
+
+    return ensemble_prediction
+
+
+def predict_fight_data(
+    fighter_a: str,
+    fighter_b: str,
+    weight_class: str,
+) -> dict[str, Any]:
+    model, numeric_features, categorical_features = load_model_and_features()
+
+    return predict_fight_data_for_model(
+        fighter_a=fighter_a,
+        fighter_b=fighter_b,
+        weight_class=weight_class,
+        model_name="best_winner_model",
+        model=model,
+        numeric_features=numeric_features,
+        categorical_features=categorical_features,
+        include_explanations=True,
+    )
+
+
+def predict_fight_all_models(
+    fighter_a: str,
+    fighter_b: str,
+    weight_class: str,
+) -> dict[str, Any]:
+    models, model_metadata, best_model_name, numeric_features, categorical_features = (
+        load_all_prediction_models_and_features()
+    )
+
+    model_predictions = []
+
+    for model_name, model in sorted(models.items()):
+        prediction = predict_fight_data_for_model(
+            fighter_a=fighter_a,
+            fighter_b=fighter_b,
+            weight_class=weight_class,
+            model_name=model_name,
+            model=model,
+            numeric_features=numeric_features,
+            categorical_features=categorical_features,
+            include_explanations=False,
+        )
+
+        prediction["is_best_model"] = model_name == best_model_name
+        prediction["model_metrics"] = model_metadata.get(model_name, {}).get("metrics", {})
+        model_predictions.append(prediction)
+
+    elo_prediction = predict_elo_baseline(
+        fighter_a=fighter_a,
+        fighter_b=fighter_b,
+        weight_class=weight_class,
+    )
+    elo_prediction["is_best_model"] = False
+    elo_prediction["model_metrics"] = {
+        "model_type": "baseline",
+        "description": "Standard Elo expected-score probability using prior_elo.",
+    }
+    model_predictions.append(elo_prediction)
+
+    ensemble_prediction = build_ensemble_average_prediction(model_predictions)
+
+    if ensemble_prediction is not None:
+        ensemble_prediction["is_best_model"] = False
+        ensemble_prediction["model_metrics"] = {
+            "model_type": "ensemble",
+            "description": "Average of calibrated model probabilities plus Elo baseline when available.",
+            "members": ensemble_prediction.get("ensemble_members", []),
+        }
+        model_predictions.append(ensemble_prediction)
+
+    return {
+        "fighter_a": clean_text(fighter_a),
+        "fighter_b": clean_text(fighter_b),
+        "weight_class": clean_text(weight_class),
+        "best_model_name": best_model_name,
+        "model_count": len(model_predictions),
+        "model_predictions": model_predictions,
     }
 
 def clear_prediction_cache() -> None:

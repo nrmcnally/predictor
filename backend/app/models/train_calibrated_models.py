@@ -9,7 +9,7 @@ import pandas as pd
 
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import ExtraTreesClassifier, HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -40,6 +40,8 @@ TRAINING_MATCHUPS_CSV = PROCESSED_DATA_DIR / "training_matchups.csv"
 BEST_MODEL_PATH = MODELS_DIR / "best_winner_model.joblib"
 CALIBRATED_METRICS_PATH = MODELS_DIR / "calibrated_model_metrics.json"
 FEATURES_PATH = MODELS_DIR / "model_features.json"
+MODEL_REGISTRY_PATH = MODELS_DIR / "model_registry.json"
+WINNER_MODELS_DIR = MODELS_DIR / "winner_models"
 
 RANDOM_STATE = 42
 
@@ -182,6 +184,39 @@ def build_base_models(
                     min_samples_leaf=8,
                     random_state=RANDOM_STATE,
                     n_jobs=-1,
+                ),
+            ),
+        ]
+    )
+
+    models["extra_trees"] = Pipeline(
+        steps=[
+            ("preprocessor", tree_preprocessor),
+            (
+                "model",
+                ExtraTreesClassifier(
+                    n_estimators=600,
+                    max_depth=None,
+                    min_samples_leaf=8,
+                    random_state=RANDOM_STATE,
+                    n_jobs=-1,
+                ),
+            ),
+        ]
+    )
+
+    models["hist_gradient_boosting"] = Pipeline(
+        steps=[
+            ("preprocessor", tree_preprocessor),
+            (
+                "model",
+                HistGradientBoostingClassifier(
+                    max_iter=350,
+                    learning_rate=0.035,
+                    max_leaf_nodes=15,
+                    min_samples_leaf=20,
+                    l2_regularization=0.05,
+                    random_state=RANDOM_STATE,
                 ),
             ),
         ]
@@ -372,6 +407,7 @@ def print_metrics_table(results: dict[str, dict[str, float]]) -> None:
 def save_outputs(
     best_model_name: str,
     best_model,
+    fitted_models: dict[str, Any],
     results: dict[str, dict[str, float]],
     bucket_reports: dict[str, list[dict[str, Any]]],
     numeric_features: list[str],
@@ -381,11 +417,26 @@ def save_outputs(
     test_df: pd.DataFrame,
 ) -> None:
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    WINNER_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
     joblib.dump(best_model, BEST_MODEL_PATH)
 
+    model_registry: dict[str, dict[str, Any]] = {}
+
+    for model_name, model in sorted(fitted_models.items()):
+        model_path = WINNER_MODELS_DIR / f"{model_name}.joblib"
+        joblib.dump(model, model_path)
+        model_registry[model_name] = {
+            "model_name": model_name,
+            "path": str(model_path.relative_to(MODELS_DIR)),
+            "is_best_model": model_name == best_model_name,
+            "metrics": results.get(model_name, {}),
+        }
+
     metrics_payload = {
         "best_model_name": best_model_name,
+        "available_model_names": sorted(fitted_models.keys()),
+        "model_registry_path": str(MODEL_REGISTRY_PATH),
         "selection_priority": [
             "lowest_brier_score",
             "lowest_log_loss",
@@ -410,6 +461,15 @@ def save_outputs(
 
     with open(CALIBRATED_METRICS_PATH, "w", encoding="utf-8") as file:
         json.dump(metrics_payload, file, indent=2)
+
+    registry_payload = {
+        "best_model_name": best_model_name,
+        "models_dir": str(WINNER_MODELS_DIR),
+        "models": model_registry,
+    }
+
+    with open(MODEL_REGISTRY_PATH, "w", encoding="utf-8") as file:
+        json.dump(registry_payload, file, indent=2)
 
     features_payload = {
         "numeric_features": numeric_features,
@@ -537,6 +597,7 @@ def main() -> None:
     save_outputs(
         best_model_name=best_model_name,
         best_model=best_model,
+        fitted_models=fitted_models,
         results=results,
         bucket_reports=bucket_reports,
         numeric_features=numeric_features,
@@ -548,6 +609,8 @@ def main() -> None:
 
     print()
     print(f"Saved best model to: {BEST_MODEL_PATH}")
+    print(f"Saved all winner models to: {WINNER_MODELS_DIR}")
+    print(f"Saved model registry to: {MODEL_REGISTRY_PATH}")
     print(f"Saved calibrated metrics to: {CALIBRATED_METRICS_PATH}")
     print(f"Saved features to: {FEATURES_PATH}")
 

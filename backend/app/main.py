@@ -62,6 +62,7 @@ from app.services.model_evaluation_service import get_model_evaluation
 from app.services.fighter_profile_service import build_fighter_profile
 
 from app.services.model_market_evaluation_service import build_model_market_evaluation
+from app.services.model_snapshot_evaluation_service import build_model_snapshot_evaluation
 
 app = FastAPI(
     title="UFC Fight Predictor API",
@@ -533,3 +534,18 @@ def model_vs_market_evaluation() -> dict[str, Any]:
                 "error": str(error),
             },
         )
+
+@app.get("/model-snapshot-evaluation")
+def model_snapshot_evaluation() -> dict[str, Any]:
+    try:
+        return build_model_snapshot_evaluation()
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to build all-model snapshot evaluation.",
+                "error": str(error),
+            },
+        )
+

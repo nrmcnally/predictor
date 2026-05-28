@@ -109,9 +109,15 @@ function formatModelName(modelName = "") {
     calibrated_logistic_regression: "Calibrated Logistic",
     calibrated_random_forest: "Calibrated Random Forest",
     calibrated_xgboost: "Calibrated XGBoost",
+    calibrated_extra_trees: "Calibrated Extra Trees",
+    calibrated_hist_gradient_boosting: "Calibrated Hist Gradient",
     logistic_regression: "Logistic Regression",
     random_forest: "Random Forest",
     xgboost: "XGBoost",
+    extra_trees: "Extra Trees",
+    hist_gradient_boosting: "Hist Gradient Boosting",
+    elo_baseline: "Elo Baseline",
+    ensemble_average: "Ensemble Average",
   };
 
   return names[modelName] ?? modelName.replaceAll("_", " ");
@@ -210,6 +216,127 @@ function getAccuracyColor(value) {
   }
 
   return "yellow";
+}
+
+function hasScoredStats(row) {
+  return Number(row?.scored_fights ?? row?.fight_count ?? 0) > 0;
+}
+
+function getModelKind(modelName = "") {
+  const normalized = String(modelName).toLowerCase();
+
+  if (normalized.includes("ensemble")) {
+    return "Ensemble";
+  }
+
+  if (normalized.includes("elo")) {
+    return "Baseline";
+  }
+
+  if (normalized.includes("calibrated")) {
+    return "Calibrated";
+  }
+
+  if (normalized.includes("forest") || normalized.includes("trees") || normalized.includes("boost")) {
+    return "Tree model";
+  }
+
+  if (normalized.includes("logistic")) {
+    return "Linear model";
+  }
+
+  return "Model";
+}
+
+function getModelKindColor(modelName = "") {
+  const kind = getModelKind(modelName);
+
+  if (kind === "Ensemble") {
+    return "violet";
+  }
+
+  if (kind === "Baseline") {
+    return "gray";
+  }
+
+  if (kind === "Calibrated") {
+    return "blue";
+  }
+
+  if (kind === "Tree model") {
+    return "green";
+  }
+
+  if (kind === "Linear model") {
+    return "cyan";
+  }
+
+  return "gray";
+}
+
+function getModelDescription(modelName = "") {
+  const normalized = String(modelName).toLowerCase();
+
+  if (normalized === "elo_baseline") {
+    return "Simple Elo-only benchmark. Every advanced model should eventually beat this.";
+  }
+
+  if (normalized === "ensemble_average") {
+    return "Average of available model probabilities. Useful as a stability check.";
+  }
+
+  if (normalized.includes("calibrated")) {
+    return "Probability-calibrated version intended to make confidence more trustworthy.";
+  }
+
+  if (normalized.includes("hist_gradient")) {
+    return "Gradient boosting model for tabular matchup features.";
+  }
+
+  if (normalized.includes("extra_trees")) {
+    return "Randomized tree ensemble used as another tabular model comparison.";
+  }
+
+  if (normalized.includes("xgboost")) {
+    return "Boosted tree model; often strong on tabular sports features.";
+  }
+
+  if (normalized.includes("random_forest")) {
+    return "Tree ensemble baseline that can capture nonlinear feature interactions.";
+  }
+
+  if (normalized.includes("logistic")) {
+    return "Regularized linear model. Simple, stable, and useful as a sanity check.";
+  }
+
+  return "Tracked prospective model for future-fight prediction comparison.";
+}
+
+function sortProspectiveModelRows(rows = []) {
+  return [...rows].sort((a, b) => {
+    const aScored = hasScoredStats(a) ? 0 : 1;
+    const bScored = hasScoredStats(b) ? 0 : 1;
+
+    if (aScored !== bScored) {
+      return aScored - bScored;
+    }
+
+    const aBrier = Number(a.brier_score);
+    const bBrier = Number(b.brier_score);
+
+    if (Number.isFinite(aBrier) && Number.isFinite(bBrier) && aBrier !== bBrier) {
+      return aBrier - bBrier;
+    }
+
+    const aAccuracy = Number(a.accuracy);
+    const bAccuracy = Number(b.accuracy);
+
+    if (Number.isFinite(aAccuracy) && Number.isFinite(bAccuracy) && aAccuracy !== bAccuracy) {
+      return bAccuracy - aAccuracy;
+    }
+
+    return formatModelName(a.model_name).localeCompare(formatModelName(b.model_name));
+  });
 }
 
 function MetricCard({ label, value, icon }) {
@@ -381,14 +508,120 @@ function PredictionReviewCard({ title, predictions = [], color = "green" }) {
   );
 }
 
+function ModelSnapshotCard({ row, index }) {
+  const scoredFights = Number(row.scored_fights ?? row.fight_count ?? 0);
+  const savedRows = row.saved_prediction_rows ?? row.saved_rows ?? row.prediction_rows;
+  const savedFights = row.saved_unique_fights ?? row.saved_fights;
+  const pendingFights = row.pending_fights;
+  const hasStats = scoredFights > 0;
+  const rankLabel = hasStats ? `#${index + 1}` : "Waiting";
+
+  return (
+    <Card withBorder radius="xl" shadow="sm" p="lg" className="prospective-model-card">
+      <Group justify="space-between" align="flex-start" gap="md" wrap="nowrap">
+        <div>
+          <Group gap="xs" align="center">
+            <Badge
+              color={hasStats ? getAccuracyColor(row.accuracy) : "gray"}
+              variant={hasStats ? "filled" : "light"}
+              radius="xl"
+            >
+              {rankLabel}
+            </Badge>
+            <Badge color={getModelKindColor(row.model_name)} variant="light" radius="xl">
+              {getModelKind(row.model_name)}
+            </Badge>
+            {row.is_current_best_model && (
+              <Badge color="blue" variant="light" radius="xl">
+                Current app model
+              </Badge>
+            )}
+          </Group>
+
+          <Title order={3} mt="sm">
+            {formatModelName(row.model_name)}
+          </Title>
+          <Text c="dimmed" size="sm" mt={4} lh={1.5}>
+            {getModelDescription(row.model_name)}
+          </Text>
+        </div>
+      </Group>
+
+      <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="sm" mt="lg">
+        <MetricCard
+          label="Accuracy"
+          value={row.accuracy_percentage || formatMetricPercent(row.accuracy)}
+          icon={<IconTarget size={16} />}
+        />
+        <MetricCard
+          label="Scored"
+          value={formatInteger(scoredFights)}
+          icon={<IconChartBar size={16} />}
+        />
+        <MetricCard
+          label="Avg confidence"
+          value={row.average_confidence_percentage || formatMetricPercent(row.average_confidence)}
+          icon={<IconTrendingUp size={16} />}
+        />
+        <MetricCard
+          label="Brier"
+          value={formatMetricDecimal(row.brier_score)}
+          icon={<IconChartBar size={16} />}
+        />
+        <MetricCard
+          label="Log loss"
+          value={formatMetricDecimal(row.log_loss)}
+          icon={<IconChartBar size={16} />}
+        />
+        <MetricCard
+          label="Calibration"
+          value={row.calibration_gap_percentage_points || formatCalibrationGap(row)}
+          icon={<IconTrendingUp size={16} />}
+        />
+      </SimpleGrid>
+
+      <Group gap="xs" mt="md">
+        <Badge color="green" variant="light">
+          {formatInteger(row.correct_predictions)} correct
+        </Badge>
+        <Badge color="red" variant="light">
+          {formatInteger(row.wrong_predictions)} wrong
+        </Badge>
+        <Badge color="gray" variant="light">
+          {formatInteger(savedRows)} saved rows
+        </Badge>
+        {savedFights !== undefined && (
+          <Badge color="gray" variant="light">
+            {formatInteger(savedFights)} saved fights
+          </Badge>
+        )}
+        {pendingFights !== undefined && pendingFights !== null && (
+          <Badge color="yellow" variant="light">
+            {formatInteger(pendingFights)} pending
+          </Badge>
+        )}
+      </Group>
+
+      {!hasStats && (
+        <Alert color="yellow" variant="light" radius="lg" mt="md">
+          This model is being tracked, but none of its saved predictions have completed results yet.
+        </Alert>
+      )}
+    </Card>
+  );
+}
+
 function ProspectiveModelEvaluationCard({
   evaluation,
   loading = false,
   error = "",
   onReload,
 }) {
-  const modelRows = getProspectiveModelRows(evaluation);
+  const modelRows = sortProspectiveModelRows(getProspectiveModelRows(evaluation));
   const recentRows = getProspectiveRecentRows(evaluation);
+  const scoredModelRows = modelRows.filter(hasScoredStats);
+  const waitingModelRows = modelRows.filter((row) => !hasScoredStats(row));
+  const leadingModel = scoredModelRows[0];
 
   return (
     <Card withBorder radius="xl" shadow="sm" p="xl">
@@ -398,8 +631,8 @@ function ProspectiveModelEvaluationCard({
             Prospective performance
           </Text>
           <Title order={3} mt={4}>All-model prediction snapshots</Title>
-          <Text c="dimmed" size="sm" mt={4} maw={820} lh={1.55}>
-            Compares each saved model using predictions captured before future fights were completed. This is the honest long-term test for which model actually predicts upcoming results best.
+          <Text c="dimmed" size="sm" mt={4} maw={850} lh={1.55}>
+            Each model gets its own card here. These stats use predictions saved before fights happened, so this is the long-term test for which model actually predicts future cards best.
           </Text>
         </div>
 
@@ -423,7 +656,7 @@ function ProspectiveModelEvaluationCard({
       )}
 
       {evaluation && (
-        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" mt="lg">
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md" mt="lg">
           <MetricCard
             label="Saved rows"
             value={formatInteger(evaluation.prediction_rows)}
@@ -435,65 +668,97 @@ function ProspectiveModelEvaluationCard({
             icon={<IconTarget size={16} />}
           />
           <MetricCard
-            label="Models compared"
+            label="Models tracked"
             value={formatInteger(evaluation.model_count ?? modelRows.length)}
+            icon={<IconTrendingUp size={16} />}
+          />
+          <MetricCard
+            label="Current leader"
+            value={leadingModel ? formatModelName(leadingModel.model_name) : "Waiting"}
             icon={<IconTrendingUp size={16} />}
           />
         </SimpleGrid>
       )}
 
       {modelRows.length > 0 ? (
-        <ScrollArea mt="lg" scrollbarSize={7}>
-          <Table striped highlightOnHover withTableBorder verticalSpacing="sm" miw={880}>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Model</Table.Th>
-                <Table.Th>Fights</Table.Th>
-                <Table.Th>Accuracy</Table.Th>
-                <Table.Th>Brier</Table.Th>
-                <Table.Th>Log loss</Table.Th>
-                <Table.Th>Avg confidence</Table.Th>
-                <Table.Th>Calibration gap</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {modelRows.map((row) => (
-                <Table.Tr key={row.model_name}>
-                  <Table.Td>
-                    <Group gap="xs">
-                      <Text fw={850}>{formatModelName(row.model_name)}</Text>
-                      {row.is_current_best_model && (
-                        <Badge color="blue" variant="light">Current best</Badge>
-                      )}
-                    </Group>
-                  </Table.Td>
-                  <Table.Td>{formatInteger(row.scored_fights ?? row.fight_count)}</Table.Td>
-                  <Table.Td>
-                    <Badge
-                      color={getAccuracyColor(row.accuracy)}
-                      variant="light"
-                    >
-                      {row.accuracy_percentage || formatMetricPercent(row.accuracy)}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>{formatMetricDecimal(row.brier_score)}</Table.Td>
-                  <Table.Td>{formatMetricDecimal(row.log_loss)}</Table.Td>
-                  <Table.Td>
-                    {row.average_confidence_percentage ||
-                      formatMetricPercent(row.average_confidence)}
-                  </Table.Td>
-                  <Table.Td>
-                    {row.calibration_gap_percentage_points ||
-                      formatCalibrationGap(row)}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </ScrollArea>
+        <>
+          <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="lg" mt="xl">
+            {modelRows.map((row, index) => (
+              <ModelSnapshotCard
+                key={row.model_name || `model-${index}`}
+                row={row}
+                index={index}
+              />
+            ))}
+          </SimpleGrid>
+
+          <Stack gap="sm" mt="xl">
+            <Group justify="space-between" align="center">
+              <Title order={4}>Compact model leaderboard</Title>
+              <Group gap="xs">
+                {scoredModelRows.length > 0 && (
+                  <Badge color="green" variant="light">
+                    {scoredModelRows.length} scored
+                  </Badge>
+                )}
+                {waitingModelRows.length > 0 && (
+                  <Badge color="yellow" variant="light">
+                    {waitingModelRows.length} waiting
+                  </Badge>
+                )}
+              </Group>
+            </Group>
+
+            <ScrollArea scrollbarSize={7}>
+              <Table striped highlightOnHover withTableBorder verticalSpacing="sm" miw={920}>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Model</Table.Th>
+                    <Table.Th>Saved</Table.Th>
+                    <Table.Th>Scored</Table.Th>
+                    <Table.Th>Accuracy</Table.Th>
+                    <Table.Th>Brier</Table.Th>
+                    <Table.Th>Log loss</Table.Th>
+                    <Table.Th>Avg confidence</Table.Th>
+                    <Table.Th>Calibration</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {modelRows.map((row) => (
+                    <Table.Tr key={row.model_name}>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <Text fw={850}>{formatModelName(row.model_name)}</Text>
+                          <Badge color={getModelKindColor(row.model_name)} variant="light">
+                            {getModelKind(row.model_name)}
+                          </Badge>
+                        </Group>
+                      </Table.Td>
+                      <Table.Td>{formatInteger(row.saved_unique_fights ?? row.saved_prediction_rows)}</Table.Td>
+                      <Table.Td>{formatInteger(row.scored_fights ?? row.fight_count)}</Table.Td>
+                      <Table.Td>
+                        <Badge color={getAccuracyColor(row.accuracy)} variant="light">
+                          {row.accuracy_percentage || formatMetricPercent(row.accuracy)}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>{formatMetricDecimal(row.brier_score)}</Table.Td>
+                      <Table.Td>{formatMetricDecimal(row.log_loss)}</Table.Td>
+                      <Table.Td>
+                        {row.average_confidence_percentage || formatMetricPercent(row.average_confidence)}
+                      </Table.Td>
+                      <Table.Td>
+                        {row.calibration_gap_percentage_points || formatCalibrationGap(row)}
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
+          </Stack>
+        </>
       ) : (
         <Text c="dimmed" mt="lg">
-          No scored all-model snapshots are available yet. Run the incremental update to save future-card model snapshots, then this table will populate after those fights have completed.
+          No all-model snapshots are available yet. Run the incremental update to save future-card model predictions.
         </Text>
       )}
 
