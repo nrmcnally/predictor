@@ -491,6 +491,12 @@ function App() {
   const [modelMarketEvaluationLoading, setModelMarketEvaluationLoading] = useState(false);
   const [modelMarketEvaluationError, setModelMarketEvaluationError] = useState("");
 
+  const [modelSnapshotEvaluation, setModelSnapshotEvaluation] = useState(null);
+  const [modelSnapshotEvaluationLoading, setModelSnapshotEvaluationLoading] =
+    useState(false);
+  const [modelSnapshotEvaluationError, setModelSnapshotEvaluationError] =
+    useState("");
+
   const [evaluationTestFraction, setEvaluationTestFraction] = useState(0.2);
   const [evaluationRecentLimit, setEvaluationRecentLimit] = useState(25);
 
@@ -588,6 +594,7 @@ function App() {
     loadLeaderboards();
     loadModelEvaluation();
     loadModelMarketEvaluation();
+    loadModelSnapshotEvaluation();
     loadMethodModelMetrics();
     loadFutureFightOdds();
     loadFighterImages();
@@ -910,6 +917,30 @@ async function loadModelMarketEvaluation() {
     setModelMarketEvaluationError(requestError.message);
   } finally {
     setModelMarketEvaluationLoading(false);
+  }
+}
+
+async function loadModelSnapshotEvaluation() {
+  setModelSnapshotEvaluationLoading(true);
+  setModelSnapshotEvaluationError("");
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/model-snapshot-evaluation`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.detail?.message ||
+          data?.detail?.error ||
+          "Failed to load prospective model evaluation."
+      );
+    }
+
+    setModelSnapshotEvaluation(data);
+  } catch (requestError) {
+    setModelSnapshotEvaluationError(requestError.message);
+  } finally {
+    setModelSnapshotEvaluationLoading(false);
   }
 }
 
@@ -1799,6 +1830,10 @@ function selectView(nextView) {
           modelMarketEvaluationLoading={modelMarketEvaluationLoading}
           modelMarketEvaluationError={modelMarketEvaluationError}
           loadModelMarketEvaluation={loadModelMarketEvaluation}
+          modelSnapshotEvaluation={modelSnapshotEvaluation}
+          modelSnapshotEvaluationLoading={modelSnapshotEvaluationLoading}
+          modelSnapshotEvaluationError={modelSnapshotEvaluationError}
+          loadModelSnapshotEvaluation={loadModelSnapshotEvaluation}
           methodModelMetrics={methodModelMetrics}
           methodModelMetricsError={methodModelMetricsError}
           evaluationTestFraction={evaluationTestFraction}

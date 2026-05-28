@@ -6,8 +6,10 @@ import {
   Group,
   NumberInput,
   Paper,
+  ScrollArea,
   SimpleGrid,
   Stack,
+  Table,
   Text,
   Title,
 } from "@mantine/core";
@@ -129,6 +131,85 @@ function formatMetricDecimal(value) {
   }
 
   return Number(value).toFixed(4);
+}
+
+function formatInteger(value) {
+  if (value === null || value === undefined || value === "") {
+    return "N/A";
+  }
+
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return String(value);
+  }
+
+  return numberValue.toLocaleString();
+}
+
+function getProspectiveModelRows(evaluation) {
+  if (!evaluation) {
+    return [];
+  }
+
+  if (Array.isArray(evaluation.models)) {
+    return evaluation.models;
+  }
+
+  if (Array.isArray(evaluation.model_results)) {
+    return evaluation.model_results;
+  }
+
+  if (Array.isArray(evaluation.by_model)) {
+    return evaluation.by_model;
+  }
+
+  if (evaluation.models && typeof evaluation.models === "object") {
+    return Object.entries(evaluation.models).map(([modelName, modelData]) => ({
+      model_name: modelName,
+      ...(modelData || {}),
+    }));
+  }
+
+  return [];
+}
+
+function getProspectiveRecentRows(evaluation) {
+  if (!evaluation) {
+    return [];
+  }
+
+  if (Array.isArray(evaluation.recent_scored_fights)) {
+    return evaluation.recent_scored_fights;
+  }
+
+  if (Array.isArray(evaluation.recent_predictions)) {
+    return evaluation.recent_predictions;
+  }
+
+  if (Array.isArray(evaluation.scored_predictions)) {
+    return evaluation.scored_predictions.slice(0, 25);
+  }
+
+  return [];
+}
+
+function getAccuracyColor(value) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return "gray";
+  }
+
+  if (numberValue >= 0.6) {
+    return "green";
+  }
+
+  if (numberValue >= 0.52) {
+    return "blue";
+  }
+
+  return "yellow";
 }
 
 function MetricCard({ label, value, icon }) {
@@ -300,6 +381,157 @@ function PredictionReviewCard({ title, predictions = [], color = "green" }) {
   );
 }
 
+function ProspectiveModelEvaluationCard({
+  evaluation,
+  loading = false,
+  error = "",
+  onReload,
+}) {
+  const modelRows = getProspectiveModelRows(evaluation);
+  const recentRows = getProspectiveRecentRows(evaluation);
+
+  return (
+    <Card withBorder radius="xl" shadow="sm" p="xl">
+      <Group justify="space-between" align="flex-start" gap="lg">
+        <div>
+          <Text size="xs" c="blue" fw={900} tt="uppercase" lts="0.08em">
+            Prospective performance
+          </Text>
+          <Title order={3} mt={4}>All-model prediction snapshots</Title>
+          <Text c="dimmed" size="sm" mt={4} maw={820} lh={1.55}>
+            Compares each saved model using predictions captured before future fights were completed. This is the honest long-term test for which model actually predicts upcoming results best.
+          </Text>
+        </div>
+
+        <Button
+          radius="lg"
+          variant="light"
+          leftSection={<IconRefresh size={17} />}
+          onClick={onReload}
+          loading={loading}
+        >
+          Reload snapshots
+        </Button>
+      </Group>
+
+      {error && <Alert color="red" radius="lg" mt="md">{error}</Alert>}
+
+      {evaluation?.message && (
+        <Alert color={modelRows.length ? "blue" : "yellow"} radius="lg" mt="md">
+          {evaluation.message}
+        </Alert>
+      )}
+
+      {evaluation && (
+        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" mt="lg">
+          <MetricCard
+            label="Saved rows"
+            value={formatInteger(evaluation.prediction_rows)}
+            icon={<IconChartBar size={16} />}
+          />
+          <MetricCard
+            label="Scored predictions"
+            value={formatInteger(evaluation.scored_fights)}
+            icon={<IconTarget size={16} />}
+          />
+          <MetricCard
+            label="Models compared"
+            value={formatInteger(evaluation.model_count ?? modelRows.length)}
+            icon={<IconTrendingUp size={16} />}
+          />
+        </SimpleGrid>
+      )}
+
+      {modelRows.length > 0 ? (
+        <ScrollArea mt="lg" scrollbarSize={7}>
+          <Table striped highlightOnHover withTableBorder verticalSpacing="sm" miw={880}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Model</Table.Th>
+                <Table.Th>Fights</Table.Th>
+                <Table.Th>Accuracy</Table.Th>
+                <Table.Th>Brier</Table.Th>
+                <Table.Th>Log loss</Table.Th>
+                <Table.Th>Avg confidence</Table.Th>
+                <Table.Th>Calibration gap</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {modelRows.map((row) => (
+                <Table.Tr key={row.model_name}>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <Text fw={850}>{formatModelName(row.model_name)}</Text>
+                      {row.is_current_best_model && (
+                        <Badge color="blue" variant="light">Current best</Badge>
+                      )}
+                    </Group>
+                  </Table.Td>
+                  <Table.Td>{formatInteger(row.scored_fights ?? row.fight_count)}</Table.Td>
+                  <Table.Td>
+                    <Badge
+                      color={getAccuracyColor(row.accuracy)}
+                      variant="light"
+                    >
+                      {row.accuracy_percentage || formatMetricPercent(row.accuracy)}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>{formatMetricDecimal(row.brier_score)}</Table.Td>
+                  <Table.Td>{formatMetricDecimal(row.log_loss)}</Table.Td>
+                  <Table.Td>
+                    {row.average_confidence_percentage ||
+                      formatMetricPercent(row.average_confidence)}
+                  </Table.Td>
+                  <Table.Td>
+                    {row.calibration_gap_percentage_points ||
+                      formatCalibrationGap(row)}
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </ScrollArea>
+      ) : (
+        <Text c="dimmed" mt="lg">
+          No scored all-model snapshots are available yet. Run the incremental update to save future-card model snapshots, then this table will populate after those fights have completed.
+        </Text>
+      )}
+
+      {recentRows.length > 0 && (
+        <Stack gap="sm" mt="xl">
+          <Title order={4}>Recent scored snapshot fights</Title>
+          {recentRows.slice(0, 8).map((fight, index) => (
+            <Paper
+              key={`${fight.fight_url || fight.event_name}-${fight.model_name}-${index}`}
+              withBorder
+              radius="lg"
+              p="md"
+            >
+              <Group justify="space-between" align="flex-start" gap="md">
+                <div>
+                  <Text fw={850}>
+                    {fight.fighter_1} vs {fight.fighter_2}
+                  </Text>
+                  <Text c="dimmed" size="sm">
+                    {fight.event_date} • {fight.weight_class} • {formatModelName(fight.model_name)}
+                  </Text>
+                </div>
+                <Badge color={fight.prediction_correct ? "green" : "red"} variant="light">
+                  {fight.prediction_correct ? "Correct" : "Wrong"}
+                </Badge>
+              </Group>
+              <Text size="sm" mt="sm">
+                Predicted <Text span fw={850}>{fight.predicted_winner}</Text>; actual winner{" "}
+                <Text span fw={850}>{fight.actual_winner}</Text>.
+              </Text>
+            </Paper>
+          ))}
+        </Stack>
+      )}
+    </Card>
+  );
+}
+
 export default function EvaluationTab({
   modelEvaluation,
   modelEvaluationLoading = false,
@@ -309,6 +541,10 @@ export default function EvaluationTab({
   modelMarketEvaluationLoading = false,
   modelMarketEvaluationError = "",
   loadModelMarketEvaluation,
+  modelSnapshotEvaluation,
+  modelSnapshotEvaluationLoading = false,
+  modelSnapshotEvaluationError = "",
+  loadModelSnapshotEvaluation,
   methodModelMetrics,
   methodModelMetricsError = "",
   evaluationTestFraction,
@@ -378,6 +614,13 @@ export default function EvaluationTab({
         loading={modelMarketEvaluationLoading}
         error={modelMarketEvaluationError}
         onReload={loadModelMarketEvaluation}
+      />
+
+      <ProspectiveModelEvaluationCard
+        evaluation={modelSnapshotEvaluation}
+        loading={modelSnapshotEvaluationLoading}
+        error={modelSnapshotEvaluationError}
+        onReload={loadModelSnapshotEvaluation}
       />
 
       {methodModelMetricsError && <Alert color="red" radius="lg">{methodModelMetricsError}</Alert>}
