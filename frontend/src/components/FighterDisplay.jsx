@@ -1,89 +1,57 @@
-export function normalizeFighterName(value) {
-  return String(value || "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLowerCase();
-}
+import { getFighterInitials, normalizeFighterName } from "../lib/format.js";
 
-export function getFighterInitials(name) {
-  const parts = String(name || "")
-    .replaceAll("-", " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return "?";
-  }
-
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-}
-
-export function getFighterImageData(fighterName, fighterImageLookup = {}) {
+function getFighterImageData(fighterName, imageLookup = {}) {
   const name = String(fighterName || "").trim();
-  const key = normalizeFighterName(name);
-  const imageData = fighterImageLookup[key] || {};
-
+  const imageData = imageLookup[normalizeFighterName(name)] || {};
   const imageUrl =
-    imageData.image_url ||
-    imageData.fighter_image_url ||
-    imageData.url ||
-    "";
+    imageData.image_url || imageData.fighter_image_url || imageData.url || "";
 
   return {
     name,
     imageUrl,
-    sourceUrl:
-      imageData.source_url ||
-      imageData.fighter_image_source_url ||
-      "",
     initials:
-      imageData.initials ||
-      imageData.fighter_initials ||
-      getFighterInitials(name),
-    available:
-      Boolean(imageUrl) ||
-      Boolean(imageData.image_available) ||
-      Boolean(imageData.fighter_image_available),
+      imageData.initials || imageData.fighter_initials || getFighterInitials(name),
   };
 }
 
-export function FighterAvatar({
-  name,
-  imageLookup = {},
-  size = "sm",
-}) {
+function avatarHue(name) {
+  let hash = 0;
+
+  for (const character of String(name || "")) {
+    hash = (hash * 31 + character.charCodeAt(0)) % 360;
+  }
+
+  return hash;
+}
+
+export function FighterAvatar({ name, imageLookup = {}, size = "sm", corner }) {
   const imageData = getFighterImageData(name, imageLookup);
-  const className = `fighter-avatar ${size} ${
-    imageData.imageUrl ? "has-image" : "placeholder"
-  }`;
+  const cornerClass = corner ? `corner-${corner}` : "";
 
   if (imageData.imageUrl) {
     return (
-      <img
-        className={className}
-        src={imageData.imageUrl}
-        alt={`${imageData.name || "Fighter"} headshot`}
-        loading="lazy"
-        onError={(event) => {
-          event.currentTarget.style.display = "none";
-          const fallback = event.currentTarget.nextElementSibling;
-
-          if (fallback) {
-            fallback.style.display = "inline-flex";
-          }
-        }}
-      />
+      <span className={`avatar size-${size} ${cornerClass}`}>
+        <img
+          src={imageData.imageUrl}
+          alt={`${imageData.name || "Fighter"} headshot`}
+          loading="lazy"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+            event.currentTarget.parentElement.dataset.fallback = "true";
+          }}
+        />
+        <span className="avatar-fallback">{imageData.initials}</span>
+      </span>
     );
   }
 
   return (
-    <span className={className} aria-hidden="true">
-      {imageData.initials}
+    <span
+      className={`avatar size-${size} ${cornerClass}`}
+      data-fallback="true"
+      style={{ "--avatar-hue": avatarHue(imageData.name) }}
+    >
+      <span className="avatar-fallback">{imageData.initials}</span>
     </span>
   );
 }
@@ -92,75 +60,54 @@ export function FighterName({
   name,
   imageLookup = {},
   size = "sm",
-  className = "",
+  corner,
   onClick,
+  className = "",
 }) {
   const imageData = getFighterImageData(name, imageLookup);
-  const isClickable = typeof onClick === "function" && Boolean(imageData.name);
+  const clickable = typeof onClick === "function" && Boolean(imageData.name);
 
-  function handleClick(event) {
-    if (!isClickable) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    onClick(imageData.name);
-  }
-
-  function handleKeyDown(event) {
-    if (!isClickable) {
-      return;
-    }
-
-    if (event.key === "Enter" || event.key === " ") {
-      handleClick(event);
-    }
-  }
-
-  return (
-    <span
-      className={`fighter-name ${isClickable ? "clickable" : ""} ${className}`}
-      role={isClickable ? "button" : undefined}
-      tabIndex={isClickable ? 0 : undefined}
-      title={isClickable ? `Open ${imageData.name} profile` : undefined}
-      onClick={isClickable ? handleClick : undefined}
-      onKeyDown={isClickable ? handleKeyDown : undefined}
-    >
-      <span className="fighter-avatar-wrap">
-        <FighterAvatar name={name} imageLookup={imageLookup} size={size} />
-        {imageData.imageUrl && (
-          <span
-            className={`fighter-avatar ${size} placeholder`}
-            style={{ display: "none" }}
-            aria-hidden="true"
-          >
-            {imageData.initials}
-          </span>
-        )}
-      </span>
+  const content = (
+    <>
+      <FighterAvatar name={name} imageLookup={imageLookup} size={size} corner={corner} />
       <span className="fighter-name-text">{imageData.name || "Unknown fighter"}</span>
-    </span>
+    </>
   );
+
+  if (clickable) {
+    return (
+      <button
+        type="button"
+        className={`fighter-name clickable ${className}`}
+        title={`Open ${imageData.name} profile`}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onClick(imageData.name);
+        }}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <span className={`fighter-name ${className}`}>{content}</span>;
 }
 
-export function FighterMatchup({
-  fighter1,
-  fighter2,
-  imageLookup = {},
-  onFighterClick,
-}) {
+export function FighterMatchup({ fighter1, fighter2, imageLookup = {}, onFighterClick }) {
   return (
     <span className="fighter-matchup">
       <FighterName
         name={fighter1}
         imageLookup={imageLookup}
+        corner="red"
         onClick={onFighterClick}
       />
-      <span className="fighter-matchup-vs">vs</span>
+      <span className="matchup-vs">vs</span>
       <FighterName
         name={fighter2}
         imageLookup={imageLookup}
+        corner="blue"
         onClick={onFighterClick}
       />
     </span>

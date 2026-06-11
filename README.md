@@ -78,7 +78,15 @@ The app includes a FastAPI backend, a React/Vite frontend, an incremental data u
 
 - React
 - Vite
-- CSS
+- three.js (animated octagon stage in the Fight Lab view)
+- Custom CSS design system (no UI framework)
+
+The frontend can also run without the backend using built-in demo data:
+
+```cmd
+cd frontend
+npm run dev:mock
+```
 
 ---
 
