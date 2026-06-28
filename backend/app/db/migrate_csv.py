@@ -17,6 +17,7 @@ from app.db import connection
 from app.repositories import (
     event_fights_repository,
     odds_track_repository,
+    saved_model_predictions_repository,
     saved_predictions_repository,
 )
 
@@ -25,6 +26,7 @@ RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
 PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 FIGHT_ODDS_TRACK_CSV = PROCESSED_DATA_DIR / "fight_odds_track.csv"
 SAVED_CARD_PREDICTIONS_CSV = PROCESSED_DATA_DIR / "saved_card_predictions.csv"
+SAVED_MODEL_PREDICTIONS_CSV = PROCESSED_DATA_DIR / "saved_model_predictions.csv"
 EVENT_FIGHTS_CSV = RAW_DATA_DIR / "event_fights.csv"
 
 
@@ -48,6 +50,16 @@ def migrate_saved_card_predictions() -> int:
     return saved_predictions_repository.import_rows(df.to_dict(orient="records"))
 
 
+def migrate_saved_model_predictions() -> int:
+    if not SAVED_MODEL_PREDICTIONS_CSV.exists():
+        return 0
+    try:
+        df = pd.read_csv(SAVED_MODEL_PREDICTIONS_CSV)
+    except pd.errors.EmptyDataError:
+        return 0
+    return saved_model_predictions_repository.import_rows(df.to_dict(orient="records"))
+
+
 def migrate_event_fights() -> int:
     if not EVENT_FIGHTS_CSV.exists():
         return 0
@@ -61,10 +73,12 @@ def migrate_event_fights() -> int:
 def main() -> None:
     track = migrate_fight_odds_track()
     saved = migrate_saved_card_predictions()
+    saved_model = migrate_saved_model_predictions()
     results = migrate_event_fights()
     print(
         f"Imported {track} fight_odds_track, {saved} saved_card_predictions, "
-        f"{results} event_fights row(s) into {connection.get_db_path()}"
+        f"{saved_model} saved_model_predictions, {results} event_fights row(s) "
+        f"into {connection.get_db_path()}"
     )
 
 

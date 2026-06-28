@@ -19,7 +19,10 @@ from app.services.prediction_service import (
     predict_fight_all_models,
 )
 from app.models.model_version import load_current_provenance
-from app.repositories import saved_predictions_repository
+from app.repositories import (
+    saved_model_predictions_repository,
+    saved_predictions_repository,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -77,18 +80,7 @@ def read_saved_predictions() -> pd.DataFrame:
 
 
 def read_saved_model_predictions() -> pd.DataFrame:
-    if not SAVED_MODEL_PREDICTIONS_CSV.exists():
-        return pd.DataFrame()
-
-    try:
-        return pd.read_csv(SAVED_MODEL_PREDICTIONS_CSV)
-    except pd.errors.EmptyDataError:
-        return pd.DataFrame()
-
-
-def write_saved_model_predictions(df: pd.DataFrame) -> None:
-    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_csv(SAVED_MODEL_PREDICTIONS_CSV, index=False)
+    return saved_model_predictions_repository.read_all_df()
 
 
 def build_model_prediction_rows_for_card(
@@ -251,20 +243,11 @@ def save_model_predictions_for_card(
     event_id: str,
     saved_at: str | None = None,
 ) -> dict[str, Any]:
-    existing_df = read_saved_model_predictions()
     new_rows = build_model_prediction_rows_for_card(event_id=event_id, saved_at=saved_at)
     new_df = pd.DataFrame(new_rows)
 
-    if existing_df.empty:
-        combined_df = new_df
-    else:
-        # Keep one latest prospective model snapshot per future card.
-        existing_df = existing_df[
-            existing_df["event_id"].astype(str) != str(event_id)
-        ].copy()
-        combined_df = pd.concat([existing_df, new_df], ignore_index=True)
-
-    write_saved_model_predictions(combined_df)
+    # Atomic per-card replace: one latest prospective model snapshot per card.
+    saved_model_predictions_repository.replace_card(event_id, new_rows)
 
     prediction_available_count = (
         int(new_df["prediction_available"].sum())
@@ -277,7 +260,7 @@ def save_model_predictions_for_card(
         "saved_model_rows": int(len(new_df)),
         "model_prediction_available_count": prediction_available_count,
         "model_prediction_unavailable_count": int(len(new_df) - prediction_available_count),
-        "output_file": str(SAVED_MODEL_PREDICTIONS_CSV),
+        "storage": "sqlite:saved_model_predictions",
     }
 
 

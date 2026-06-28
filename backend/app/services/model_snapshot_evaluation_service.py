@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 
 from app.models.model_version import load_current_provenance
-from app.repositories import event_fights_repository
+from app.repositories import event_fights_repository, saved_model_predictions_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -332,7 +332,7 @@ def merge_scored_model_summary(
 
 
 def build_model_snapshot_evaluation() -> dict[str, Any]:
-    predictions_df = read_csv_or_empty(SAVED_MODEL_PREDICTIONS_CSV)
+    predictions_df = saved_model_predictions_repository.read_all_df()
     event_fights_df = event_fights_repository.read_all_df()
 
     if predictions_df.empty:

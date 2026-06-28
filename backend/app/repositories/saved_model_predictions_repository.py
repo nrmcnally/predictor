@@ -3,8 +3,9 @@ from __future__ import annotations
 from app.db import schema
 from app.repositories._snapshot_table import SnapshotTable
 
-# saved_card_predictions: one latest saved snapshot per card, replaced atomically.
-_table = SnapshotTable("saved_card_predictions", schema.SAVED_CARD_COLUMNS)
+# saved_model_predictions: one prospective snapshot per model per fight; the latest
+# snapshot per card is kept (replaced atomically per event).
+_table = SnapshotTable("saved_model_predictions", schema.SAVED_MODEL_COLUMNS)
 
 COLUMN_NAMES = _table.column_names
 
