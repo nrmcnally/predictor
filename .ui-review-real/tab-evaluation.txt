@@ -1,0 +1,98 @@
+MMA ANALYTICS
+FIGHT IQ
+API connected
+ANALYZE
+⚔
+Fight Lab
+◎
+Fighters
+EVENTS
+▸
+Future Cards
+↺
+Recent Cards
+INTEL
+♛
+Leaderboards
+◫
+Evaluation
+SYSTEM
+⟳
+Data Ops
+
+Calibrated UFC fight predictions from scraped UFCStats data. Odds are comparison-only.
+
+MODEL REVIEW
+
+EVALUATION
+TEST FRACTION
+RECENT LIMIT
+Evaluating…
+Scoring the holdout set…
+
+MANNER OF ENDING
+
+METHOD MODEL METRICS
+
+The method models are directional and less accurate than the winner model.
+
+BROAD METHOD MODEL
+
+Best model: Random Forest
+
+accuracy
+53.0%
+log loss
+1.003
+top 2 accuracy
+82.9%
+top 3 accuracy
+99.8%
+scored rows
+1710.000
+classes
+N/A
+DETAILED METHOD MODEL
+
+Best model: Random Forest
+
+accuracy
+41.5%
+log loss
+1.646
+top 2 accuracy
+63.3%
+top 3 accuracy
+78.9%
+scored rows
+1710.000
+classes
+N/A
+
+MARKET COMPARISON
+
+MODEL VS MARKET
+
+Only fights with locally saved pre-event odds snapshots are compared.
+
+Saved predictions exist, but no fights have actual results plus saved market odds yet.
+
+PROSPECTIVE TRACKING
+
+SAVED SNAPSHOT EVALUATION
+
+Scores saved pre-fight predictions once results arrive — a forward test, not a backtest.
+
+MODEL	SCORED FIGHTS	ACCURACY	BRIER	LOG LOSS	AVG CONF
+Logistic Regression	19	68.4%	0.2065	0.6034	63.5%
+calibrated extra trees	19	73.7%	0.2071	0.6047	61.8%
+Calibrated Logistic	19	68.4%	0.2090	0.6091	62.0%
+ensemble average	19	68.4%	0.2205	0.6330	59.7%
+extra trees	19	73.7%	0.2211	0.6347	56.9%
+elo baseline	19	73.7%	0.2244	0.6414	55.2%
+Calibrated Random Forest	19	63.2%	0.2262	0.6447	61.4%
+Random Forest	19	63.2%	0.2274	0.6474	60.1%
+calibrated hist gradient boosting	19	63.2%	0.2345	0.6616	60.8%
+hist gradient boosting	19	63.2%	0.2346	0.6618	60.3%
+Calibrated XGBoost	19	63.2%	0.2386	0.6704	61.6%
+XGBoost current	19	63.2%	0.2394	0.6723	62.6%

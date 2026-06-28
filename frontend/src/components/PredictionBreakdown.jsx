@@ -2,6 +2,18 @@ import { clampProbability } from "../lib/format.js";
 import { FighterName } from "./FighterDisplay.jsx";
 import { SectionCard, SplitBar, Tag, MeterBar } from "./ui.jsx";
 
+function riskTone(severity = "") {
+  if (severity === "high") {
+    return "loss";
+  }
+
+  if (severity === "medium") {
+    return "warn";
+  }
+
+  return "neutral";
+}
+
 function formatEdgeDifference(edge) {
   if (edge.difference === null || edge.difference === undefined) {
     return "Unknown";
@@ -36,6 +48,16 @@ export function VerdictCard({ prediction, imageLookup = {}, onFighterClick }) {
         <div className="verdict-confidence">
           <strong className="big-number">{prediction.confidence_percentage}</strong>
           <Tag tone="confidence">{prediction.confidence_label}</Tag>
+          {prediction.data_reliability &&
+            prediction.data_reliability.level !== "ok" && (
+              <Tag
+                tone={
+                  prediction.data_reliability.level === "very_limited" ? "loss" : "warn"
+                }
+              >
+                {prediction.data_reliability.label}
+              </Tag>
+            )}
         </div>
       </div>
 
@@ -44,6 +66,70 @@ export function VerdictCard({ prediction, imageLookup = {}, onFighterClick }) {
         leftLabel={`${prediction.fighter_a} · ${prediction.fighter_a_percentage}`}
         rightLabel={`${prediction.fighter_b_percentage} · ${prediction.fighter_b}`}
       />
+
+      {prediction.data_reliability?.note && (
+        <p className="dim-note verdict-data-note">{prediction.data_reliability.note}</p>
+      )}
+    </SectionCard>
+  );
+}
+
+export function RiskFlagsCard({ prediction, compact = false }) {
+  const flags = prediction?.risk_flags ?? [];
+  const dataQuality = prediction?.data_quality;
+
+  if (!dataQuality && !flags.length) {
+    return null;
+  }
+
+  if (compact) {
+    return (
+      <div className="tag-row risk-flag-row">
+        {flags.length === 0 && <Tag tone="win">Clean data context</Tag>}
+        {flags.slice(0, 3).map((flag) => (
+          <Tag key={`${flag.code}-${flag.fighter || flag.label}`} tone={riskTone(flag.severity)}>
+            {flag.label}
+          </Tag>
+        ))}
+        {flags.length > 3 && <Tag tone="neutral">+{flags.length - 3} more</Tag>}
+      </div>
+    );
+  }
+
+  return (
+    <SectionCard
+      eyebrow="Prediction context"
+      title={
+        flags.length
+          ? `${flags.length} caution ${flags.length === 1 ? "flag" : "flags"}`
+          : "Clean data context"
+      }
+      description="These flags do not change the pick; they identify where the prediction may be fragile."
+    >
+      <div className="risk-summary-grid">
+        {dataQuality?.fighters?.map((fighter) => (
+          <div className="risk-fighter-summary" key={fighter.fighter}>
+            <strong>{fighter.fighter}</strong>
+            <span>{fighter.prior_fights} UFC fights</span>
+            <span>{fighter.activity_status}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="risk-flag-list">
+        {flags.length === 0 && (
+          <p className="dim-note">
+            No low-sample, long-layoff, missing-data, or weight-class movement flags
+            were found.
+          </p>
+        )}
+        {flags.map((flag) => (
+          <div className={`risk-flag-item severity-${flag.severity}`} key={`${flag.code}-${flag.fighter || flag.label}`}>
+            <Tag tone={riskTone(flag.severity)}>{flag.label}</Tag>
+            <span>{flag.description}</span>
+          </div>
+        ))}
+      </div>
     </SectionCard>
   );
 }
@@ -76,7 +162,7 @@ export function InsightsCard({ prediction }) {
   return (
     <SectionCard
       eyebrow="Rule-based explanation"
-      title="Why this prediction?"
+      title="Matchup breakdown"
       description="Built from the same pre-fight edge data the model sees — not the model's literal internals."
     >
       <div className="insight-summary">

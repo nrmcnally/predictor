@@ -186,9 +186,14 @@ def build_candidate_models(
                 ),
                 (
                     "classifier",
+                    # No class_weight on purpose: balancing the classes flattens the
+                    # base rates and makes the predicted probabilities dishonest
+                    # (e.g. Decision shown ~35% when it actually happens ~51% of the
+                    # time). The method panel reports probabilities, so it must reflect
+                    # true frequencies. Verified: removing this cut broad log-loss
+                    # 1.175 -> 1.004 and aligned predicted vs actual class rates.
                     LogisticRegression(
                         max_iter=4000,
-                        class_weight="balanced",
                         random_state=RANDOM_STATE,
                     ),
                 ),
@@ -206,10 +211,11 @@ def build_candidate_models(
                 ),
                 (
                     "classifier",
+                    # See the note on the logistic model: no class balancing, so the
+                    # predicted probabilities stay faithful to real method base rates.
                     RandomForestClassifier(
                         n_estimators=500,
                         min_samples_leaf=5,
-                        class_weight="balanced_subsample",
                         n_jobs=-1,
                         random_state=RANDOM_STATE,
                     ),

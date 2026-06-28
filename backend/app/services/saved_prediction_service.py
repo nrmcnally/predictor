@@ -18,6 +18,7 @@ from app.services.prediction_service import (
     FighterNotFoundError,
     predict_fight_all_models,
 )
+from app.models.model_version import load_current_provenance
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -125,6 +126,8 @@ def build_model_prediction_rows_for_card(
                 fighter_a=fight["fighter_1"],
                 fighter_b=fight["fighter_2"],
                 weight_class=fight["weight_class"],
+                fight_context=fight.get("fight_context"),
+                market_features=odds_data,
             )
 
             for prediction in all_model_payload.get("model_predictions", []):
@@ -146,6 +149,11 @@ def build_model_prediction_rows_for_card(
                         "fighter_1": fight["fighter_1"],
                         "fighter_2": fight["fighter_2"],
                         "weight_class": fight["weight_class"],
+                        "scheduled_rounds": fight.get("scheduled_rounds"),
+                        "is_main_event": fight.get("is_main_event", False),
+                        "round_override_saved": fight.get("round_override_saved", False),
+                        "round_override_source": fight.get("round_override_source", ""),
+                        "round_override_updated_at": fight.get("round_override_updated_at", ""),
 
                         "model_name": model_name,
                         "is_best_model": bool(prediction.get("is_best_model", False)),
@@ -193,6 +201,11 @@ def build_model_prediction_rows_for_card(
                     "fighter_1": fight["fighter_1"],
                     "fighter_2": fight["fighter_2"],
                     "weight_class": fight["weight_class"],
+                    "scheduled_rounds": fight.get("scheduled_rounds"),
+                    "is_main_event": fight.get("is_main_event", False),
+                    "round_override_saved": fight.get("round_override_saved", False),
+                    "round_override_source": fight.get("round_override_source", ""),
+                    "round_override_updated_at": fight.get("round_override_updated_at", ""),
                     "model_name": "",
                     "is_best_model": False,
                     "model_metrics_json": "{}",
@@ -221,6 +234,11 @@ def build_model_prediction_rows_for_card(
                     "fighter_1": fight["fighter_1"],
                     "fighter_2": fight["fighter_2"],
                     "weight_class": fight["weight_class"],
+                    "scheduled_rounds": fight.get("scheduled_rounds"),
+                    "is_main_event": fight.get("is_main_event", False),
+                    "round_override_saved": fight.get("round_override_saved", False),
+                    "round_override_source": fight.get("round_override_source", ""),
+                    "round_override_updated_at": fight.get("round_override_updated_at", ""),
                     "model_name": "",
                     "is_best_model": False,
                     "model_metrics_json": "{}",
@@ -274,6 +292,7 @@ def save_model_predictions_for_card(
 def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
     card = get_future_card_predictions(event_id)
     model_metadata = load_model_metadata()
+    provenance = load_current_provenance()
     odds_lookup = load_future_odds_lookup()
 
     saved_at = now_iso()
@@ -300,6 +319,11 @@ def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
             "fighter_1": fight["fighter_1"],
             "fighter_2": fight["fighter_2"],
             "weight_class": fight["weight_class"],
+            "scheduled_rounds": fight.get("scheduled_rounds"),
+            "is_main_event": fight.get("is_main_event", False),
+            "round_override_saved": fight.get("round_override_saved", False),
+            "round_override_source": fight.get("round_override_source", ""),
+            "round_override_updated_at": fight.get("round_override_updated_at", ""),
 
             "prediction_available": prediction_available,
             "error_json": json.dumps(error) if error else "",
@@ -315,6 +339,11 @@ def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
 
             "model_name": model_metadata["best_model_name"],
             "model_metrics_json": json.dumps(model_metadata["metrics"]),
+
+            "model_version": clean_text(provenance.get("model_version", "")),
+            "model_recipe_hash": clean_text(provenance.get("recipe_hash", "")),
+            "model_trained_at": clean_text(provenance.get("trained_at", "")),
+            "model_git_commit": clean_text(provenance.get("git_commit", "")),
 
             "basic_matchup_edges_json": json.dumps(
                 prediction.get("basic_matchup_edges", [])

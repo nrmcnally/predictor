@@ -1,0 +1,71 @@
+MMA ANALYTICS
+FIGHT IQ
+API connected
+ANALYZE
+⚔
+Fight Lab
+◎
+Fighters
+EVENTS
+▸
+Future Cards
+↺
+Recent Cards
+INTEL
+♛
+Leaderboards
+◫
+Evaluation
+SYSTEM
+⟳
+Data Ops
+
+Calibrated UFC fight predictions from scraped UFCStats data. Odds are comparison-only.
+
+PREDICTION TRACKING
+
+RECENT CARDS
+UFC Fight Night: Medic vs. Rodriguez
+August 01, 2026
+Belgrade, Vojvodina, Serbia
+Waiting for results
+UFC Fight Night: Ankalaev vs. Rountree Jr
+July 25, 2026
+Abu Dhabi, Abu Dhabi, United Arab Emirates
+Waiting for results
+UFC Fight Night
+July 18, 2026
+Oklahoma City, Oklahoma, USA
+Waiting for results
+UFC 329: McGregor vs. Holloway 2
+July 11, 2026
+Las Vegas, Nevada, USA
+Waiting for results
+UFC Fight Night: Fiziev vs. Torres
+June 27, 2026
+Baku, Azerbaijan
+Waiting for results
+UFC Fight Night: Kape vs. Horiguchi
+June 20, 2026
+Las Vegas, Nevada, USA
+Waiting for results
+UFC Freedom 250
+June 14, 2026
+Washington, DC, USA
+Waiting for results
+UFC Fight Night: Muhammad vs. Bonfim
+June 06, 2026
+Las Vegas, Nevada, USA
+Completed
+63.6% model
+UFC Fight Night: Song vs. Figueiredo
+May 30, 2026
+Macau, China
+Partial results
+62.5% model
+UFC Fight Night: Allen vs. Costa
+May 16, 2026
+Las Vegas, Nevada, USA
+Completed
+30.0% model
+Loading results…

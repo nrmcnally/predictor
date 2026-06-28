@@ -582,6 +582,54 @@ def sample_confident_predictions(
 
     return rows
 
+def resolve_holdout(
+    df: pd.DataFrame,
+    saved_metrics: dict[str, Any],
+    test_fraction: float,
+) -> tuple[pd.DataFrame, pd.DataFrame, str]:
+    """
+    Returns (train_df, holdout_df, source) where holdout_df is the model's true
+    out-of-sample test set. Resolution order, most precise first:
+
+      1. the exact test_fight_urls saved at train time (bulletproof);
+      2. the saved test_date_min boundary (reconstructs the chronological holdout
+         for models trained before fight_urls were persisted);
+      3. a clamped chronological split (never larger than the standard training
+         test size), so even with neither saved it cannot pull train/calibration
+         fights into the holdout.
+
+    This replaces the old behaviour where the holdout was recomputed straight from
+    the `test_fraction` control, which let a caller silently include fights the
+    model had trained or calibrated on and inflate the reported metrics.
+    """
+    if "fight_url" in df.columns:
+        saved_urls = saved_metrics.get("test_fight_urls") or []
+
+        if saved_urls:
+            url_set = {str(url) for url in saved_urls}
+            mask = df["fight_url"].astype(str).isin(url_set)
+            holdout_df = df[mask].copy()
+
+            if not holdout_df.empty:
+                return df[~mask].copy(), holdout_df, "saved_holdout"
+
+    test_date_min = saved_metrics.get("test_date_min")
+
+    if test_date_min:
+        boundary = pd.to_datetime(test_date_min, errors="coerce")
+
+        if pd.notna(boundary):
+            mask = df["event_date_parsed"] >= boundary
+            holdout_df = df[mask].copy()
+
+            if not holdout_df.empty:
+                return df[~mask].copy(), holdout_df, "saved_date_boundary"
+
+    safe_fraction = min(test_fraction, 0.20)
+    train_df, holdout_df = chronological_test_split(df, safe_fraction)
+    return train_df, holdout_df, "chronological_fraction"
+
+
 def get_model_evaluation(
     test_fraction: float = 0.20,
     recent_prediction_limit: int = 25,
@@ -590,8 +638,9 @@ def get_model_evaluation(
     model, numeric_features, categorical_features = load_model_and_features()
     saved_metrics = load_saved_metrics()
 
-    train_df, test_df = chronological_test_split(
+    train_df, test_df, holdout_source = resolve_holdout(
         df=df,
+        saved_metrics=saved_metrics,
         test_fraction=test_fraction,
     )
 
@@ -628,7 +677,7 @@ def get_model_evaluation(
             "source_file": str(TRAINING_MATCHUPS_CSV),
             "model_file": str(BEST_MODEL_PATH),
             "features_file": str(FEATURES_PATH),
-            "test_fraction": test_fraction,
+            "holdout_source": holdout_source,
             "train_rows": int(len(train_df)),
             "test_rows": int(len(test_df)),
             "test_fights": int(len(fight_level_df)),
@@ -641,8 +690,10 @@ def get_model_evaluation(
             "saved_metrics_file": str(METRICS_PATH),
             "saved_best_model_name": saved_metrics.get("best_model_name", ""),
             "metric_note": (
-                "Fight accuracy and confidence use one row per fight with two-perspective "
-                "normalization. Brier score, log loss, and ROC AUC use row-level holdout data."
+                "Scored on the model's true chronological holdout — the fights it was never "
+                "trained or calibrated on — so these numbers are not affected by any test-window "
+                "control. Fight accuracy and confidence use one row per fight with two-perspective "
+                "normalization; Brier score, log loss, and ROC AUC are row-level."
             ),
         },
         "overall": overall_summary,

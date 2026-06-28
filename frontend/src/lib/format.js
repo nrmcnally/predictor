@@ -108,9 +108,29 @@ export function parsePercentageText(value) {
 const MODEL_NAMES = {
   calibrated_logistic_regression: "Calibrated Logistic",
   calibrated_random_forest: "Calibrated Random Forest",
+  calibrated_extra_trees: "Calibrated Extra Trees",
+  calibrated_hist_gradient_boosting: "Calibrated Hist Gradient Boosting",
   calibrated_xgboost: "Calibrated XGBoost",
+  elo_baseline: "Elo Baseline",
+  ensemble_average: "Ensemble Average",
+  extra_trees: "Extra Trees",
+  hist_gradient_boosting: "Hist Gradient Boosting",
   logistic_regression: "Logistic Regression",
   random_forest: "Random Forest",
+  shadow_isotonic_extra_trees: "Experimental Isotonic Extra Trees",
+  shadow_isotonic_hist_gradient_boosting:
+    "Experimental Isotonic Hist Gradient Boosting",
+  shadow_isotonic_logistic_regression: "Experimental Isotonic Logistic",
+  shadow_isotonic_random_forest: "Experimental Isotonic Random Forest",
+  shadow_isotonic_xgboost: "Experimental Isotonic XGBoost",
+  shadow_market_implied_probability: "Market Implied Baseline",
+  shadow_market_logistic_regression: "Experimental Market-Only Logistic",
+  shadow_model_market_calibrated_logistic_regression:
+    "Experimental Best Winner + Market Platt Logistic",
+  shadow_model_market_isotonic_logistic_regression:
+    "Experimental Best Winner + Market Isotonic Logistic",
+  shadow_model_market_logistic_regression:
+    "Experimental Best Winner + Market Logistic",
   xgboost: "XGBoost",
 };
 
@@ -128,6 +148,7 @@ const STAT_LABELS = {
   prior_fights: "UFC fights",
   prior_wins: "UFC wins",
   prior_losses: "UFC losses",
+  prior_unscored_results: "UFC draws/NCs",
   avg_sig_str_differential_per_15: "Sig. strike diff / 15",
   avg_sig_str_landed_per_15: "Sig. strikes landed / 15",
   avg_sig_str_absorbed_per_15: "Sig. strikes absorbed / 15",
@@ -162,6 +183,18 @@ export function formatLeaderboardStatValue(key, value) {
 
   if (!Number.isFinite(numberValue)) {
     return String(value);
+  }
+
+  if (
+    [
+      "prior_fights",
+      "prior_wins",
+      "prior_losses",
+      "prior_decisive_results",
+      "prior_unscored_results",
+    ].includes(key)
+  ) {
+    return numberValue.toFixed(0);
   }
 
   if (key.includes("rate") || key.includes("accuracy") || key.includes("defense")) {

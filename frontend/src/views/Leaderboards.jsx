@@ -245,7 +245,12 @@ export default function Leaderboards() {
               </div>
 
               <div className="leaderboard-score">
-                <span className="stat-label">Score</span>
+                <span
+                  className="stat-label"
+                  title="Heuristic, data-derived composite — not an official UFC rating."
+                >
+                  Score (heuristic)
+                </span>
                 <strong className="mono">{row.score}</strong>
               </div>
 

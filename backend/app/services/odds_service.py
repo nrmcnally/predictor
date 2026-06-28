@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from datetime import datetime
@@ -20,6 +21,9 @@ PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 UPCOMING_FIGHTS_CSV = RAW_DATA_DIR / "upcoming_fights.csv"
 CURRENT_MMA_ODDS_JSON = RAW_DATA_DIR / "current_mma_odds.json"
 FUTURE_FIGHT_ODDS_CSV = PROCESSED_DATA_DIR / "future_fight_odds.csv"
+# Per-fight opening (frozen on first sight) + closing (latest seen) market line,
+# accumulated across odds refreshes. This is what closing-line value (CLV) needs.
+FIGHT_ODDS_TRACK_CSV = PROCESSED_DATA_DIR / "fight_odds_track.csv"
 
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/mma_mixed_martial_arts/odds/"
 
@@ -31,6 +35,17 @@ PREFERRED_BOOKMAKERS = [
     "betrivers",
     "espnbet",
 ]
+
+logger = logging.getLogger("ufc_predictor.odds")
+
+# Fighter-name match thresholds for pairing an odds event to one of our fights.
+# Require BOTH fighters to individually clear PER_FIGHTER_MATCH_THRESHOLD, so a
+# perfect match on one fighter can't drag a weak match on the other over the line
+# (the old average-only test let, e.g., 1.00 + 0.76 = 0.88 through). Accepted
+# matches whose weaker fighter falls below LOW_CONFIDENCE_MATCH_THRESHOLD are
+# kept but flagged on the row and logged for review.
+PER_FIGHTER_MATCH_THRESHOLD = 0.85
+LOW_CONFIDENCE_MATCH_THRESHOLD = 0.92
 
 
 def clean_text(value: Any) -> str:
@@ -190,23 +205,37 @@ def odds_event_matches_fight(
     odds_event: dict[str, Any],
     fighter_1: str,
     fighter_2: str,
-) -> tuple[bool, float]:
+) -> tuple[bool, float, float]:
+    """Return (is_match, avg_score, weaker_score).
+
+    The odds feed's home/away order isn't guaranteed to match our
+    fighter_1/fighter_2 order, so both orientations are scored. A match requires
+    BOTH fighters in the better orientation to individually clear
+    PER_FIGHTER_MATCH_THRESHOLD. ``weaker_score`` is the lower of the two
+    per-fighter similarities in that orientation, used to flag low-confidence
+    matches downstream.
+    """
     home_team = clean_text(odds_event.get("home_team", ""))
     away_team = clean_text(odds_event.get("away_team", ""))
 
-    direct_score = (
-        name_similarity(home_team, fighter_1)
-        + name_similarity(away_team, fighter_2)
-    ) / 2.0
+    direct_1 = name_similarity(home_team, fighter_1)
+    direct_2 = name_similarity(away_team, fighter_2)
+    swapped_1 = name_similarity(home_team, fighter_2)
+    swapped_2 = name_similarity(away_team, fighter_1)
 
-    swapped_score = (
-        name_similarity(home_team, fighter_2)
-        + name_similarity(away_team, fighter_1)
-    ) / 2.0
+    direct_avg = (direct_1 + direct_2) / 2.0
+    swapped_avg = (swapped_1 + swapped_2) / 2.0
 
-    best_score = max(direct_score, swapped_score)
+    if direct_avg >= swapped_avg:
+        best_score = direct_avg
+        weaker_score = min(direct_1, direct_2)
+    else:
+        best_score = swapped_avg
+        weaker_score = min(swapped_1, swapped_2)
 
-    return best_score >= 0.88, best_score
+    is_match = weaker_score >= PER_FIGHTER_MATCH_THRESHOLD
+
+    return is_match, best_score, weaker_score
 
 
 def get_bookmaker_probability_match(
@@ -264,9 +293,10 @@ def build_odds_row_for_fight(
 
     best_event = None
     best_score = 0.0
+    best_weaker_score = 0.0
 
     for odds_event in odds_events:
-        is_match, score = odds_event_matches_fight(
+        is_match, score, weaker_score = odds_event_matches_fight(
             odds_event=odds_event,
             fighter_1=fighter_1,
             fighter_2=fighter_2,
@@ -275,6 +305,20 @@ def build_odds_row_for_fight(
         if is_match and score > best_score:
             best_event = odds_event
             best_score = score
+            best_weaker_score = weaker_score
+
+    low_confidence_match = bool(best_event) and best_weaker_score < LOW_CONFIDENCE_MATCH_THRESHOLD
+
+    if low_confidence_match:
+        logger.warning(
+            "Low-confidence odds match for %s vs %s "
+            "(weaker name similarity %.2f) -> %s vs %s",
+            fighter_1,
+            fighter_2,
+            best_weaker_score,
+            clean_text(best_event.get("home_team", "")),
+            clean_text(best_event.get("away_team", "")),
+        )
 
     base_row = {
         "event_name": clean_text(fight_row.get("event_name", "")),
@@ -288,6 +332,8 @@ def build_odds_row_for_fight(
         "odds_event_id": "",
         "odds_commence_time": "",
         "odds_match_score": best_score,
+        "odds_match_min_score": best_weaker_score,
+        "odds_match_low_confidence": low_confidence_match,
         "odds_bookmaker": "",
         "odds_last_update": "",
         "bookmakers_matched": 0,
@@ -380,16 +426,104 @@ def refresh_future_fight_odds(api_key: str | None = None) -> dict[str, Any]:
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     odds_df.to_csv(FUTURE_FIGHT_ODDS_CSV, index=False)
 
+    # Capture the opening/closing line track for CLV.
+    track_result = update_fight_odds_track()
+
     odds_available_count = int(odds_df["odds_available"].sum()) if not odds_df.empty else 0
 
     return {
         "output_file": str(FUTURE_FIGHT_ODDS_CSV),
+        "odds_track_fights": track_result.get("tracked_fights", 0),
         "raw_odds_file": str(CURRENT_MMA_ODDS_JSON),
         "upcoming_fights": int(len(upcoming_fights_df)),
         "odds_events": int(len(odds_events)),
         "matched_fights": odds_available_count,
         "unmatched_fights": int(len(upcoming_fights_df) - odds_available_count),
     }
+
+
+def optional_float(value: Any) -> float | None:
+    if value is None or pd.isna(value):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def optional_int(value: Any) -> int | None:
+    number = optional_float(value)
+    return None if number is None else int(number)
+
+
+def _normalize_fight_url(value: Any) -> str:
+    normalized = clean_text(value).replace("https://www.", "https://").replace("http://www.", "http://")
+    return normalized.rstrip("/")
+
+
+def update_fight_odds_track() -> dict[str, Any]:
+    """
+    Maintains fight_odds_track.csv: per fight, freeze the OPENING line the first time
+    we see odds, and overwrite the CLOSING line every refresh. Once a fight drops out
+    of the current odds (event passed), its last-seen closing line is preserved. Run
+    this on every odds refresh so the closing line is captured as near to fight time
+    as the pipeline is run.
+    """
+    if not FUTURE_FIGHT_ODDS_CSV.exists():
+        return {"tracked_fights": 0, "output_file": str(FIGHT_ODDS_TRACK_CSV)}
+
+    current = pd.read_csv(FUTURE_FIGHT_ODDS_CSV)
+    if "fighter_1_market_probability" in current.columns:
+        current = current[current["fighter_1_market_probability"].notna()].copy()
+
+    now = datetime.now().isoformat(timespec="seconds")
+
+    existing: dict[str, dict[str, Any]] = {}
+    if FIGHT_ODDS_TRACK_CSV.exists():
+        try:
+            prior = pd.read_csv(FIGHT_ODDS_TRACK_CSV)
+            existing = {_normalize_fight_url(r.get("fight_url", "")): r.to_dict() for _, r in prior.iterrows()}
+        except pd.errors.EmptyDataError:
+            existing = {}
+
+    rows: dict[str, dict[str, Any]] = dict(existing)  # keep frozen rows for fights no longer listed
+
+    for _, row in current.iterrows():
+        url = _normalize_fight_url(row.get("fight_url", ""))
+        if not url:
+            continue
+
+        f1 = optional_float(row.get("fighter_1_market_probability"))
+        f2 = optional_float(row.get("fighter_2_market_probability"))
+        prior = existing.get(url)
+
+        if prior is None:
+            rows[url] = {
+                "fight_url": url,
+                "fighter_1": clean_text(row.get("fighter_1", "")),
+                "fighter_2": clean_text(row.get("fighter_2", "")),
+                "opening_fighter_1_probability": f1,
+                "opening_fighter_2_probability": f2,
+                "opening_captured_at": now,
+                "closing_fighter_1_probability": f1,
+                "closing_fighter_2_probability": f2,
+                "closing_captured_at": now,
+                "capture_count": 1,
+            }
+        else:
+            updated = dict(prior)
+            updated["closing_fighter_1_probability"] = f1
+            updated["closing_fighter_2_probability"] = f2
+            updated["closing_captured_at"] = now
+            updated["capture_count"] = optional_int(prior.get("capture_count")) or 0
+            updated["capture_count"] += 1
+            rows[url] = updated
+
+    track_df = pd.DataFrame(list(rows.values()))
+    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    track_df.to_csv(FIGHT_ODDS_TRACK_CSV, index=False)
+
+    return {"tracked_fights": int(len(track_df)), "output_file": str(FIGHT_ODDS_TRACK_CSV)}
 
 
 def load_future_fight_odds() -> dict[str, Any]:

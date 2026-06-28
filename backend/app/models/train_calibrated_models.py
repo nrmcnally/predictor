@@ -21,6 +21,9 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+from app.features.fight_context_features import FIGHT_CONTEXT_NUMERIC_FEATURES
+from app.models.model_version import build_provenance
+
 
 try:
     from xgboost import XGBClassifier
@@ -60,11 +63,30 @@ def load_training_matchups() -> pd.DataFrame:
     return df.copy()
 
 
+# Features that the data pipeline produces and keeps, but that are intentionally
+# held OUT of the model. The cardio/fade features (round-derived) were validated on
+# the walk-forward harness (2026-06-26) and did not help the production model
+# (accuracy -0.14 pts, Brier/log-loss slightly worse, within noise). They are kept
+# in the snapshots/matchups for future iteration (better metrics, or a tree model),
+# but excluded here so they don't degrade the current model. Remove a name from this
+# set to re-enable it for an experiment.
+MODEL_EXCLUDED_FEATURE_COLUMNS = {
+    "diff_prior_avg_cardio_sig_output_slope",
+    "diff_prior_avg_cardio_late_round_share",
+    "diff_prior_avg_cardio_rounds_logged",
+    "diff_prior_cardio_fights",
+}
+
+
 def get_feature_columns(df: pd.DataFrame) -> tuple[list[str], list[str]]:
     numeric_features = [
         column
         for column in df.columns
-        if column.startswith("diff_")
+        if (
+            column.startswith("diff_")
+            or column in FIGHT_CONTEXT_NUMERIC_FEATURES
+        )
+        and column not in MODEL_EXCLUDED_FEATURE_COLUMNS
         and pd.api.types.is_numeric_dtype(df[column])
     ]
 
@@ -246,7 +268,10 @@ def build_base_models(
     return models
 
 
-def make_calibrated_model(fitted_model: Pipeline) -> CalibratedClassifierCV:
+def make_calibrated_model(
+    fitted_model: Pipeline,
+    method: str = "sigmoid",
+) -> CalibratedClassifierCV:
     """
     Builds a calibrated version of an already-fitted model.
 
@@ -261,7 +286,7 @@ def make_calibrated_model(fitted_model: Pipeline) -> CalibratedClassifierCV:
 
         return CalibratedClassifierCV(
             estimator=FrozenEstimator(fitted_model),
-            method="sigmoid",
+            method=method,
         )
 
     except ImportError:
@@ -269,13 +294,13 @@ def make_calibrated_model(fitted_model: Pipeline) -> CalibratedClassifierCV:
         try:
             return CalibratedClassifierCV(
                 estimator=fitted_model,
-                method="sigmoid",
+                method=method,
                 cv="prefit",
             )
         except TypeError:
             return CalibratedClassifierCV(
                 base_estimator=fitted_model,
-                method="sigmoid",
+                method=method,
                 cv="prefit",
             )
 
@@ -358,6 +383,27 @@ def build_confidence_bucket_report(
     return rows
 
 
+def is_shadow_model_name(model_name: str) -> bool:
+    return model_name.startswith("shadow_")
+
+
+def calibration_method_for_model(model_name: str) -> str:
+    if model_name.startswith("calibrated_"):
+        return "sigmoid"
+
+    if model_name.startswith("shadow_isotonic_"):
+        return "isotonic"
+
+    return "none"
+
+
+def base_model_type(model_name: str) -> str:
+    for prefix in ("calibrated_", "shadow_isotonic_"):
+        if model_name.startswith(prefix):
+            return model_name[len(prefix):]
+    return model_name
+
+
 def choose_best_model_name(results: dict[str, dict[str, float]]) -> str:
     """
     App-focused selection.
@@ -368,8 +414,17 @@ def choose_best_model_name(results: dict[str, dict[str, float]]) -> str:
         3. Higher accuracy
         4. Higher ROC AUC
     """
+    primary_candidate_names = [
+        model_name
+        for model_name in results.keys()
+        if not is_shadow_model_name(model_name)
+    ]
+
+    if not primary_candidate_names:
+        primary_candidate_names = list(results.keys())
+
     return sorted(
-        results.keys(),
+        primary_candidate_names,
         key=lambda model_name: (
             results[model_name]["brier_score"],
             results[model_name]["log_loss"],
@@ -430,12 +485,33 @@ def save_outputs(
             "model_name": model_name,
             "path": str(model_path.relative_to(MODELS_DIR)),
             "is_best_model": model_name == best_model_name,
+            "is_shadow_model": is_shadow_model_name(model_name),
+            "training_role": (
+                "shadow_experiment"
+                if is_shadow_model_name(model_name)
+                else "primary_candidate"
+            ),
+            "calibration_method": calibration_method_for_model(model_name),
             "metrics": results.get(model_name, {}),
         }
 
     metrics_payload = {
         "best_model_name": best_model_name,
         "available_model_names": sorted(fitted_models.keys()),
+        "primary_candidate_model_names": sorted(
+            [
+                model_name
+                for model_name in fitted_models.keys()
+                if not is_shadow_model_name(model_name)
+            ]
+        ),
+        "shadow_model_names": sorted(
+            [
+                model_name
+                for model_name in fitted_models.keys()
+                if is_shadow_model_name(model_name)
+            ]
+        ),
         "model_registry_path": str(MODEL_REGISTRY_PATH),
         "selection_priority": [
             "lowest_brier_score",
@@ -457,6 +533,18 @@ def save_outputs(
         "calibration_date_max": str(calibration_df["event_date_parsed"].max().date()),
         "test_date_min": str(test_df["event_date_parsed"].min().date()),
         "test_date_max": str(test_df["event_date_parsed"].max().date()),
+        # The exact fights the model was never trained or calibrated on. The
+        # Evaluation tab scores against precisely this set, so its metrics can't be
+        # inflated by accidentally including train/calibration fights.
+        "test_fight_urls": sorted(test_df["fight_url"].astype(str).unique().tolist()),
+        # Version/provenance: human version + recipe hash + git/lineage. Saved
+        # predictions are stamped with this so grading knows which generation made them.
+        "provenance": build_provenance(
+            numeric_features=numeric_features,
+            categorical_features=categorical_features,
+            model_type=base_model_type(best_model_name),
+            calibration_method=calibration_method_for_model(best_model_name),
+        ),
     }
 
     with open(CALIBRATED_METRICS_PATH, "w", encoding="utf-8") as file:
@@ -579,6 +667,34 @@ def main() -> None:
             f"log_loss={calibrated_metrics['log_loss']:.4f}, "
             f"brier={calibrated_metrics['brier_score']:.4f}, "
             f"roc_auc={calibrated_metrics['roc_auc']:.4f}"
+        )
+
+        shadow_isotonic_model_name = f"shadow_isotonic_{model_name}"
+
+        print(f"Shadow isotonic calibration for {model_name}...")
+
+        shadow_isotonic_model = make_calibrated_model(
+            fitted_model=model,
+            method="isotonic",
+        )
+        shadow_isotonic_model.fit(X_calibration, y_calibration)
+
+        shadow_isotonic_metrics = evaluate_model(shadow_isotonic_model, X_test, y_test)
+
+        results[shadow_isotonic_model_name] = shadow_isotonic_metrics
+        fitted_models[shadow_isotonic_model_name] = shadow_isotonic_model
+        bucket_reports[shadow_isotonic_model_name] = build_confidence_bucket_report(
+            shadow_isotonic_model,
+            X_test,
+            y_test,
+        )
+
+        print(
+            f"{shadow_isotonic_model_name} "
+            f"accuracy={shadow_isotonic_metrics['accuracy']:.4f}, "
+            f"log_loss={shadow_isotonic_metrics['log_loss']:.4f}, "
+            f"brier={shadow_isotonic_metrics['brier_score']:.4f}, "
+            f"roc_auc={shadow_isotonic_metrics['roc_auc']:.4f}"
         )
 
     print_metrics_table(results)

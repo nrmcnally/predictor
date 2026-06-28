@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getLatestUpdateReport,
   getUpdateStatus,
@@ -12,6 +12,52 @@ import {
   Tag,
 } from "../components/ui.jsx";
 import { formatDuration, formatModelName, formatNumber } from "../lib/format.js";
+
+function getStageGroup(stageName = "") {
+  const name = String(stageName).toLowerCase();
+
+  if (name.includes("prediction")) {
+    return "Prediction export";
+  }
+
+  if (
+    name.includes("model") ||
+    name.includes("method") ||
+    name.includes("matchup")
+  ) {
+    return "Model training";
+  }
+
+  if (
+    name.includes("feature") ||
+    name.includes("snapshot") ||
+    name.includes("dob") ||
+    name.includes("elo") ||
+    name.includes("age")
+  ) {
+    return "Feature prep";
+  }
+
+  return "Data refresh";
+}
+
+function groupStages(stages = []) {
+  const groups = [];
+
+  for (const stage of stages) {
+    const title = getStageGroup(stage.name);
+    let group = groups.find((item) => item.title === title);
+
+    if (!group) {
+      group = { title, stages: [] };
+      groups.push(group);
+    }
+
+    group.stages.push(stage);
+  }
+
+  return groups;
+}
 
 export default function UpdateData() {
   const [status, setStatus] = useState(null);
@@ -100,6 +146,7 @@ export default function UpdateData() {
   const trainStage = report?.stages?.find(
     (stage) => stage.name === "Train calibrated model"
   );
+  const stageGroups = useMemo(() => groupStages(report?.stages || []), [report]);
 
   return (
     <div className="view update-data">
@@ -199,23 +246,33 @@ export default function UpdateData() {
             </p>
           )}
 
-          <div className="stage-list">
-            {report.stages?.map((stage) => (
-              <div className="stage-row" key={stage.name}>
-                <Tag
-                  tone={
-                    String(stage.status || "").toLowerCase().includes("fail")
-                      ? "loss"
-                      : "win"
-                  }
-                >
-                  {stage.status || "done"}
-                </Tag>
-                <span className="stage-name">{stage.name}</span>
-                <span className="muted mono">
-                  {formatDuration(stage.duration_seconds)}
-                </span>
-              </div>
+          <div className="stage-group-list">
+            {stageGroups.map((group) => (
+              <section className="stage-group" key={group.title}>
+                <header className="stage-group-head">
+                  <h3>{group.title}</h3>
+                  <span>{group.stages.length} stages</span>
+                </header>
+                <div className="stage-list">
+                  {group.stages.map((stage) => (
+                    <div className="stage-row" key={stage.name}>
+                      <Tag
+                        tone={
+                          String(stage.status || "").toLowerCase().includes("fail")
+                            ? "loss"
+                            : "win"
+                        }
+                      >
+                        {stage.status || "done"}
+                      </Tag>
+                      <span className="stage-name">{stage.name}</span>
+                      <span className="muted mono">
+                        {formatDuration(stage.duration_seconds)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         </SectionCard>

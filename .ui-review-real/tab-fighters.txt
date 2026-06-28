@@ -1,0 +1,29 @@
+MMA ANALYTICS
+FIGHT IQ
+API connected
+ANALYZE
+⚔
+Fight Lab
+◎
+Fighters
+EVENTS
+▸
+Future Cards
+↺
+Recent Cards
+INTEL
+♛
+Leaderboards
+◫
+Evaluation
+SYSTEM
+⟳
+Data Ops
+
+Calibrated UFC fight predictions from scraped UFCStats data. Odds are comparison-only.
+
+FIGHTER INTELLIGENCE
+
+FIGHTERS
+Loading…
+Pulling stats, rankings, and history…

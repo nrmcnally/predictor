@@ -5,10 +5,12 @@ import {
   getFutureCards,
   getFutureFightOdds,
   refreshFutureCards,
+  updateFutureFightScheduledRounds,
 } from "../api/client.js";
 import { FighterMatchup } from "../components/FighterDisplay.jsx";
 import {
   InsightsCard,
+  RiskFlagsCard,
   VerdictCard,
 } from "../components/PredictionBreakdown.jsx";
 import {
@@ -38,6 +40,86 @@ function findOdds(oddsRows, fightUrl) {
   return oddsRows.find((row) => normalizeFightUrl(row.fight_url) === normalized) || null;
 }
 
+function normalizeName(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function getMarketSignal(prediction, odds) {
+  if (!prediction || !odds?.odds_available || !odds.market_favorite) {
+    return null;
+  }
+
+  const split =
+    normalizeName(prediction.predicted_winner) !== normalizeName(odds.market_favorite);
+
+  return {
+    className: split ? "market-split" : "market-agrees",
+    label: split ? "Model-market split" : "Market agrees",
+    tone: split ? "warn" : "win",
+  };
+}
+
+function getProbabilityForFighter(prediction, fighterName) {
+  const normalized = normalizeName(fighterName);
+
+  if (normalizeName(prediction?.fighter_a) === normalized) {
+    return Number(prediction.fighter_a_probability);
+  }
+
+  if (normalizeName(prediction?.fighter_b) === normalized) {
+    return Number(prediction.fighter_b_probability);
+  }
+
+  return null;
+}
+
+function getMarketProbabilityForFighter(odds, fighterName) {
+  const normalized = normalizeName(fighterName);
+
+  if (normalizeName(odds?.fighter_1) === normalized) {
+    return Number(odds.fighter_1_market_probability);
+  }
+
+  if (normalizeName(odds?.fighter_2) === normalized) {
+    return Number(odds.fighter_2_market_probability);
+  }
+
+  return null;
+}
+
+function formatProbabilityPointDelta(delta) {
+  if (!Number.isFinite(delta)) {
+    return "N/A";
+  }
+
+  const points = delta * 100;
+  return `${points >= 0 ? "+" : ""}${points.toFixed(1)} pts`;
+}
+
+function getMarketEdge(prediction, odds) {
+  if (!prediction || !odds?.odds_available || !odds.market_favorite) {
+    return null;
+  }
+
+  const predictedWinner = prediction.predicted_winner;
+  const modelProbability = getProbabilityForFighter(prediction, predictedWinner);
+  const marketProbability = getMarketProbabilityForFighter(odds, predictedWinner);
+
+  if (!Number.isFinite(modelProbability) || !Number.isFinite(marketProbability)) {
+    return null;
+  }
+
+  return {
+    fighter: predictedWinner,
+    modelProbability,
+    marketProbability,
+    delta: modelProbability - marketProbability,
+  };
+}
+
 function summarizeCard(card) {
   const fights = card?.fights ?? [];
   const available = fights.filter((fight) => fight.prediction_available && fight.prediction);
@@ -56,10 +138,35 @@ function summarizeCard(card) {
   };
 }
 
+function summarizeMarkets(card, oddsRows) {
+  const fights = card?.fights ?? [];
+
+  return fights.reduce(
+    (summary, fight) => {
+      const signal = getMarketSignal(fight.prediction, findOdds(oddsRows, fight.fight_url));
+
+      if (!signal) {
+        return summary;
+      }
+
+      if (signal.className === "market-split") {
+        summary.splits += 1;
+      } else {
+        summary.agrees += 1;
+      }
+
+      return summary;
+    },
+    { splits: 0, agrees: 0 }
+  );
+}
+
 function OddsLine({ fight, odds }) {
   if (!odds || !odds.odds_available) {
     return <p className="odds-line muted">Market odds unavailable</p>;
   }
+
+  const marketEdge = getMarketEdge(fight.prediction, odds);
 
   return (
     <p className="odds-line">
@@ -81,7 +188,39 @@ function OddsLine({ fight, odds }) {
           {odds.bookmakers_matched ? ` · ${odds.bookmakers_matched} books` : ""}
         </span>
       )}
+      {marketEdge && (
+        <span>
+          Model edge on pick:{" "}
+          <strong>{formatProbabilityPointDelta(marketEdge.delta)}</strong>
+        </span>
+      )}
     </p>
+  );
+}
+
+function RoundOverrideControl({ fight, disabled, onChange }) {
+  if (!fight?.round_override_eligible) {
+    return null;
+  }
+
+  return (
+    <div
+      className="round-toggle segmented"
+      aria-label={`${fight.fighter_1} vs ${fight.fighter_2} scheduled rounds`}
+      onClick={(event) => event.stopPropagation()}
+    >
+      {[3, 5].map((rounds) => (
+        <button
+          key={rounds}
+          type="button"
+          className={Number(fight.scheduled_rounds) === rounds ? "active" : ""}
+          disabled={disabled}
+          onClick={() => onChange(fight, rounds)}
+        >
+          {rounds}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -96,6 +235,7 @@ export default function FutureCards() {
 
   const [cardsLoading, setCardsLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [savingRoundFightId, setSavingRoundFightId] = useState("");
   const [error, setError] = useState("");
 
   async function loadCards() {
@@ -165,6 +305,34 @@ export default function FutureCards() {
     };
   }, [selectedCardId]);
 
+  async function handleRoundOverride(fight, scheduledRounds) {
+    if (Number(fight.scheduled_rounds) === Number(scheduledRounds)) {
+      return;
+    }
+
+    setSavingRoundFightId(fight.fight_id);
+    setError("");
+
+    try {
+      const result = await updateFutureFightScheduledRounds(
+        selectedCardId,
+        fight.fight_id,
+        scheduledRounds
+      );
+
+      if (result?.card) {
+        setSelectedCard(result.card);
+      } else {
+        const data = await getFutureCardPredictions(selectedCardId);
+        setSelectedCard(data);
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSavingRoundFightId("");
+    }
+  }
+
   async function handleRefresh() {
     setCardsLoading(true);
     setError("");
@@ -179,6 +347,10 @@ export default function FutureCards() {
   }
 
   const summary = useMemo(() => summarizeCard(selectedCard), [selectedCard]);
+  const marketSummary = useMemo(
+    () => summarizeMarkets(selectedCard, oddsRows),
+    [selectedCard, oddsRows]
+  );
 
   return (
     <div className="view future-cards">
@@ -226,11 +398,17 @@ export default function FutureCards() {
 
           {!detailLoading && selectedCard && (
             <>
-              <div className="tile-row four">
+              <div className="tile-row five">
                 <StatTile label="Fights" value={summary.total} />
                 <StatTile label="Predictions" value={summary.available} />
                 <StatTile label="High confidence" value={summary.high} tone="win" />
                 <StatTile label="Close fights" value={summary.close} tone="warn" />
+                <StatTile
+                  label="Market splits"
+                  value={marketSummary.splits}
+                  hint={`${marketSummary.agrees} agree`}
+                  tone={marketSummary.splits ? "warn" : "default"}
+                />
               </div>
 
               <div className="fight-list">
@@ -238,13 +416,14 @@ export default function FutureCards() {
                   const odds = findOdds(oddsRows, fight.fight_url);
                   const expanded = expandedFightId === fight.fight_id;
                   const prediction = fight.prediction;
+                  const marketSignal = getMarketSignal(prediction, odds);
 
                   return (
                     <div
                       key={fight.fight_id}
                       className={`fight-row ${expanded ? "expanded" : ""} ${
                         fight.prediction_available ? "has-prediction" : "no-prediction"
-                      }`}
+                      } ${marketSignal?.className || ""}`}
                     >
                       <div
                         role={fight.prediction_available ? "button" : undefined}
@@ -275,6 +454,16 @@ export default function FutureCards() {
                           />
                           <div className="tag-row">
                             <Tag>{fight.weight_class || "Weight class unknown"}</Tag>
+                            {fight.scheduled_rounds && (
+                              <Tag tone={fight.scheduled_rounds === 5 ? "gold" : "neutral"}>
+                                {fight.scheduled_rounds} rounds
+                              </Tag>
+                            )}
+                            <RoundOverrideControl
+                              fight={fight}
+                              disabled={savingRoundFightId === fight.fight_id}
+                              onChange={handleRoundOverride}
+                            />
                             {prediction?.confidence_label && (
                               <Tag
                                 tone={`conf-${getConfidenceClass(
@@ -284,7 +473,27 @@ export default function FutureCards() {
                                 {prediction.confidence_label}
                               </Tag>
                             )}
+                            {prediction?.data_reliability &&
+                              prediction.data_reliability.level !== "ok" && (
+                                <Tag
+                                  tone={
+                                    prediction.data_reliability.level === "very_limited"
+                                      ? "loss"
+                                      : "warn"
+                                  }
+                                >
+                                  {prediction.data_reliability.label}
+                                </Tag>
+                              )}
+                            {marketSignal && (
+                              <Tag tone={marketSignal.tone} className="market-signal">
+                                {marketSignal.label}
+                              </Tag>
+                            )}
                           </div>
+                          {prediction && (
+                            <RiskFlagsCard prediction={prediction} compact />
+                          )}
                         </div>
 
                         {fight.prediction_available && prediction ? (
@@ -314,6 +523,7 @@ export default function FutureCards() {
                             imageLookup={imageLookup}
                             onFighterClick={openProfile}
                           />
+                          <RiskFlagsCard prediction={prediction} />
                           <InsightsCard prediction={prediction} />
                         </div>
                       )}

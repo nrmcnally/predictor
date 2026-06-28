@@ -7,6 +7,12 @@ from typing import Any
 
 import pandas as pd
 
+from app.features.strength_of_schedule import (
+    SOS_FEATURE_COLUMNS,
+    compute_sos_features,
+    empty_sos_features,
+)
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -101,6 +107,7 @@ def add_elo_features(df: pd.DataFrame) -> pd.DataFrame:
         "prior_lowest_elo",
         "prior_elo_change_last_3",
         "prior_elo_fights",
+        *SOS_FEATURE_COLUMNS,
     ]
 
     existing_elo_columns = [column for column in elo_columns if column in df.columns]
@@ -119,11 +126,17 @@ def add_elo_features(df: pd.DataFrame) -> pd.DataFrame:
     ratings: dict[str, float] = defaultdict(lambda: BASE_ELO)
     rating_history: dict[str, list[float]] = defaultdict(list)
 
+    # Strength-of-schedule tracking: the pre-fight Elo of each opponent a fighter
+    # has faced so far, plus whether the fighter won, in chronological order.
+    opponent_elo_history: dict[str, list[float]] = defaultdict(list)
+    opponent_result_history: dict[str, list[int]] = defaultdict(list)
+
     prior_elo_by_index: dict[int, float] = {}
     prior_peak_elo_by_index: dict[int, float] = {}
     prior_lowest_elo_by_index: dict[int, float] = {}
     prior_elo_change_last_3_by_index: dict[int, float | None] = {}
     prior_elo_fights_by_index: dict[int, int] = {}
+    sos_by_index: dict[int, dict[str, Any]] = {}
 
     grouped = df.groupby("fight_url", sort=False)
 
@@ -148,6 +161,7 @@ def add_elo_features(df: pd.DataFrame) -> pd.DataFrame:
                     history=history,
                 )
                 prior_elo_fights_by_index[row_index] = len(history)
+                sos_by_index[row_index] = empty_sos_features()
 
             continue
 
@@ -175,6 +189,10 @@ def add_elo_features(df: pd.DataFrame) -> pd.DataFrame:
             history=history_a,
         )
         prior_elo_fights_by_index[index_a] = len(history_a)
+        sos_by_index[index_a] = compute_sos_features(
+            opponent_elo_history[fighter_a],
+            opponent_result_history[fighter_a],
+        )
 
         # Save pre-fight Elo features for Fighter B.
         prior_elo_by_index[index_b] = rating_b_before
@@ -185,9 +203,21 @@ def add_elo_features(df: pd.DataFrame) -> pd.DataFrame:
             history=history_b,
         )
         prior_elo_fights_by_index[index_b] = len(history_b)
+        sos_by_index[index_b] = compute_sos_features(
+            opponent_elo_history[fighter_b],
+            opponent_result_history[fighter_b],
+        )
 
         actual_a = float(row_a["target_is_winner"])
         actual_b = float(row_b["target_is_winner"])
+
+        # Record who each fighter faced (opponent's pre-fight Elo). This happens
+        # after their SoS features are saved, so the current opponent is excluded
+        # from the current-fight values.
+        opponent_elo_history[fighter_a].append(rating_b_before)
+        opponent_result_history[fighter_a].append(int(actual_a == 1))
+        opponent_elo_history[fighter_b].append(rating_a_before)
+        opponent_result_history[fighter_b].append(int(actual_b == 1))
 
         # If this is not a clear winner/loser fight, do not update ratings.
         if actual_a == actual_b:
@@ -216,6 +246,11 @@ def add_elo_features(df: pd.DataFrame) -> pd.DataFrame:
     df["prior_lowest_elo"] = df.index.map(prior_lowest_elo_by_index)
     df["prior_elo_change_last_3"] = df.index.map(prior_elo_change_last_3_by_index)
     df["prior_elo_fights"] = df.index.map(prior_elo_fights_by_index)
+
+    for column in SOS_FEATURE_COLUMNS:
+        df[column] = df.index.map(
+            {index: features.get(column) for index, features in sos_by_index.items()}
+        )
 
     df = df.drop(columns=["event_date_parsed"])
 

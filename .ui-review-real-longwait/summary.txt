@@ -1,0 +1,58 @@
+messages=
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+debug: [vite] connecting...
+info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+debug: [vite] connected.
+info: Images loaded lazily and replaced with placeholders. Load events are deferred. See https://go.microsoft.com/fwlink/?linkid=2048113
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+error: Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED
+failed=
+GET https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-05/CHIMAEV_KHAMZAT_10-26.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2024-01/STRICKLAND_SEAN_BELT_01-20.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-05/CHIMAEV_KHAMZAT_10-26.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2026-02/MEDIC_UROS_02-21.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-07/RODRIGUEZ_DANIEL_07-19.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2026-02/DELIJA_ANTE_02-21.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2026-04/WALKER_JOHNNY_04-11.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-10/RAKIC_ALEKSANDAR_10-25.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2026-03/TYBURA_MARCIN_03-28.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-09/TODOROVIC_DUSKO_09-13.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2019-04/SILHOUETTE.png?VersionId=gr9Cvr32ZpepB0II4R_u9lu3vdCILDqn :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-08/URBINA_GILBERT_08-09.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2026-05/LEKA_JOVAN.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-11/GIMENIS_MAX_11-08.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-10/KLEIN_LUDOVIT_10-25.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2026-03/MUSAYEV_TOFIQ_03-28.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2026-04/VOLOGDIN_MARK_04-18.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-09/MUSASA_JOSIAS_09-27.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2026-04/BUZUKJA_DENNIS_04-18.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-11/GRAD_BOGDAN_11-22.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-10/JONES_JON.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-01/7/MAKHACHEV_ISLAM_BELT_01-18.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-06/TOPURIA_ILIA_BELT_10-26.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2025-12/NUNES_AMANDA.png :: net::ERR_NETWORK_ACCESS_DENIED
+GET https://ufc.com/images/2026-04/ULBERG_CARLOS_BELTMOCK.png :: net::ERR_NETWORK_ACCESS_DENIED

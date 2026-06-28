@@ -1,0 +1,120 @@
+MMA ANALYTICS
+FIGHT IQ
+API connected
+ANALYZE
+⚔
+Fight Lab
+◎
+Fighters
+EVENTS
+▸
+Future Cards
+↺
+Recent Cards
+INTEL
+♛
+Leaderboards
+◫
+Evaluation
+SYSTEM
+⟳
+Data Ops
+
+Calibrated UFC fight predictions from scraped UFCStats data. Odds are comparison-only.
+
+DATA OPERATIONS
+
+DATA OPS
+▶ Run incremental update
+
+PIPELINE STATUS
+
+PIPELINE IDLE
+LAST RUN
+Success
+FINISHED
+2026-06-11T12:30:44
+MESSAGE
+Incremental update completed successfully.
+
+LATEST REPORT
+
+MOST RECENT UPDATE REPORT
+
+Started 2026-06-11T12:20:04 · finished 2026-06-11T12:30:43
+
+RESULT
+Success
+DURATION
+10m 39s
+NEW FIGHTS
+N/A
+SAVED PREDICTION ROWS
+104
+used by Recent Cards
+
+Current model: XGBoost — 61.7% test accuracy
+
+success
+Refresh completed events
+13s
+success
+Update completed fight list incrementally
+0s
+success
+Update fight stats incrementally
+3m 5s
+success
+Refresh fighter profiles
+3m 51s
+success
+Restore fighter DOBs
+0s
+success
+Build fighter snapshots
+16s
+success
+Add Elo features
+2s
+success
+Add physical features
+1s
+success
+Add weight/size features
+2s
+success
+Add age features
+1s
+success
+Build matchup training rows
+22s
+success
+Build method labels
+12s
+success
+Build method training data
+2s
+success
+Train method models
+11s
+success
+Train calibrated model
+7s
+success
+Build current fighter features
+10s
+success
+Add current age features
+1s
+success
+Refresh future cards
+1m 18s
+success
+Refresh fighter images
+10s
+success
+Refresh future fight odds
+0s
+success
+Save future-card predictions
+35s

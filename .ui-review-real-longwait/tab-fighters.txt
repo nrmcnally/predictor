@@ -1,0 +1,272 @@
+MMA ANALYTICS
+FIGHT IQ
+API connected
+ANALYZE
+⚔
+Fight Lab
+◎
+Fighters
+EVENTS
+▸
+Future Cards
+↺
+Recent Cards
+INTEL
+♛
+Leaderboards
+◫
+Evaluation
+SYSTEM
+⟳
+Data Ops
+
+Calibrated UFC fight predictions from scraped UFCStats data. Odds are comparison-only.
+
+FIGHTER INTELLIGENCE
+
+FIGHTERS
+Load profile
+KC
+Middleweight
+KHAMZAT CHIMAEV
+Well-rounded
+Striking-oriented
+Grappling-oriented
+Strong defensive profile
+High-volume striker
+
+Style labels are heuristic assumptions based on available UFCStats-derived features, not official scouting labels.
+
+Use as red corner
+Use as blue corner
+ELO
+1646
+PEAK ELO
+1661
+UFC RECORD
+9–1
+WIN RATE
+90.0%
+AGE
+32.1
+HEIGHT / REACH
+74.0 in / 75.0 in
+
+MOMENTUM
+
+RECENT FORM
+LAST 5
+4-1
+STREAK
+1-fight losing streak
+RESULTS
+L · W · W · W · W
+
+APPROACH
+
+STYLE SCORES
+STRIKING
+84.9%
+GRAPPLING
+94.9%
+DEFENSE
+77.8%
+Striking-oriented
+Grappling-oriented
+Strong defensive profile
+High-volume striker
+Positive striking differential
+Wrestling-heavy
+Control grappler
+Submission threat
+
+TRAJECTORY
+
+ELO / FORM TREND
+
+Post-fight Elo over the fighter's recent UFC bouts.
+
+CURRENT ELO
+1661
+TREND (SHOWN FIGHTS)
++146
+RECENT SEQUENCE
+L · W · W · W · W · W
+1489
+1588
+1687
+July 15, 2020
+May 09, 2026
+Win
+Loss
+Other / NC
+
+STANDING
+
+NOTABLE RANKINGS
+GRAPPLING
+#1
+
+#1 in Middleweight for control time per 15 among qualified fighters.
+
+589.3 sec
+GRAPPLING
+#3
+
+#3 overall in control time per 15 among qualified fighters.
+
+589.3 sec
+STRIKING
+#3
+
+#3 in Middleweight for striking differential per 15 among qualified fighters.
+
+61.33
+GRAPPLING
+#3
+
+#3 in Middleweight for takedowns landed per 15 among qualified fighters.
+
+5.47
+OVERALL
+#4
+
+#4 in Middleweight for ufc win rate among qualified fighters.
+
+90.0%
+OVERALL
+#5
+
+#5 in Middleweight for elo rating among qualified fighters.
+
+1646
+OVERALL
+#5
+
+#5 in Middleweight for finish win rate among qualified fighters.
+
+60.0%
+STRIKING DEFENSE
+#6
+
+#6 in Middleweight for fewest significant strikes absorbed per 15 among qualified fighters.
+
+24.74
+OVERALL
+#6
+
+#6 in Middleweight for recent 5 fight win rate among qualified fighters.
+
+80.0%
+STRIKING
+#6
+
+#6 in Middleweight for significant strike accuracy among qualified fighters.
+
+61.1%
+GRAPPLING
+#7
+
+#7 in Middleweight for submission attempts per 15 among qualified fighters.
+
+3.97
+
+FINISHING
+
+METHOD TENDENCIES
+WINS
+Decision
+3
+Submission
+4
+KO/TKO
+2
+LOSSES
+Decision
+1
+ALL FIGHTS
+Decision
+4
+Submission
+4
+KO/TKO
+2
+
+NUMBERS
+
+STAT SNAPSHOT
+ELO
+1646
+PEAK ELO
+1661
+UFC FIGHTS
+10
+UFC WINS
+9
+UFC LOSSES
+1
+WIN RATE
+90.0%
+RECENT 5 WIN RATE
+80.0%
+FINISH WIN RATE
+60.0%
+HEIGHT
+74.0 in
+REACH
+75.0 in
+REACH MINUS HEIGHT
+1.0 in
+AGE
+32.1
+SIG. STRIKE DIFF / 15
+61.33
+SIG. STRIKES LANDED / 15
+86.07
+SIG. STRIKES ABSORBED / 15
+24.74
+SIG. STRIKE ACCURACY
+61.1%
+SIG. STRIKE DEFENSE
+56.5%
+TAKEDOWNS LANDED / 15
+5.47
+TAKEDOWN ACCURACY
+58.9%
+TAKEDOWN DEFENSE
+75.0%
+CONTROL SECONDS / 15
+589.3 sec
+SUB ATTEMPTS / 15
+3.97
+
+HISTORY
+
+RECENT FIGHT HISTORY
+
+Click an opponent to open their profile.
+
+Sean Strickland
+May 09, 2026 · Middleweight · UFC 328: Chimaev vs. Strickland
+loss · Decision · R5.0 · 5:00
+Dricus Du Plessis
+August 16, 2025 · Middleweight · UFC 319: Du Plessis vs. Chimaev
+win · Decision · R5.0 · 5:00
+Robert Whittaker
+October 26, 2024 · Middleweight · UFC 308: Topuria vs. Holloway
+win · Submission · R1.0 · 3:34
+Kamaru Usman
+October 21, 2023 · Middleweight · UFC 294: Makhachev vs. Volkanovski 2
+win · Decision · R3.0 · 5:00
+Kevin Holland
+September 10, 2022 · Catch Weight · UFC 279: Diaz vs. Ferguson
+win · Submission · R1.0 · 2:13
+Gilbert Burns
+April 09, 2022 · Welterweight · UFC 273: Volkanovski vs. The Korean Zombie
+win · Decision · R3.0 · 5:00
+Li Jingliang
+October 30, 2021 · Welterweight · UFC 267: Blachowicz vs. Teixeira
+win · Submission · R1.0 · 3:16
+Gerald Meerschaert
+September 19, 2020 · Middleweight · UFC Fight Night: Covington vs. Woodley
+win · KO/TKO · R1.0 · 0:17

@@ -7,6 +7,11 @@ from typing import Any
 import pandas as pd
 
 from app.data.scrape_upcoming_cards import scrape_upcoming_cards, save_csvs
+from app.features.fight_context_features import build_future_fight_context
+from app.services.fight_context_override_service import (
+    find_scheduled_rounds_override,
+    upsert_scheduled_rounds_override,
+)
 from app.services.prediction_service import FighterNotFoundError, predict_fight_data
 
 
@@ -91,27 +96,63 @@ def get_future_card(event_id: str) -> dict[str, Any]:
         raise ValueError(f"Future card not found: {event_id}")
 
     event = event_matches.iloc[0]
+    event_name = clean_text(event["event_name"])
+    is_fight_night = event_name.casefold().startswith("ufc fight night")
 
     event_fights_df = fights_df[fights_df["event_id"].astype(str) == str(event_id)]
 
     fights = []
 
-    for _, fight in event_fights_df.iterrows():
+    card_size = int(len(event_fights_df))
+
+    for fight_index, (_, fight) in enumerate(event_fights_df.iterrows()):
         fight_id = clean_text(fight["fight_url"]).rstrip("/").split("/")[-1]
+        fighter_1 = clean_text(fight["fighter_1"])
+        fighter_2 = clean_text(fight["fighter_2"])
+        fight_url = clean_text(fight["fight_url"])
+        round_override = find_scheduled_rounds_override(
+            event_id=event_id,
+            fight_url=fight_url,
+            fighter_1=fighter_1,
+            fighter_2=fighter_2,
+        )
+        explicit_scheduled_rounds = (
+            round_override["scheduled_rounds"]
+            if round_override
+            else fight.get("scheduled_rounds")
+        )
+        fight_context = build_future_fight_context(
+            fight_index=fight_index,
+            card_size=card_size,
+            explicit_scheduled_rounds=explicit_scheduled_rounds,
+        )
+
+        if round_override:
+            fight_context["fight_context_source"] = "manual_override"
 
         fights.append(
             {
                 "fight_id": fight_id,
-                "fight_url": clean_text(fight["fight_url"]),
-                "fighter_1": clean_text(fight["fighter_1"]),
-                "fighter_2": clean_text(fight["fighter_2"]),
+                "fight_url": fight_url,
+                "fighter_1": fighter_1,
+                "fighter_2": fighter_2,
                 "weight_class": clean_text(fight["weight_class"]),
+                "fight_context": fight_context,
+                "scheduled_rounds": fight_context["fight_context_scheduled_rounds"],
+                "is_main_event": bool(fight_context["fight_context_is_main_event"]),
+                "card_position_from_top": fight_index + 1,
+                "round_override_eligible": fight_index in {1, 2} and not is_fight_night,
+                "round_override_saved": bool(round_override),
+                "round_override_source": fight_context.get("fight_context_source", ""),
+                "round_override_updated_at": (
+                    round_override.get("updated_at", "") if round_override else ""
+                ),
             }
         )
 
     return {
         "event_id": clean_text(event["event_id"]),
-        "event_name": clean_text(event["event_name"]),
+        "event_name": event_name,
         "event_date": clean_text(event["event_date"]),
         "event_location": clean_text(event["event_location"]),
         "event_url": clean_text(event["event_url"]),
@@ -134,6 +175,7 @@ def get_future_card_predictions(event_id: str) -> dict[str, Any]:
                 fighter_a=fighter_1,
                 fighter_b=fighter_2,
                 weight_class=weight_class,
+                fight_context=fight.get("fight_context"),
             )
 
             predicted_fights.append(
@@ -175,3 +217,50 @@ def get_future_card_predictions(event_id: str) -> dict[str, Any]:
         **card,
         "fights": predicted_fights,
     }
+
+
+def set_future_fight_scheduled_rounds(
+    *,
+    event_id: str,
+    fight_id: str,
+    scheduled_rounds: Any,
+) -> dict[str, Any]:
+    events_df = load_upcoming_events()
+    fights_df = load_upcoming_fights()
+
+    event_matches = events_df[events_df["event_id"].astype(str) == str(event_id)]
+
+    if event_matches.empty:
+        raise ValueError(f"Future card not found: {event_id}")
+
+    event = event_matches.iloc[0]
+    event_fights_df = fights_df[fights_df["event_id"].astype(str) == str(event_id)]
+
+    for fight_index, (_, fight) in enumerate(event_fights_df.iterrows()):
+        current_fight_id = clean_text(fight["fight_url"]).rstrip("/").split("/")[-1]
+
+        if current_fight_id != str(fight_id):
+            continue
+
+        override = upsert_scheduled_rounds_override(
+            event_id=event_id,
+            event_name=event.get("event_name", ""),
+            event_date=event.get("event_date", ""),
+            event_url=event.get("event_url", ""),
+            fight_id=current_fight_id,
+            fight_url=fight.get("fight_url", ""),
+            fighter_1=fight.get("fighter_1", ""),
+            fighter_2=fight.get("fighter_2", ""),
+            weight_class=fight.get("weight_class", ""),
+            scheduled_rounds=scheduled_rounds,
+        )
+
+        return {
+            "event_id": event_id,
+            "fight_id": current_fight_id,
+            "card_position_from_top": fight_index + 1,
+            "override": override,
+            "card": get_future_card_predictions(event_id),
+        }
+
+    raise ValueError(f"Future fight not found: {fight_id}")

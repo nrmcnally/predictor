@@ -5,11 +5,19 @@ from typing import Any
 
 import pandas as pd
 
+from app.features.fight_context_features import (
+    FIGHT_CONTEXT_NUMERIC_FEATURES,
+    build_event_fight_context_lookup,
+    normalize_fight_url,
+)
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
 PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 
+EVENT_FIGHTS_CSV = RAW_DATA_DIR / "event_fights.csv"
 FIGHTER_SNAPSHOTS_CSV = PROCESSED_DATA_DIR / "fighter_snapshots.csv"
 TRAINING_MATCHUPS_CSV = PROCESSED_DATA_DIR / "training_matchups.csv"
 
@@ -43,6 +51,13 @@ def load_fighter_snapshots() -> pd.DataFrame:
     return pd.read_csv(FIGHTER_SNAPSHOTS_CSV)
 
 
+def load_event_fights() -> pd.DataFrame:
+    if not EVENT_FIGHTS_CSV.exists():
+        return pd.DataFrame()
+
+    return pd.read_csv(EVENT_FIGHTS_CSV)
+
+
 def get_numeric_feature_columns(df: pd.DataFrame) -> list[str]:
     """
     Finds numeric snapshot columns that can be used as model features.
@@ -68,6 +83,7 @@ def build_single_matchup_row(
     fighter_a_row: pd.Series,
     fighter_b_row: pd.Series,
     numeric_feature_columns: list[str],
+    fight_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Builds one model row from Fighter A's perspective.
@@ -90,6 +106,11 @@ def build_single_matchup_row(
         "target": int(fighter_a_row["target_is_winner"]),
     }
 
+    fight_context = fight_context or {}
+
+    for column in FIGHT_CONTEXT_NUMERIC_FEATURES:
+        row[column] = fight_context.get(column)
+
     for column in numeric_feature_columns:
         fighter_a_value = fighter_a_row[column]
         fighter_b_value = fighter_b_row[column]
@@ -105,8 +126,10 @@ def build_matchup_training_rows(snapshots_df: pd.DataFrame) -> pd.DataFrame:
     snapshots_df = snapshots_df.copy()
 
     numeric_feature_columns = get_numeric_feature_columns(snapshots_df)
+    fight_context_lookup = build_event_fight_context_lookup(load_event_fights())
 
     print(f"Using {len(numeric_feature_columns)} numeric snapshot features.")
+    print(f"Using {len(FIGHT_CONTEXT_NUMERIC_FEATURES)} direct fight-context features.")
     print("Feature columns:")
     for column in numeric_feature_columns:
         print(f"- {column}")
@@ -127,6 +150,10 @@ def build_matchup_training_rows(snapshots_df: pd.DataFrame) -> pd.DataFrame:
 
         row_1 = pd.Series(fighter_rows[0], index=fight_columns)
         row_2 = pd.Series(fighter_rows[1], index=fight_columns)
+        fight_context = fight_context_lookup.get(
+            normalize_fight_url(row_1.get("fight_url", "")),
+            {},
+        )
 
         # Skip rows without a clear winner/loser.
         # For this dataset, this should rarely happen because we filtered earlier.
@@ -140,6 +167,7 @@ def build_matchup_training_rows(snapshots_df: pd.DataFrame) -> pd.DataFrame:
                 fighter_a_row=row_1,
                 fighter_b_row=row_2,
                 numeric_feature_columns=numeric_feature_columns,
+                fight_context=fight_context,
             )
         )
 
@@ -149,6 +177,7 @@ def build_matchup_training_rows(snapshots_df: pd.DataFrame) -> pd.DataFrame:
                 fighter_a_row=row_2,
                 fighter_b_row=row_1,
                 numeric_feature_columns=numeric_feature_columns,
+                fight_context=fight_context,
             )
         )
 

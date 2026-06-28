@@ -1,0 +1,165 @@
+MMA ANALYTICS
+FIGHT IQ
+API connected
+ANALYZE
+⚔
+Fight Lab
+◎
+Fighters
+EVENTS
+▸
+Future Cards
+↺
+Recent Cards
+INTEL
+♛
+Leaderboards
+◫
+Evaluation
+SYSTEM
+⟳
+Data Ops
+
+Calibrated UFC fight predictions from scraped UFCStats data. Odds are comparison-only.
+
+PREDICTION TRACKING
+
+RECENT CARDS
+UFC Fight Night: Medic vs. Rodriguez
+August 01, 2026
+Belgrade, Vojvodina, Serbia
+Waiting for results
+UFC Fight Night: Ankalaev vs. Rountree Jr
+July 25, 2026
+Abu Dhabi, Abu Dhabi, United Arab Emirates
+Waiting for results
+UFC Fight Night
+July 18, 2026
+Oklahoma City, Oklahoma, USA
+Waiting for results
+UFC 329: McGregor vs. Holloway 2
+July 11, 2026
+Las Vegas, Nevada, USA
+Waiting for results
+UFC Fight Night: Fiziev vs. Torres
+June 27, 2026
+Baku, Azerbaijan
+Waiting for results
+UFC Fight Night: Kape vs. Horiguchi
+June 20, 2026
+Las Vegas, Nevada, USA
+Waiting for results
+UFC Freedom 250
+June 14, 2026
+Washington, DC, USA
+Waiting for results
+UFC Fight Night: Muhammad vs. Bonfim
+June 06, 2026
+Las Vegas, Nevada, USA
+Completed
+63.6% model
+UFC Fight Night: Song vs. Figueiredo
+May 30, 2026
+Macau, China
+Partial results
+62.5% model
+UFC Fight Night: Allen vs. Costa
+May 16, 2026
+Las Vegas, Nevada, USA
+Completed
+30.0% model
+FIGHTS
+9
+CORRECT
+0
+WRONG
+0
+WAITING
+9
+MODEL VS MARKET
+N/A / N/A
+accuracy
+UM
+Uros Medic
+VS
+DR
+Daniel Rodriguez
+Welterweight
+Waiting
+PICK
+Uros Medic
+50.1%
+AD
+Ante Delija
+VS
+JW
+Johnny Walker
+Heavyweight
+Waiting
+PICK
+Johnny Walker
+64.7%
+AR
+Aleksandar Rakic
+VS
+MT
+Marcin Tybura
+Heavyweight
+Waiting
+PICK
+Aleksandar Rakic
+63.0%
+DT
+Dusko Todorovic
+VS
+RV
+Robert Valentin
+Middleweight
+Waiting
+PICK
+Dusko Todorovic
+61.5%
+VC
+Vlasto Cepo
+VS
+GU
+Gilbert Urbina
+Middleweight
+Waiting
+JL
+Jovan Leka
+VS
+MG
+Max Gimenis
+Heavyweight
+Waiting
+LK
+Ludovit Klein
+VS
+TM
+Tofiq Musayev
+Lightweight
+Waiting
+PICK
+Ludovit Klein
+71.2%
+MV
+Mark Vologdin
+VS
+JM
+Josias Musasa
+Bantamweight
+Waiting
+PICK
+Mark Vologdin
+50.0%
+DB
+Dennis Buzukja
+VS
+BG
+Bogdan Grad
+Featherweight
+Waiting
+PICK
+Bogdan Grad
+63.6%

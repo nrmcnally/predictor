@@ -145,6 +145,23 @@ export async function getFutureCardPredictions(eventId) {
   });
 }
 
+export async function updateFutureFightScheduledRounds(eventId, fightId, scheduledRounds) {
+  if (USE_MOCK) {
+    return mock.updateFutureFightScheduledRounds(eventId, fightId, scheduledRounds);
+  }
+
+  return request(
+    `/future-cards/${encodeURIComponent(eventId)}/fights/${encodeURIComponent(
+      fightId
+    )}/scheduled-rounds`,
+    {
+      method: "POST",
+      body: { scheduled_rounds: scheduledRounds },
+      fallbackError: "Failed to save scheduled-rounds override.",
+    }
+  );
+}
+
 export async function refreshFutureCards() {
   if (USE_MOCK) {
     return { message: "Future cards refreshed." };
@@ -170,14 +187,14 @@ export async function getFutureFightOdds() {
 
 export async function getRecentCards(includeWaiting = true) {
   if (USE_MOCK) {
-    return mock.getRecentCards();
+    const cards = await mock.getRecentCards();
+    return { cards, overall: null };
   }
 
-  const data = await request(`/recent-cards?include_waiting=${includeWaiting}`, {
+  // Returns { card_count, overall, cards } so the UI can show a cumulative grade.
+  return request(`/recent-cards?include_waiting=${includeWaiting}`, {
     fallbackError: "Failed to load recent cards.",
   });
-
-  return data.cards ?? [];
 }
 
 export async function getRecentCardDetail(eventId) {
@@ -216,18 +233,31 @@ export async function getLeaderboards({ top, minFights, maxInactiveDays }) {
   });
 }
 
-export async function getModelEvaluation({ testFraction, recentLimit }) {
+export async function getModelEvaluation({ recentLimit = 25 } = {}) {
   if (USE_MOCK) {
     return mock.getModelEvaluation();
   }
 
+  // The holdout is fixed to the model's true chronological test set on the
+  // backend, so there is no test-window parameter to pass anymore.
   const params = new URLSearchParams({
-    test_fraction: String(testFraction),
     recent_prediction_limit: String(recentLimit),
   });
 
   return request(`/model-evaluation?${params}`, {
     fallbackError: "Failed to load model evaluation.",
+  });
+}
+
+export async function getWalkForwardEvaluation({ nFolds = 8 } = {}) {
+  if (USE_MOCK) {
+    return mock.getWalkForwardEvaluation();
+  }
+
+  const params = new URLSearchParams({ n_folds: String(nFolds) });
+
+  return request(`/walk-forward-evaluation?${params}`, {
+    fallbackError: "Failed to load walk-forward evaluation.",
   });
 }
 
@@ -258,6 +288,30 @@ export async function getModelSnapshotEvaluation() {
 
   return request("/model-snapshot-evaluation", {
     fallbackError: "Failed to load prospective model evaluation.",
+  });
+}
+
+export async function getClvEvaluation() {
+  if (USE_MOCK) {
+    return {
+      available: false,
+      message: "CLV accrues once odds are captured more than once per fight.",
+      fights: [],
+    };
+  }
+
+  return request("/clv-evaluation", {
+    fallbackError: "Failed to load CLV evaluation.",
+  });
+}
+
+export async function getDataQualitySummary() {
+  if (USE_MOCK) {
+    return mock.getDataQualitySummary();
+  }
+
+  return request("/data-quality", {
+    fallbackError: "Failed to load data quality summary.",
   });
 }
 

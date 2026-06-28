@@ -25,6 +25,11 @@ from app.data.scrape_event_fights import (
     scrape_event_fights,
     save_event_fights_csv,
 )
+from app.data.scrape_fight_round_stats import scrape_round_stats
+from app.features.add_cardio_features import (
+    add_cardio_features,
+    load_round_stats as load_cardio_round_stats,
+)
 from app.data.scrape_fight_details import (
     scrape_fight_stats,
     save_fight_stats_csv,
@@ -49,11 +54,13 @@ from app.features.add_physical_features import (
     save_snapshots,
 )
 from app.features.add_weight_size_features import add_weight_size_features
+from app.features.add_age_features import add_age_features
 from app.features.build_matchups import (
     load_fighter_snapshots,
     build_matchup_training_rows,
     save_training_matchups,
 )
+from app.features.fight_context_features import FIGHT_CONTEXT_NUMERIC_FEATURES
 from app.features.build_current_fighter_features import (
     load_fight_stats as load_current_feature_fight_stats,
     load_fighter_snapshots as load_current_feature_snapshots,
@@ -62,6 +69,11 @@ from app.features.build_current_fighter_features import (
     save_current_features,
 )
 from app.models.train_calibrated_models import main as train_calibrated_models
+from app.models.train_market_shadow_models import (
+    MARKET_SHADOW_METRICS_PATH,
+    MARKET_SHADOW_REGISTRY_PATH,
+    main as train_market_shadow_models,
+)
 from app.services.future_card_service import refresh_upcoming_cards
 from app.services.prediction_service import clear_prediction_cache
 from app.services.saved_prediction_service import (
@@ -254,6 +266,11 @@ def stage_refresh_fight_details() -> dict[str, Any]:
     }
 
 
+def stage_refresh_fight_round_details() -> dict[str, Any]:
+    # Full rebuild of per-round stats for every fight.
+    return scrape_round_stats(only_missing=False)
+
+
 def stage_refresh_fighter_profiles() -> dict[str, Any]:
     profiles = scrape_all_fighter_profiles()
     save_profiles_csv(profiles)
@@ -269,8 +286,19 @@ def stage_build_fighter_snapshots() -> dict[str, Any]:
     snapshots_df = build_fighter_snapshots(fight_stats_df)
     save_fighter_snapshots(snapshots_df)
 
+    generated_columns = [
+        column
+        for column in snapshots_df.columns
+        if column.startswith(("bayes_", "decayed_", "path_", "style_", "vulnerability_"))
+        or column.startswith("avg_opponent_adjusted_")
+        or column.startswith("recent_3_opponent_adjusted_")
+        or column.startswith("volatility_")
+        or column in {"sample_reliability", "durability_risk_score"}
+    ]
+
     return {
         "fighter_snapshots": len(snapshots_df),
+        "generated_analytics_columns": len(generated_columns),
         "output_file": str(PROCESSED_DATA_DIR / "fighter_snapshots.csv"),
     }
 
@@ -293,6 +321,25 @@ def stage_add_elo_features() -> dict[str, Any]:
         "elo_columns_present": [
             column for column in elo_columns if column in snapshots_with_elo_df.columns
         ],
+        "output_file": str(PROCESSED_DATA_DIR / "fighter_snapshots.csv"),
+    }
+
+
+def stage_add_cardio_features() -> dict[str, Any]:
+    snapshots_df = load_snapshots()
+    round_stats_df = load_cardio_round_stats()
+
+    updated_snapshots_df = add_cardio_features(snapshots_df, round_stats_df)
+    save_snapshots(updated_snapshots_df)
+
+    coverage = 0
+    if "prior_avg_cardio_sig_output_slope" in updated_snapshots_df.columns:
+        coverage = int(updated_snapshots_df["prior_avg_cardio_sig_output_slope"].notna().sum())
+
+    return {
+        "fighter_snapshots": len(updated_snapshots_df),
+        "round_rows_available": int(len(round_stats_df)),
+        "rows_with_prior_cardio": coverage,
         "output_file": str(PROCESSED_DATA_DIR / "fighter_snapshots.csv"),
     }
 
@@ -336,6 +383,10 @@ def stage_add_weight_size_features() -> dict[str, Any]:
     return add_weight_size_features()
 
 
+def stage_add_age_features() -> dict[str, Any]:
+    return add_age_features()
+
+
 def stage_build_matchups() -> dict[str, Any]:
     snapshots_df = load_fighter_snapshots()
     matchups_df = build_matchup_training_rows(snapshots_df)
@@ -351,6 +402,9 @@ def stage_build_matchups() -> dict[str, Any]:
                 if column.startswith("diff_")
             ]
         ),
+        "direct_fight_context_columns": [
+            column for column in FIGHT_CONTEXT_NUMERIC_FEATURES if column in matchups_df.columns
+        ],
         "output_file": str(PROCESSED_DATA_DIR / "training_matchups.csv"),
     }
 
@@ -371,6 +425,24 @@ def stage_train_model() -> dict[str, Any]:
         "best_model_metrics": metrics.get("results", {}).get(metrics.get("best_model_name", ""), {}),
         "metrics_file": str(metrics_path),
         "model_file": str(PROJECT_ROOT / "models" / "best_winner_model.joblib"),
+    }
+
+
+def stage_train_market_shadow_models() -> dict[str, Any]:
+    train_market_shadow_models()
+
+    metrics = {}
+
+    if MARKET_SHADOW_METRICS_PATH.exists():
+        with open(MARKET_SHADOW_METRICS_PATH, "r", encoding="utf-8") as file:
+            metrics = json.load(file)
+
+    return {
+        "available": bool(metrics.get("available", False)),
+        "training_rows": metrics.get("training_rows", 0),
+        "model_names": metrics.get("model_names", []),
+        "metrics_file": str(MARKET_SHADOW_METRICS_PATH),
+        "registry_file": str(MARKET_SHADOW_REGISTRY_PATH),
     }
 
 
@@ -512,19 +584,24 @@ def run_update_all(stop_on_failure: bool = True) -> dict[str, Any]:
         ("Refresh completed events", stage_refresh_completed_events),
         ("Refresh completed fight list", stage_refresh_completed_fight_list),
         ("Refresh detailed fight stats", stage_refresh_fight_details),
+        ("Refresh per-round fight stats", stage_refresh_fight_round_details),
         ("Refresh fighter profiles", stage_refresh_fighter_profiles),
         ("Restore fighter DOBs", restore_fighter_dobs_stage),
         ("Build fighter snapshots", stage_build_fighter_snapshots),
         ("Add Elo features", stage_add_elo_features),
         ("Add physical features", stage_add_physical_features),
         ("Add weight/size features", stage_add_weight_size_features),
+        ("Add age features", stage_add_age_features),
+        ("Add cardio features", stage_add_cardio_features),
         ("Build matchup training rows", stage_build_matchups),
         ("Build method labels", build_method_labels_stage),
         ("Build method training data", build_method_training_data_stage),
         ("Train method models", train_method_models_stage),
         ("Train calibrated model", stage_train_model),
         ("Build current fighter features", stage_build_current_fighter_features),
+        ("Add current age features", stage_add_age_features),
         ("Refresh future cards", stage_refresh_future_cards),
+        ("Train market shadow models", stage_train_market_shadow_models),
         ("Save future-card predictions", stage_save_future_card_predictions),
         ("Refresh fighter images", stage_refresh_fighter_images),
     ]

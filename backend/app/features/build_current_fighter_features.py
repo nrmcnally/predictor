@@ -8,6 +8,7 @@ from typing import Any
 import pandas as pd
 
 from app.features.build_fighter_snapshots import (
+    add_opponent_adjusted_history_columns,
     add_engineered_fight_columns,
     add_opponent_stats,
     build_snapshot_from_history,
@@ -19,6 +20,15 @@ from app.features.add_elo_features import (
     expected_score,
     method_multiplier,
 )
+from app.features.strength_of_schedule import (
+    SOS_FEATURE_COLUMNS,
+    compute_sos_features,
+)
+from app.features.cardio_features import (
+    CARDIO_SNAPSHOT_COLUMNS,
+    build_current_cardio_lookup,
+)
+from app.features.add_cardio_features import load_round_stats
 from app.features.add_weight_size_features import (
     add_weight_size_features_to_current_features,
     load_fighter_profiles,
@@ -80,6 +90,7 @@ def prepare_fight_history(fight_stats_df: pd.DataFrame) -> pd.DataFrame:
         by=["event_date_parsed", "event_name", "fight_url", "fighter"],
         ascending=[True, True, True, True],
     ).reset_index(drop=True)
+    df = add_opponent_adjusted_history_columns(df)
 
     return df
 
@@ -87,15 +98,21 @@ def prepare_fight_history(fight_stats_df: pd.DataFrame) -> pd.DataFrame:
 def build_final_elo_state(df: pd.DataFrame) -> tuple[
     dict[str, float],
     dict[str, list[float]],
+    dict[str, list[float]],
+    dict[str, list[int]],
 ]:
     """
-    Replays the full fight history and returns each fighter's current Elo state.
+    Replays the full fight history and returns each fighter's current Elo state,
+    plus the strength-of-schedule history (pre-fight Elo of every opponent faced
+    and whether the fighter won).
 
     This is similar to add_elo_features.py, but instead of saving pre-fight Elo
     for every fight, we only care about the final/current state.
     """
     ratings: dict[str, float] = defaultdict(lambda: BASE_ELO)
     rating_history: dict[str, list[float]] = defaultdict(list)
+    opponent_elo_history: dict[str, list[float]] = defaultdict(list)
+    opponent_result_history: dict[str, list[int]] = defaultdict(list)
 
     grouped = df.groupby("fight_url", sort=False)
 
@@ -120,6 +137,11 @@ def build_final_elo_state(df: pd.DataFrame) -> tuple[
         actual_a = float(row_a["is_winner"])
         actual_b = float(row_b["is_winner"])
 
+        opponent_elo_history[fighter_a].append(rating_b_before)
+        opponent_result_history[fighter_a].append(int(actual_a == 1))
+        opponent_elo_history[fighter_b].append(rating_a_before)
+        opponent_result_history[fighter_b].append(int(actual_b == 1))
+
         if actual_a == actual_b:
             rating_history[fighter_a].append(rating_a_before)
             rating_history[fighter_b].append(rating_b_before)
@@ -141,7 +163,7 @@ def build_final_elo_state(df: pd.DataFrame) -> tuple[
         rating_history[fighter_a].append(rating_a_after)
         rating_history[fighter_b].append(rating_b_after)
 
-    return ratings, rating_history
+    return ratings, rating_history, opponent_elo_history, opponent_result_history
 
 
 def build_physical_lookup(snapshots_df: pd.DataFrame) -> pd.DataFrame:
@@ -200,7 +222,9 @@ def build_current_features(
             fighter = clean_text(row["fighter"])
             fighter_histories[fighter].append(row)
 
-    ratings, rating_history = build_final_elo_state(engineered_df)
+    ratings, rating_history, opponent_elo_history, opponent_result_history = (
+        build_final_elo_state(engineered_df)
+    )
 
     current_rows: list[dict[str, Any]] = []
 
@@ -219,6 +243,10 @@ def build_current_features(
         latest_row["opponent"] = ""
         latest_row["method"] = ""
         latest_row["is_winner"] = 0
+        latest_row["is_win"] = 0
+        latest_row["is_loss"] = 0
+        latest_row["is_decisive_result"] = 0
+        latest_row["is_unscored_result"] = 0
 
         snapshot = build_snapshot_from_history(latest_row, history)
         row_dict = asdict(snapshot)
@@ -236,6 +264,13 @@ def build_current_features(
             row_dict["prior_elo_change_last_3"] = None
 
         row_dict["prior_elo_fights"] = len(elo_history)
+
+        sos_features = compute_sos_features(
+            opponent_elo_history[fighter],
+            opponent_result_history[fighter],
+        )
+        for column in SOS_FEATURE_COLUMNS:
+            row_dict[column] = sos_features.get(column)
 
         current_rows.append(row_dict)
 
@@ -257,6 +292,16 @@ def build_current_features(
         current_features_df=current_df,
         fight_stats_df=engineered_df,
     )
+
+    cardio_lookup = build_current_cardio_lookup(load_round_stats())
+
+    if not cardio_lookup.empty:
+        current_df = current_df.merge(cardio_lookup, on="fighter", how="left")
+
+    # Keep a stable schema even before per-round data has been backfilled.
+    for column in CARDIO_SNAPSHOT_COLUMNS:
+        if column not in current_df.columns:
+            current_df[column] = pd.NA
 
     return current_df
 
@@ -297,6 +342,8 @@ def main() -> None:
         "prior_fights",
         "prior_wins",
         "prior_losses",
+        "prior_decisive_results",
+        "prior_unscored_results",
         "prior_win_rate",
         "days_since_last_fight",
         "prior_elo",

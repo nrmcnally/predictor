@@ -1,0 +1,181 @@
+MMA ANALYTICS
+FIGHT IQ
+API connected
+ANALYZE
+⚔
+Fight Lab
+◎
+Fighters
+EVENTS
+▸
+Future Cards
+↺
+Recent Cards
+INTEL
+♛
+Leaderboards
+◫
+Evaluation
+SYSTEM
+⟳
+Data Ops
+
+Calibrated UFC fight predictions from scraped UFCStats data. Odds are comparison-only.
+
+UPCOMING SCHEDULE
+
+FUTURE CARDS
+⟳ Refresh cards
+UFC Freedom 250
+June 14, 2026
+Washington, DC, USA
+7 fights
+UFC Fight Night: Kape vs. Horiguchi
+June 20, 2026
+Las Vegas, Nevada, USA
+11 fights
+UFC Fight Night: Fiziev vs. Torres
+June 27, 2026
+Baku, Azerbaijan
+12 fights
+UFC 329: McGregor vs. Holloway 2
+July 11, 2026
+Las Vegas, Nevada, USA
+12 fights
+UFC Fight Night
+July 18, 2026
+Oklahoma City, Oklahoma, USA
+6 fights
+UFC Fight Night: Ankalaev vs. Rountree Jr
+July 25, 2026
+Abu Dhabi, Abu Dhabi, United Arab Emirates
+9 fights
+UFC Fight Night: Medic vs. Rodriguez
+August 01, 2026
+Belgrade, Vojvodina, Serbia
+9 fights
+UFC 330
+August 15, 2026
+Philadelphia, Pennsylvania, USA
+0 fights
+FIGHTS
+7
+PREDICTIONS
+7
+HIGH CONFIDENCE
+4
+CLOSE FIGHTS
+2
+IT
+Ilia Topuria
+VS
+JG
+Justin Gaethje
+Lightweight
+Slight lean
+PICK
+Ilia Topuria
+58.4%
+
+Market: Ilia Topuria 80.8%
+Ilia Topuria: -520 · 80.8%
+Justin Gaethje: +390 · 19.2%
+DraftKings · 6 books
+
+AP
+Alex Pereira
+VS
+CG
+Ciryl Gane
+Heavyweight
+Moderate lean
+PICK
+Ciryl Gane
+60.0%
+
+Market: Ciryl Gane 50.0%
+Alex Pereira: -108 · 50.0%
+Ciryl Gane: -112 · 50.0%
+DraftKings · 6 books
+
+SO
+Sean O'Malley
+VS
+AZ
+Aiemann Zahabi
+Bantamweight
+Strong lean
+PICK
+Sean O'Malley
+69.2%
+
+Market: Sean O'Malley 78.0%
+Sean O'Malley: -440 · 78.0%
+Aiemann Zahabi: +340 · 22.0%
+DraftKings · 6 books
+
+JH
+Josh Hokit
+VS
+DL
+Derrick Lewis
+Heavyweight
+Strong lean
+PICK
+Josh Hokit
+68.6%
+
+Market: Josh Hokit 77.6%
+Josh Hokit: -410 · 77.6%
+Derrick Lewis: +320 · 22.4%
+DraftKings · 6 books
+
+MR
+Mauricio Ruffy
+VS
+MC
+Michael Chandler
+Lightweight
+High confidence
+PICK
+Mauricio Ruffy
+77.8%
+
+Market: Mauricio Ruffy 84.1%
+Mauricio Ruffy: -700 · 84.1%
+Michael Chandler: +500 · 15.9%
+DraftKings · 6 books
+
+BN
+Bo Nickal
+VS
+KD
+Kyle Daukaus
+Middleweight
+High confidence
+PICK
+Bo Nickal
+70.8%
+
+Market: Bo Nickal 73.6%
+Bo Nickal: -325 · 73.6%
+Kyle Daukaus: +260 · 26.4%
+DraftKings · 6 books
+
+DL
+Diego Lopes
+VS
+SG
+Steve Garcia
+Featherweight
+Very close / low confidence
+PICK
+Steve Garcia
+51.1%
+
+Market: Diego Lopes 57.9%
+Diego Lopes: -155 · 57.9%
+Steve Garcia: +130 · 42.1%
+DraftKings · 6 books
+
+Method predictions are intentionally excluded here — they are noisier than winner predictions. Odds are comparison-only and never used as model features.

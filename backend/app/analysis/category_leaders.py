@@ -433,6 +433,7 @@ def build_categories_for_weight_class(
             "prior_fights",
             "prior_wins",
             "prior_losses",
+            "prior_unscored_results",
             "prior_win_rate",
         ],
     )

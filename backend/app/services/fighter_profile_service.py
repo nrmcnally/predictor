@@ -131,6 +131,7 @@ PROFILE_STAT_KEYS = [
     "prior_fights",
     "prior_wins",
     "prior_losses",
+    "prior_unscored_results",
     "prior_win_rate",
     "recent_5_win_rate",
     "prior_finish_win_rate",
@@ -198,7 +199,7 @@ def format_stat_value(key: str, value: Any) -> str:
     if key in {"prior_elo", "prior_peak_elo"}:
         return f"{number:.0f}"
 
-    if key in {"prior_fights", "prior_wins", "prior_losses"}:
+    if key in {"prior_fights", "prior_wins", "prior_losses", "prior_unscored_results"}:
         return f"{number:.0f}"
 
     if "rate" in key or "accuracy" in key or "defense" in key:
@@ -755,6 +756,7 @@ def build_fighter_profile(fighter_name: str) -> dict[str, Any]:
             "ufc_fights": safe_int(fighter_row.get("prior_fights")),
             "ufc_wins": safe_int(fighter_row.get("prior_wins")),
             "ufc_losses": safe_int(fighter_row.get("prior_losses")),
+            "ufc_unscored_results": safe_int(fighter_row.get("prior_unscored_results")),
             "win_rate": safe_number(fighter_row.get("prior_win_rate")),
             "win_rate_formatted": format_stat_value("prior_win_rate", fighter_row.get("prior_win_rate")),
             "age_years": safe_number(fighter_row.get("age_years")),

@@ -1,0 +1,5 @@
+2026/06/11-22:19:12.001 1e0 Creating DB C:\Users\nrmcn\predictor\threejs\.ui-review-test-lab\edge-profile\Default\EdgeCoupons/coupons_data.db since it was missing.
+2026/06/11-22:19:12.010 1e0 Reusing MANIFEST C:\Users\nrmcn\predictor\threejs\.ui-review-test-lab\edge-profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/06/11-22:19:12.087 a0d4 Level-0 table #5: started
+2026/06/11-22:19:12.092 a0d4 Level-0 table #5: 682669 bytes OK
+2026/06/11-22:19:12.094 a0d4 Delete type=0 #3

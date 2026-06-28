@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 import json
+import logging
+import os
 from pathlib import Path
 
 from app.services.method_prediction_service import predict_method_data
@@ -33,6 +36,7 @@ from app.services.future_card_service import (
     get_future_card_predictions,
     get_future_cards,
     refresh_upcoming_cards,
+    set_future_fight_scheduled_rounds,
 )
 
 from app.services.update_job_service import (
@@ -58,11 +62,14 @@ from app.services.leaderboard_service import (
 )
 
 from app.services.model_evaluation_service import get_model_evaluation
+from app.services.walk_forward_evaluation_service import run_walk_forward_evaluation
 
 from app.services.fighter_profile_service import build_fighter_profile
 
 from app.services.model_market_evaluation_service import build_model_market_evaluation
 from app.services.model_snapshot_evaluation_service import build_model_snapshot_evaluation
+from app.services.clv_evaluation_service import build_clv_evaluation
+from app.services.data_quality_service import build_data_quality_summary
 
 app = FastAPI(
     title="UFC Fight Predictor API",
@@ -82,6 +89,64 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+logger = logging.getLogger("ufc_predictor")
+
+# Optional admin token. When unset, the admin/heavy endpoints stay open (local dev).
+# Set ADMIN_TOKEN to require an `X-Admin-Token` header on those endpoints.
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "").strip()
+
+
+def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
+    if not ADMIN_TOKEN:
+        return
+    if x_admin_token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail={"message": "Admin token required."})
+
+
+# --- Centralized error handling -------------------------------------------------
+# Endpoints stay thin: they call services and let domain exceptions bubble up to
+# the handlers below. This removes the repetitive per-endpoint try/except blocks
+# and guarantees consistent, non-leaky error responses.
+#
+# The 404 handlers keep the `{"detail": {...}}` envelope the frontend already
+# parses (including fighter-name suggestions), so error display is unchanged.
+# `FighterNotFoundError` subclasses `ValueError`, so its dedicated handler must be
+# registered too — Starlette resolves to the most specific handler by MRO.
+
+
+@app.exception_handler(FighterNotFoundError)
+async def fighter_not_found_handler(
+    request: Request, exc: FighterNotFoundError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content={
+            "detail": {
+                "message": f"Could not find fighter: {exc.fighter_name}",
+                "suggestions": exc.suggestions,
+            }
+        },
+    )
+
+
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
+    # Services raise ValueError for "not found" / bad-identifier cases
+    # (unknown event, card, or fighter). Surface the message at 404.
+    return JSONResponse(
+        status_code=404,
+        content={"detail": {"message": str(exc)}},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    # Log full detail server-side; return a generic message so internal errors
+    # (file paths, stack info) are never disclosed to clients.
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"message": "Internal server error."})
+
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 METHOD_MODEL_METRICS_PATH = PROJECT_ROOT / "models" / "method_model_metrics.json"
 
@@ -90,6 +155,10 @@ class PredictionRequest(BaseModel):
     fighter_a: str
     fighter_b: str
     weight_class: str
+
+
+class ScheduledRoundsOverrideRequest(BaseModel):
+    scheduled_rounds: int
 
 
 @app.get("/")
@@ -126,115 +195,55 @@ def weight_classes() -> dict[str, list[str]]:
 
 @app.post("/predict")
 def predict_fight(request: PredictionRequest) -> dict[str, Any]:
-    try:
-        return predict_fight_data(
-            fighter_a=request.fighter_a,
-            fighter_b=request.fighter_b,
-            weight_class=request.weight_class,
-        )
-
-    except FighterNotFoundError as error:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "message": f"Could not find fighter: {error.fighter_name}",
-                "suggestions": error.suggestions,
-            },
-        )
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Prediction failed.",
-                "error": str(error),
-            },
-        )
+    return predict_fight_data(
+        fighter_a=request.fighter_a,
+        fighter_b=request.fighter_b,
+        weight_class=request.weight_class,
+    )
 
 
-@app.post("/future-cards/refresh")
+@app.post("/future-cards/refresh", dependencies=[Depends(require_admin)])
 def refresh_future_cards() -> dict[str, Any]:
-    try:
-        result = refresh_upcoming_cards()
-
-        return {
-            "message": "Future cards refreshed.",
-            **result,
-        }
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to refresh future cards.",
-                "error": str(error),
-            },
-        )
+    return {
+        "message": "Future cards refreshed.",
+        **refresh_upcoming_cards(),
+    }
 
 
 @app.get("/future-cards")
 def future_cards() -> dict[str, Any]:
-    try:
-        return {
-            "cards": get_future_cards(),
-        }
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load future cards.",
-                "error": str(error),
-            },
-        )
+    return {
+        "cards": get_future_cards(),
+    }
 
 
 @app.get("/future-cards/{event_id}")
 def future_card_detail(event_id: str) -> dict[str, Any]:
-    try:
-        return get_future_card(event_id)
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "message": str(error),
-            },
-        )
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load future card.",
-                "error": str(error),
-            },
-        )
+    return get_future_card(event_id)
 
 
 @app.get("/future-cards/{event_id}/predictions")
 def future_card_predictions(event_id: str) -> dict[str, Any]:
-    try:
-        return get_future_card_predictions(event_id)
+    return get_future_card_predictions(event_id)
 
-    except ValueError as error:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "message": str(error),
-            },
-        )
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to predict future card.",
-                "error": str(error),
-            },
-        )
-    
-@app.post("/admin/update/start")
+@app.post("/future-cards/{event_id}/fights/{fight_id}/scheduled-rounds")
+def update_future_fight_scheduled_rounds(
+    event_id: str,
+    fight_id: str,
+    request: ScheduledRoundsOverrideRequest,
+) -> dict[str, Any]:
+    return {
+        "message": "Scheduled-rounds override saved.",
+        **set_future_fight_scheduled_rounds(
+            event_id=event_id,
+            fight_id=fight_id,
+            scheduled_rounds=request.scheduled_rounds,
+        ),
+    }
+
+
+@app.post("/admin/update/start", dependencies=[Depends(require_admin)])
 def start_update() -> dict[str, Any]:
     return start_incremental_update_job()
 
@@ -248,110 +257,37 @@ def update_status() -> dict[str, Any]:
 def latest_update_report() -> dict[str, Any]:
     return get_latest_update_report()
 
-@app.post("/future-cards/{event_id}/save-predictions")
+
+@app.post("/future-cards/{event_id}/save-predictions", dependencies=[Depends(require_admin)])
 def save_future_card_predictions(event_id: str) -> dict[str, Any]:
-    try:
-        return save_predictions_for_card(event_id)
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "message": str(error),
-            },
-        )
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to save future-card predictions.",
-                "error": str(error),
-            },
-        )
+    return save_predictions_for_card(event_id)
 
 
-@app.post("/future-cards/save-all-predictions")
+@app.post("/future-cards/save-all-predictions", dependencies=[Depends(require_admin)])
 def save_all_future_card_predictions() -> dict[str, Any]:
-    try:
-        return save_predictions_for_all_future_cards()
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to save all future-card predictions.",
-                "error": str(error),
-            },
-        )
+    return save_predictions_for_all_future_cards()
 
 
 @app.get("/saved-card-predictions")
 def saved_card_predictions() -> dict[str, Any]:
-    try:
-        return get_saved_card_predictions()
+    return get_saved_card_predictions()
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load saved card predictions.",
-                "error": str(error),
-            },
-        )
-    
+
 @app.get("/recent-cards")
 def recent_cards(
     include_waiting: bool = True,
 ) -> dict[str, Any]:
-    try:
-        return get_recent_cards(include_waiting=include_waiting)
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load recent cards.",
-                "error": str(error),
-            },
-        )
+    return get_recent_cards(include_waiting=include_waiting)
 
 
 @app.get("/recent-cards/{event_id}")
 def recent_card_detail(event_id: str) -> dict[str, Any]:
-    try:
-        return get_recent_card(event_id)
+    return get_recent_card(event_id)
 
-    except ValueError as error:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "message": str(error),
-            },
-        )
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load recent card.",
-                "error": str(error),
-            },
-        )
-    
 @app.get("/leaderboards/options")
 def leaderboard_options() -> dict[str, Any]:
-    try:
-        return get_leaderboard_options()
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load leaderboard options.",
-                "error": str(error),
-            },
-        )
+    return get_leaderboard_options()
 
 
 @app.get("/leaderboards")
@@ -360,192 +296,106 @@ def leaderboards(
     min_fights: int = 5,
     max_inactive_days: int = 1095,
 ) -> dict[str, Any]:
-    try:
-        return get_leaderboards(
-            top=top,
-            min_fights=min_fights,
-            max_inactive_days=max_inactive_days,
-        )
+    return get_leaderboards(
+        top=top,
+        min_fights=min_fights,
+        max_inactive_days=max_inactive_days,
+    )
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load leaderboards.",
-                "error": str(error),
-            },
-        )
-    
+
 @app.get("/model-evaluation")
 def model_evaluation(
     test_fraction: float = 0.20,
     recent_prediction_limit: int = 25,
 ) -> dict[str, Any]:
-    try:
-        return get_model_evaluation(
-            test_fraction=test_fraction,
-            recent_prediction_limit=recent_prediction_limit,
-        )
+    return get_model_evaluation(
+        test_fraction=test_fraction,
+        recent_prediction_limit=recent_prediction_limit,
+    )
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load model evaluation.",
-                "error": str(error),
-            },
-        )
-    
+
+@app.get("/walk-forward-evaluation")
+def walk_forward_evaluation(
+    n_folds: int = 8,
+    min_test_fights: int = 150,
+    min_train_fights: int = 1000,
+) -> dict[str, Any]:
+    return run_walk_forward_evaluation(
+        n_folds=n_folds,
+        min_test_fights=min_test_fights,
+        min_train_fights=min_train_fights,
+    )
+
+
 @app.post("/predict-method")
 def predict_method(request: PredictionRequest) -> dict[str, Any]:
-    try:
-        return predict_method_data(
-            fighter_a=request.fighter_a,
-            fighter_b=request.fighter_b,
-            weight_class=request.weight_class,
-        )
+    return predict_method_data(
+        fighter_a=request.fighter_a,
+        fighter_b=request.fighter_b,
+        weight_class=request.weight_class,
+    )
 
-    except ValueError as error:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "message": str(error),
-            },
-        )
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to predict method of victory.",
-                "error": str(error),
-            },
-        )
-    
 @app.get("/method-model-metrics")
 def method_model_metrics() -> dict[str, Any]:
-    try:
-        if not METHOD_MODEL_METRICS_PATH.exists():
-            return {
-                "available": False,
-                "message": "Method model metrics are not available yet. Train method models first.",
-                "metrics": None,
-            }
-
-        with open(METHOD_MODEL_METRICS_PATH, "r", encoding="utf-8") as file:
-            metrics = json.load(file)
-
+    if not METHOD_MODEL_METRICS_PATH.exists():
         return {
-            "available": True,
-            "message": "Method model metrics loaded.",
-            "metrics": metrics,
+            "available": False,
+            "message": "Method model metrics are not available yet. Train method models first.",
+            "metrics": None,
         }
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load method model metrics.",
-                "error": str(error),
-            },
-        )
-    
+    with open(METHOD_MODEL_METRICS_PATH, "r", encoding="utf-8") as file:
+        metrics = json.load(file)
+
+    return {
+        "available": True,
+        "message": "Method model metrics loaded.",
+        "metrics": metrics,
+    }
+
+
 @app.get("/future-fight-odds")
 def future_fight_odds() -> dict[str, Any]:
-    try:
-        return load_future_fight_odds()
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load future fight odds.",
-                "error": str(error),
-            },
-        )
+    return load_future_fight_odds()
 
 
-@app.post("/future-fight-odds/refresh")
+@app.post("/future-fight-odds/refresh", dependencies=[Depends(require_admin)])
 def refresh_future_fight_odds_endpoint() -> dict[str, Any]:
-    try:
-        return refresh_future_fight_odds()
+    return refresh_future_fight_odds()
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to refresh future fight odds.",
-                "error": str(error),
-            },
-        )
-    
+
 @app.get("/fighter-images")
 def fighter_images() -> dict[str, Any]:
-    try:
-        image_lookup = load_fighter_image_lookup()
+    image_lookup = load_fighter_image_lookup()
 
-        return {
-            "available": True,
-            "count": len(image_lookup),
-            "images": list(image_lookup.values()),
-        }
+    return {
+        "available": True,
+        "count": len(image_lookup),
+        "images": list(image_lookup.values()),
+    }
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load fighter images.",
-                "error": str(error),
-            },
-        )
-    
+
 @app.get("/fighter-profile")
 def fighter_profile(fighter: str) -> dict[str, Any]:
-    try:
-        return build_fighter_profile(fighter)
+    return build_fighter_profile(fighter)
 
-    except ValueError as error:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "message": str(error),
-            },
-        )
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to load fighter profile.",
-                "error": str(error),
-            },
-        )
-    
 @app.get("/model-vs-market-evaluation")
 def model_vs_market_evaluation() -> dict[str, Any]:
-    try:
-        return build_model_market_evaluation()
+    return build_model_market_evaluation()
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to build model-vs-market evaluation.",
-                "error": str(error),
-            },
-        )
 
 @app.get("/model-snapshot-evaluation")
 def model_snapshot_evaluation() -> dict[str, Any]:
-    try:
-        return build_model_snapshot_evaluation()
+    return build_model_snapshot_evaluation()
 
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Failed to build all-model snapshot evaluation.",
-                "error": str(error),
-            },
-        )
 
+@app.get("/clv-evaluation")
+def clv_evaluation() -> dict[str, Any]:
+    return build_clv_evaluation()
+
+
+@app.get("/data-quality")
+def data_quality() -> dict[str, Any]:
+    return build_data_quality_summary()

@@ -18,6 +18,48 @@ function methodSummaryTotal(summary = {}) {
   return Object.values(summary).reduce((total, value) => total + Number(value || 0), 0);
 }
 
+function buildProfileSummary(profile = {}, headline = {}, styleProfile = {}) {
+  const form = profile.form_summary || {};
+  const recentResults = Array.isArray(form.recent_results)
+    ? form.recent_results.map((result) => result?.[0]?.toUpperCase() || "?").join(" ")
+    : "";
+  const topRanking = profile.notable_rankings?.[0];
+  const winMethods = profile.method_summary?.wins || {};
+  const topWinMethod = Object.entries(winMethods).sort(
+    ([, firstCount], [, secondCount]) => Number(secondCount || 0) - Number(firstCount || 0)
+  )[0];
+
+  return [
+    {
+      label: "Style read",
+      value: styleProfile.style_label || "Style unknown",
+      note:
+        styleProfile.note ||
+        styleProfile.tags?.slice(0, 3).join(" / ") ||
+        "Style profile is still building.",
+    },
+    {
+      label: "Current form",
+      value: form.current_streak || form.last_5_record || "N/A",
+      note: form.last_5_record
+        ? `Last 5: ${form.last_5_record}${recentResults ? ` (${recentResults})` : ""}`
+        : "Recent UFC form unavailable.",
+    },
+    {
+      label: "Finish lean",
+      value: topWinMethod ? `${topWinMethod[0]} wins` : "No clear lean",
+      note: topWinMethod
+        ? `${topWinMethod[1]} recorded win${Number(topWinMethod[1]) === 1 ? "" : "s"} by ${topWinMethod[0]}.`
+        : "Method history is sparse.",
+    },
+    {
+      label: "Model context",
+      value: headline.elo_formatted || "No Elo",
+      note: topRanking?.description || "No top ranking flags among qualified fighters.",
+    },
+  ];
+}
+
 export default function FighterProfile() {
   const { imageLookup, profileFighter, sendToFightLab } = useContext(AppContext);
 
@@ -60,6 +102,9 @@ export default function FighterProfile() {
   const headline = profile?.headline_stats ?? {};
   const styleProfile = profile?.style_profile ?? {};
   const methodSummary = profile?.method_summary ?? {};
+  const profileSummary = profile
+    ? buildProfileSummary(profile, headline, styleProfile)
+    : [];
 
   return (
     <div className="view fighter-profile">
@@ -142,6 +187,16 @@ export default function FighterProfile() {
             </div>
           </section>
 
+          <section className="profile-summary">
+            {profileSummary.map((item) => (
+              <div className="profile-summary-item" key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <p>{item.note}</p>
+              </div>
+            ))}
+          </section>
+
           <div className="tile-row six">
             <StatTile label="Elo" value={headline.elo_formatted} />
             <StatTile label="Peak Elo" value={headline.peak_elo_formatted} />
@@ -175,7 +230,11 @@ export default function FighterProfile() {
               </div>
             </SectionCard>
 
-            <SectionCard eyebrow="Approach" title="Style scores">
+            <SectionCard
+              eyebrow="Approach"
+              title="Style scores"
+              description="Heuristic, data-derived from each fighter's striking / grappling / defense stats — not official UFC style labels."
+            >
               <div className="tile-row three">
                 <StatTile
                   label="Striking"

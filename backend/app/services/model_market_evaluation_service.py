@@ -5,6 +5,12 @@ from typing import Any
 
 import pandas as pd
 
+from app.services.recent_card_service import (
+    build_actual_result_lookup,
+    load_actual_results,
+    normalize_fight_url,
+)
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SAVED_CARD_PREDICTIONS_CSV = PROJECT_ROOT / "data" / "processed" / "saved_card_predictions.csv"
@@ -86,6 +92,43 @@ def load_saved_predictions() -> pd.DataFrame:
         return pd.read_csv(SAVED_CARD_PREDICTIONS_CSV)
     except pd.errors.EmptyDataError:
         return pd.DataFrame()
+
+
+def add_actual_result_columns(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+
+    event_fights_df = load_actual_results()
+    actual_lookup = build_actual_result_lookup(event_fights_df)
+
+    for column in [
+        "actual_winner",
+        "actual_loser",
+        "actual_method",
+        "actual_round",
+        "actual_time",
+        "actual_outcome",
+    ]:
+        if column not in df.columns:
+            df[column] = ""
+
+    if "fight_url" not in df.columns or not actual_lookup:
+        return df
+
+    for index, row in df.iterrows():
+        fight_url = normalize_fight_url(row.get("fight_url", ""))
+        actual = actual_lookup.get(fight_url)
+
+        if actual is None:
+            continue
+
+        df.at[index, "actual_winner"] = clean_text(actual.get("winner", ""))
+        df.at[index, "actual_loser"] = clean_text(actual.get("loser", ""))
+        df.at[index, "actual_method"] = clean_text(actual.get("method", ""))
+        df.at[index, "actual_round"] = clean_text(actual.get("round", ""))
+        df.at[index, "actual_time"] = clean_text(actual.get("time", ""))
+        df.at[index, "actual_outcome"] = clean_text(actual.get("actual_outcome", ""))
+
+    return df
 
 
 def add_comparison_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -298,10 +341,26 @@ def build_event_breakdown(scored_df: pd.DataFrame) -> list[dict[str, Any]]:
                 "market_correct": event_summary["market_correct"],
                 "agreement_count": event_summary["agreement_count"],
                 "disagreement_count": event_summary["disagreement_count"],
+                "_event_date_parsed": pd.to_datetime(
+                    event_rows["event_date"].iloc[0],
+                    errors="coerce",
+                )
+                if "event_date" in event_rows.columns
+                else pd.NaT,
             }
         )
 
-    events.sort(key=lambda row: row.get("event_date", ""), reverse=True)
+    events.sort(
+        key=lambda row: (
+            pd.Timestamp.min
+            if pd.isna(row.get("_event_date_parsed"))
+            else row["_event_date_parsed"]
+        ),
+        reverse=True,
+    )
+
+    for event in events:
+        event.pop("_event_date_parsed", None)
 
     return events
 
@@ -318,17 +377,28 @@ def build_model_market_evaluation() -> dict[str, Any]:
             "interesting_fights": {},
         }
 
+    df = add_actual_result_columns(df)
     df = add_comparison_columns(df)
 
-    scored_df = df[
+    result_prediction_df = df[
         df["_actual_winner_norm"].ne("")
         & df["_predicted_winner_norm"].ne("")
-        & df["_market_favorite_norm"].ne("")
+    ].copy()
+
+    scored_df = result_prediction_df[
+        result_prediction_df["_market_favorite_norm"].ne("")
     ].copy()
 
     if "odds_available" in scored_df.columns:
         odds_available = scored_df["odds_available"].apply(parse_bool)
         scored_df = scored_df[odds_available.eq(True)].copy()
+
+    all_scored_prediction_fights = int(len(result_prediction_df))
+    scored_with_market_odds = int(len(scored_df))
+    excluded_without_market_odds = max(
+        0,
+        all_scored_prediction_fights - scored_with_market_odds,
+    )
 
     if scored_df.empty:
         return {
@@ -338,12 +408,18 @@ def build_model_market_evaluation() -> dict[str, Any]:
             ),
             "summary": {
                 "saved_rows": int(len(df)),
+                "all_scored_prediction_fights": all_scored_prediction_fights,
+                "scored_with_market_odds": scored_with_market_odds,
+                "excluded_without_market_odds": excluded_without_market_odds,
             },
             "event_breakdown": [],
             "interesting_fights": {},
         }
 
     summary = build_summary(scored_df)
+    summary["all_scored_prediction_fights"] = all_scored_prediction_fights
+    summary["scored_with_market_odds"] = scored_with_market_odds
+    summary["excluded_without_market_odds"] = excluded_without_market_odds
 
     return {
         "available": True,

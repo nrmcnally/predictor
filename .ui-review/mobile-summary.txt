@@ -1,0 +1,57 @@
+title=Fight Lab
+canvas_count=1
+messages=['console:error:Failed to load resource: net::ERR_NETWORK_ACCESS_DENIED', 'console:debug:[vite] connecting...', 'console:info:%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold', 'console:debug:[vite] connected.']
+visible_text=☰
+MMA ANALYTICS
+FIGHT IQ
+Demo data
+API connected
+ANALYZE
+⚔
+Fight Lab
+◎
+Fighters
+EVENTS
+▸
+Future Cards
+↺
+Recent Cards
+INTEL
+♛
+Leaderboards
+◫
+Evaluation
+SYSTEM
+⟳
+Data Ops
+
+Calibrated UFC fight predictions from scraped UFCStats data. Odds are comparison-only.
+
+PREDICTION ENGINE
+
+FIGHT LAB
+
+Calibrated win probabilities from Elo, fight history, physical profile, and age features.
+
+KC
+RED CORNER
+VS
+Flyweight
+Bantamweight
+Featherweight
+Lightweight
+Welterweight
+Middleweight
+Light Heavyweight
+Heavyweight
+Women's Flyweight
+Women's Bantamweight
+PREDICT FIGHT
+⇄ Swap
+Clear
+SS
+BLUE CORNER
+Try:
+Chimaev vs Strickland
+Makhachev vs Muhammad
+Dvalishvili vs O'Malley

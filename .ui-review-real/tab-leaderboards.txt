@@ -1,0 +1,103 @@
+MMA ANALYTICS
+FIGHT IQ
+API connected
+ANALYZE
+⚔
+Fight Lab
+◎
+Fighters
+EVENTS
+▸
+Future Cards
+↺
+Recent Cards
+INTEL
+♛
+Leaderboards
+◫
+Evaluation
+SYSTEM
+⟳
+Data Ops
+
+Calibrated UFC fight predictions from scraped UFCStats data. Odds are comparison-only.
+
+FIGHTER RANKINGS
+
+LEADERBOARDS
+SCOPE
+Overall
+By weight class
+CATEGORY
+Overall
+Striking
+Grappling
+Wrestling
+Finishing
+Defense
+Elo
+Experience
+Reach
+Reach for Size
+DIRECTION
+Best
+Worst
+TOP N
+MIN FIGHTS
+MAX INACTIVE DAYS
+Apply
+#1
+JJ
+Jon Jones
+Overall · 24 UFC fights
+SCORE
+2.862
+Elo: 1793.81
+Win rate: 91.7%
+Recent 5 win rate: 100.0%
+Sig. strike diff / 15: 38.84
+Finish win rate: 50.0%
+#2
+IM
+Islam Makhachev
+Overall · 18 UFC fights
+SCORE
+2.547
+Elo: 1750.39
+Win rate: 94.4%
+Recent 5 win rate: 100.0%
+Sig. strike diff / 15: 17.71
+Finish win rate: 61.1%
+#3
+IT
+Ilia Topuria
+Overall · 9 UFC fights
+SCORE
+2.184
+Elo: 1680.06
+Win rate: 100.0%
+Recent 5 win rate: 100.0%
+Sig. strike diff / 15: 21.68
+Finish win rate: 77.8%
+#4
+AN
+Amanda Nunes
+Overall · 18 UFC fights
+SCORE
+2.09
+Elo: 1691.75
+Win rate: 88.9%
+Recent 5 win rate: 80.0%
+Sig. strike diff / 15: 73.47
+Finish win rate: 55.6%
+#5
+CU
+Carlos Ulberg
+Overall · 11 UFC fights
+SCORE
+2.085
+Elo: 1657.87
+Win rate: 90.9%
+Recent 5 win rate: 100.0%
+Sig. strike diff / 15: 89.09
+Finish win rate: 63.6%

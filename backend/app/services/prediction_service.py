@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from difflib import get_close_matches
-from functools import lru_cache
+from functools import lru_cache, wraps
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +20,7 @@ from app.features.add_weight_size_features import (
     normalize_name as normalize_weight_size_name,
     sorted_fight_stats,
 )
+from app.features.fight_context_features import default_fight_context
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -32,6 +33,46 @@ BEST_MODEL_PATH = MODELS_DIR / "best_winner_model.joblib"
 FEATURES_PATH = MODELS_DIR / "model_features.json"
 MODEL_REGISTRY_PATH = MODELS_DIR / "model_registry.json"
 WINNER_MODELS_DIR = MODELS_DIR / "winner_models"
+MARKET_SHADOW_REGISTRY_PATH = MODELS_DIR / "market_shadow_model_registry.json"
+MARKET_SHADOW_MODELS_DIR = MODELS_DIR / "market_shadow_models"
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
+
+
+def _file_signature(paths: list[Path]) -> tuple:
+    signature = []
+    for path in paths:
+        try:
+            signature.append((str(path), path.stat().st_mtime_ns))
+        except OSError:
+            signature.append((str(path), None))
+    return tuple(signature)
+
+
+def file_aware_cache(paths_func):
+    """
+    Caches a zero-argument loader and auto-reloads when any of its source files
+    change on disk (by mtime). This fixes stale predictions after a retrain or data
+    rebuild done OUT of the server process (CLI runs, manual scripts) — where a plain
+    lru_cache would keep serving old data until a server restart. The wrapped loader
+    still exposes .cache_clear() for explicit invalidation.
+    """
+    def decorator(loader):
+        state: dict[str, Any] = {}
+
+        @wraps(loader)
+        def wrapper():
+            signature = _file_signature(paths_func())
+
+            if state.get("signature") != signature:
+                state["value"] = loader()
+                state["signature"] = signature
+
+            return state["value"]
+
+        wrapper.cache_clear = state.clear
+        return wrapper
+
+    return decorator
 
 
 class FighterNotFoundError(ValueError):
@@ -89,7 +130,7 @@ def get_confidence_label(confidence: float) -> str:
     return "High confidence"
 
 
-@lru_cache(maxsize=1)
+@file_aware_cache(lambda: [CURRENT_FIGHTER_FEATURES_CSV])
 def load_current_features() -> pd.DataFrame:
     if not CURRENT_FIGHTER_FEATURES_CSV.exists():
         raise FileNotFoundError(
@@ -103,7 +144,7 @@ def load_current_features() -> pd.DataFrame:
     return df
 
 
-@lru_cache(maxsize=1)
+@file_aware_cache(lambda: [BEST_MODEL_PATH, FEATURES_PATH])
 def load_model_and_features():
     if not BEST_MODEL_PATH.exists():
         raise FileNotFoundError(
@@ -128,7 +169,7 @@ def load_model_and_features():
     return model, numeric_features, categorical_features
 
 
-@lru_cache(maxsize=1)
+@file_aware_cache(lambda: [MODEL_REGISTRY_PATH, FEATURES_PATH, BEST_MODEL_PATH])
 def load_all_prediction_models_and_features():
     """
     Loads every saved winner model plus the feature list used at training time.
@@ -186,6 +227,48 @@ def load_all_prediction_models_and_features():
         }
 
     return models, model_metadata, best_model_name, numeric_features, categorical_features
+
+
+@file_aware_cache(lambda: [MARKET_SHADOW_REGISTRY_PATH])
+def load_market_shadow_models():
+    """
+    Loads optional market-aware shadow models.
+
+    These are intentionally separate from the main winner-model registry so
+    market odds never affect normal front-facing predictions or best-model
+    selection.
+    """
+    if not MARKET_SHADOW_REGISTRY_PATH.exists():
+        return {}, {}
+
+    with open(MARKET_SHADOW_REGISTRY_PATH, "r", encoding="utf-8") as file:
+        registry_payload = json.load(file)
+
+    registry_models = registry_payload.get("models", {})
+    models: dict[str, Any] = {}
+    model_metadata: dict[str, Any] = {}
+
+    for model_name, metadata in registry_models.items():
+        model_type = clean_text(metadata.get("model_type", ""))
+        relative_path = clean_text(metadata.get("path", ""))
+
+        if model_type == "market_probability_baseline":
+            model_metadata[model_name] = metadata
+            continue
+
+        model_path = (
+            MODELS_DIR / relative_path
+            if relative_path
+            else MARKET_SHADOW_MODELS_DIR / f"{model_name}.joblib"
+        )
+
+        if not model_path.exists():
+            continue
+
+        models[model_name] = joblib.load(model_path)
+        model_metadata[model_name] = metadata
+
+    return models, model_metadata
 
 
 def search_fighters(query: str, limit: int = 10) -> list[str]:
@@ -260,7 +343,7 @@ def get_fighter_row(features_df: pd.DataFrame, fighter_name: str) -> pd.Series:
     )
 
 
-@lru_cache(maxsize=1)
+@file_aware_cache(lambda: [RAW_DATA_DIR / "fighter_profiles.csv", RAW_DATA_DIR / "fight_stats.csv"])
 def load_weight_size_prediction_context():
     """
     Loads context needed to recalculate weight/size features at prediction time.
@@ -353,11 +436,15 @@ def build_model_input_row(
     weight_class: str,
     numeric_features: list[str],
     categorical_features: list[str],
+    fight_context: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
     row: dict[str, Any] = {}
+    fight_context = {**default_fight_context(), **(fight_context or {})}
 
     for feature in numeric_features:
         if not feature.startswith("diff_"):
+            value = optional_float(fight_context.get(feature))
+            row[feature] = np.nan if value is None else value
             continue
 
         base_column = feature.removeprefix("diff_")
@@ -387,6 +474,7 @@ def predict_direct_probability(
     weight_class: str,
     numeric_features: list[str],
     categorical_features: list[str],
+    fight_context: dict[str, Any] | None = None,
 ) -> float:
     model_input = build_model_input_row(
         fighter_a_row=fighter_a_row,
@@ -394,6 +482,7 @@ def predict_direct_probability(
         weight_class=weight_class,
         numeric_features=numeric_features,
         categorical_features=categorical_features,
+        fight_context=fight_context,
     )
 
     probability = model.predict_proba(model_input)[0][1]
@@ -597,6 +686,320 @@ def optional_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def optional_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+
+    if value is None or pd.isna(value):
+        return False
+
+    return clean_text(value).lower() in {"true", "1", "yes", "y"}
+
+
+def optional_probability(value: Any) -> float | None:
+    probability = optional_float(value)
+
+    if probability is None:
+        return None
+
+    if probability > 1.0:
+        probability = probability / 100.0
+
+    return float(np.clip(probability, 0.0, 1.0))
+
+
+def normalize_probability_pair(
+    first_probability: Any,
+    second_probability: Any,
+) -> tuple[float | None, float | None]:
+    first = optional_probability(first_probability)
+    second = optional_probability(second_probability)
+
+    if first is None and second is None:
+        return None, None
+
+    if first is None and second is not None:
+        first = 1.0 - second
+
+    if second is None and first is not None:
+        second = 1.0 - first
+
+    if first is None or second is None:
+        return None, None
+
+    total = first + second
+
+    if total <= 0:
+        return 0.5, 0.5
+
+    return first / total, second / total
+
+
+def optional_int(value: Any) -> int | None:
+    number = optional_float(value)
+
+    if number is None:
+        return None
+
+    return int(number)
+
+
+def value_is_missing(value: Any) -> bool:
+    return value is None or pd.isna(value)
+
+
+def build_risk_flag(
+    *,
+    code: str,
+    label: str,
+    severity: str,
+    description: str,
+    fighter: str = "",
+    value: Any = None,
+) -> dict[str, Any]:
+    return {
+        "code": code,
+        "label": label,
+        "severity": severity,
+        "description": description,
+        "fighter": fighter,
+        "value": value,
+    }
+
+
+def build_fighter_context(row: pd.Series) -> dict[str, Any]:
+    days_since_last_fight = optional_int(row.get("days_since_last_fight"))
+    prior_fights = optional_int(row.get("prior_fights")) or 0
+    weight_class_move_lbs = optional_float(
+        row.get("current_vs_recent_weight_class_lbs_delta")
+    )
+
+    if days_since_last_fight is None:
+        activity_status = "unknown"
+    elif days_since_last_fight > 1095:
+        activity_status = "inactive"
+    elif days_since_last_fight > 540:
+        activity_status = "layoff"
+    else:
+        activity_status = "active"
+
+    return {
+        "fighter": clean_text(row.get("fighter", "")),
+        "prior_fights": prior_fights,
+        "prior_wins": optional_int(row.get("prior_wins")) or 0,
+        "prior_losses": optional_int(row.get("prior_losses")) or 0,
+        "days_since_last_fight": days_since_last_fight,
+        "activity_status": activity_status,
+        "age_known": not value_is_missing(row.get("age_years")),
+        "reach_known": not value_is_missing(row.get("reach_inches")),
+        "height_known": not value_is_missing(row.get("height_inches")),
+        "prior_weight_class_known": bool(
+            optional_int(row.get("prior_weight_class_known")) or 0
+        ),
+        "weight_class_move_lbs": weight_class_move_lbs,
+    }
+
+
+def build_prediction_context(
+    *,
+    fighter_a_row: pd.Series,
+    fighter_b_row: pd.Series,
+    confidence: float,
+) -> dict[str, Any]:
+    fighter_contexts = [
+        build_fighter_context(fighter_a_row),
+        build_fighter_context(fighter_b_row),
+    ]
+
+    flags: list[dict[str, Any]] = []
+
+    minimum_prior_fights = min(context["prior_fights"] for context in fighter_contexts)
+    missing_physical_fields: list[str] = []
+
+    for context in fighter_contexts:
+        fighter = context["fighter"]
+        prior_fights = context["prior_fights"]
+        days_since_last_fight = context["days_since_last_fight"]
+        weight_class_move_lbs = context["weight_class_move_lbs"]
+
+        if prior_fights <= 1:
+            flags.append(
+                build_risk_flag(
+                    code="very_low_ufc_sample",
+                    label="Very low UFC sample",
+                    severity="high",
+                    fighter=fighter,
+                    value=prior_fights,
+                    description=(
+                        f"{fighter} has only {prior_fights} prior UFC fight"
+                        f"{'' if prior_fights == 1 else 's'} in the dataset."
+                    ),
+                )
+            )
+        elif prior_fights < 5:
+            flags.append(
+                build_risk_flag(
+                    code="low_ufc_sample",
+                    label="Low UFC sample",
+                    severity="medium",
+                    fighter=fighter,
+                    value=prior_fights,
+                    description=(
+                        f"{fighter} has {prior_fights} prior UFC fights, so the "
+                        "statistical profile is still thin."
+                    ),
+                )
+            )
+
+        if days_since_last_fight is not None:
+            if days_since_last_fight > 1095:
+                flags.append(
+                    build_risk_flag(
+                        code="long_inactivity",
+                        label="Long inactivity",
+                        severity="high",
+                        fighter=fighter,
+                        value=days_since_last_fight,
+                        description=(
+                            f"{fighter} has not fought in the UFC dataset for "
+                            f"{days_since_last_fight} days."
+                        ),
+                    )
+                )
+            elif days_since_last_fight > 540:
+                flags.append(
+                    build_risk_flag(
+                        code="layoff",
+                        label="Layoff",
+                        severity="medium",
+                        fighter=fighter,
+                        value=days_since_last_fight,
+                        description=(
+                            f"{fighter} is coming off a {days_since_last_fight}-day "
+                            "gap since their last UFC fight."
+                        ),
+                    )
+                )
+
+        if (
+            context["prior_weight_class_known"]
+            and weight_class_move_lbs is not None
+            and abs(weight_class_move_lbs) >= 10
+        ):
+            direction = "up" if weight_class_move_lbs > 0 else "down"
+            flags.append(
+                build_risk_flag(
+                    code="weight_class_move",
+                    label="Weight-class move",
+                    severity="medium",
+                    fighter=fighter,
+                    value=weight_class_move_lbs,
+                    description=(
+                        f"{fighter} is projected {direction} about "
+                        f"{abs(weight_class_move_lbs):.0f} lb from their recent UFC "
+                        "division context."
+                    ),
+                )
+            )
+
+        if not context["reach_known"]:
+            missing_physical_fields.append(f"{fighter}: reach")
+
+        if not context["age_known"]:
+            missing_physical_fields.append(f"{fighter}: age")
+
+    if missing_physical_fields:
+        flags.append(
+            build_risk_flag(
+                code="missing_physical_data",
+                label="Missing physical data",
+                severity="low",
+                value=missing_physical_fields,
+                description=(
+                    "Some physical/context fields are missing: "
+                    + ", ".join(missing_physical_fields[:4])
+                    + ("." if len(missing_physical_fields) <= 4 else ", and more.")
+                ),
+            )
+        )
+
+    if confidence >= 0.75 and minimum_prior_fights < 5:
+        flags.append(
+            build_risk_flag(
+                code="high_confidence_low_sample",
+                label="High confidence, thin data",
+                severity="high",
+                value={
+                    "confidence": confidence,
+                    "minimum_prior_fights": minimum_prior_fights,
+                },
+                description=(
+                    "The model is highly confident even though at least one fighter "
+                    "has fewer than five prior UFC fights."
+                ),
+            )
+        )
+
+    severity_rank = {"high": 3, "medium": 2, "low": 1}
+    flags = sorted(
+        flags,
+        key=lambda flag: (
+            -severity_rank.get(clean_text(flag.get("severity", "")), 0),
+            clean_text(flag.get("label", "")),
+        ),
+    )
+
+    high_count = sum(1 for flag in flags if flag["severity"] == "high")
+    medium_count = sum(1 for flag in flags if flag["severity"] == "medium")
+
+    if high_count:
+        overall_risk = "high"
+    elif medium_count:
+        overall_risk = "medium"
+    elif flags:
+        overall_risk = "low"
+    else:
+        overall_risk = "normal"
+
+    if minimum_prior_fights <= 1:
+        reliability_level = "very_limited"
+        reliability_label = "Very limited data"
+        reliability_note = (
+            "At least one fighter has almost no prior UFC history, so this "
+            "prediction leans heavily on league-average assumptions — treat it as a "
+            "weak lean, not a confident call."
+        )
+    elif minimum_prior_fights < 5:
+        reliability_level = "limited"
+        reliability_label = "Limited data"
+        reliability_note = (
+            "At least one fighter has a thin UFC sample, so the confidence is less "
+            "trustworthy than the number suggests."
+        )
+    else:
+        reliability_level = "ok"
+        reliability_label = "Sufficient data"
+        reliability_note = ""
+
+    return {
+        "risk_flags": flags,
+        "data_reliability": {
+            "level": reliability_level,
+            "label": reliability_label,
+            "note": reliability_note,
+            "minimum_prior_fights": minimum_prior_fights,
+        },
+        "data_quality": {
+            "overall_risk": overall_risk,
+            "flag_count": len(flags),
+            "high_risk_count": high_count,
+            "medium_risk_count": medium_count,
+            "minimum_prior_fights": minimum_prior_fights,
+            "fighters": fighter_contexts,
+        },
+    }
 
 def add_sided_insight(
     insights: dict[str, Any],
@@ -975,6 +1378,7 @@ def predict_fight_data_for_model(
     model,
     numeric_features: list[str],
     categorical_features: list[str],
+    fight_context: dict[str, Any] | None = None,
     include_explanations: bool = False,
 ) -> dict[str, Any]:
     features_df = load_current_features()
@@ -998,6 +1402,7 @@ def predict_fight_data_for_model(
         weight_class=weight_class,
         numeric_features=numeric_features,
         categorical_features=categorical_features,
+        fight_context=fight_context,
     )
 
     fighter_b_direct_probability = predict_direct_probability(
@@ -1007,6 +1412,7 @@ def predict_fight_data_for_model(
         weight_class=weight_class,
         numeric_features=numeric_features,
         categorical_features=categorical_features,
+        fight_context=fight_context,
     )
 
     total = fighter_a_direct_probability + fighter_b_direct_probability
@@ -1044,7 +1450,15 @@ def predict_fight_data_for_model(
         "confidence": confidence,
         "confidence_percentage": format_percent(confidence),
         "confidence_label": get_confidence_label(confidence),
+        "fight_context": {**default_fight_context(), **(fight_context or {})},
     }
+
+    prediction_context = build_prediction_context(
+        fighter_a_row=fighter_a_row,
+        fighter_b_row=fighter_b_row,
+        confidence=confidence,
+    )
+    prediction_payload.update(prediction_context)
 
     if include_explanations:
         basic_matchup_edges = build_basic_matchup_edges(
@@ -1263,10 +1677,195 @@ def build_ensemble_average_prediction(
     return ensemble_prediction
 
 
+def normalize_market_shadow_inputs(
+    market_features: dict[str, Any] | None,
+    fighter_a: str,
+) -> dict[str, Any] | None:
+    if not market_features:
+        return None
+
+    fighter_a_market_probability, fighter_b_market_probability = normalize_probability_pair(
+        market_features.get("fighter_1_market_probability"),
+        market_features.get("fighter_2_market_probability"),
+    )
+
+    if fighter_a_market_probability is None or fighter_b_market_probability is None:
+        return None
+
+    market_favorite = clean_text(market_features.get("market_favorite", ""))
+    market_favorite_is_fighter_a = (
+        normalize_name(market_favorite) == normalize_name(fighter_a)
+        if market_favorite
+        else fighter_a_market_probability >= fighter_b_market_probability
+    )
+
+    return {
+        "market_fighter_1_probability": fighter_a_market_probability,
+        "market_fighter_2_probability": fighter_b_market_probability,
+        "market_confidence": max(
+            fighter_a_market_probability,
+            fighter_b_market_probability,
+        ),
+        "market_favorite_is_fighter_1": int(market_favorite_is_fighter_a),
+        "odds_available": optional_bool(market_features.get("odds_available", True)),
+    }
+
+
+def choose_base_prediction_for_market_shadow(
+    model_predictions: list[dict[str, Any]],
+    best_model_name: str,
+) -> dict[str, Any] | None:
+    for prediction in model_predictions:
+        if clean_text(prediction.get("model_name", "")) == best_model_name:
+            return prediction
+
+    for prediction in model_predictions:
+        if bool(prediction.get("is_best_model", False)):
+            return prediction
+
+    if model_predictions:
+        return model_predictions[0]
+
+    return None
+
+
+def build_market_shadow_feature_row(
+    *,
+    base_prediction: dict[str, Any],
+    market_inputs: dict[str, Any],
+    weight_class: str,
+) -> dict[str, Any]:
+    model_fighter_1_probability, model_fighter_2_probability = normalize_probability_pair(
+        base_prediction.get("fighter_a_probability"),
+        base_prediction.get("fighter_b_probability"),
+    )
+
+    if model_fighter_1_probability is None or model_fighter_2_probability is None:
+        model_fighter_1_probability = 0.5
+        model_fighter_2_probability = 0.5
+
+    model_confidence = optional_probability(base_prediction.get("confidence"))
+
+    if model_confidence is None:
+        model_confidence = max(
+            model_fighter_1_probability,
+            model_fighter_2_probability,
+        )
+
+    model_favorite_is_fighter_1 = int(
+        model_fighter_1_probability >= model_fighter_2_probability
+    )
+    market_favorite_is_fighter_1 = int(market_inputs["market_favorite_is_fighter_1"])
+
+    return {
+        "market_fighter_1_probability": market_inputs["market_fighter_1_probability"],
+        "market_fighter_2_probability": market_inputs["market_fighter_2_probability"],
+        "market_confidence": market_inputs["market_confidence"],
+        "market_favorite_is_fighter_1": market_favorite_is_fighter_1,
+        "model_fighter_1_probability": model_fighter_1_probability,
+        "model_fighter_2_probability": model_fighter_2_probability,
+        "model_confidence": model_confidence,
+        "model_favorite_is_fighter_1": model_favorite_is_fighter_1,
+        "model_market_agree": int(
+            model_favorite_is_fighter_1 == market_favorite_is_fighter_1
+        ),
+        "model_market_probability_delta": (
+            model_fighter_1_probability
+            - market_inputs["market_fighter_1_probability"]
+        ),
+        "model_confidence_delta": model_confidence - market_inputs["market_confidence"],
+        "weight_class": clean_text(weight_class),
+    }
+
+
+def build_market_shadow_predictions(
+    *,
+    fighter_a: str,
+    fighter_b: str,
+    weight_class: str,
+    base_prediction: dict[str, Any] | None,
+    market_features: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    if base_prediction is None:
+        return []
+
+    market_inputs = normalize_market_shadow_inputs(
+        market_features=market_features,
+        fighter_a=fighter_a,
+    )
+
+    if market_inputs is None:
+        return []
+
+    models, model_metadata = load_market_shadow_models()
+
+    if not model_metadata:
+        return []
+
+    fighter_a_clean = clean_text(base_prediction.get("fighter_a", fighter_a))
+    fighter_b_clean = clean_text(base_prediction.get("fighter_b", fighter_b))
+    feature_row = build_market_shadow_feature_row(
+        base_prediction=base_prediction,
+        market_inputs=market_inputs,
+        weight_class=weight_class,
+    )
+
+    predictions: list[dict[str, Any]] = []
+
+    for model_name, metadata in sorted(model_metadata.items()):
+        model_type = clean_text(metadata.get("model_type", ""))
+
+        if model_type == "market_probability_baseline":
+            fighter_a_probability = market_inputs["market_fighter_1_probability"]
+        else:
+            model = models.get(model_name)
+
+            if model is None:
+                continue
+
+            feature_columns = metadata.get("feature_columns", [])
+
+            if not feature_columns:
+                continue
+
+            input_df = pd.DataFrame(
+                [
+                    {
+                        column: feature_row.get(column)
+                        for column in feature_columns
+                    }
+                ]
+            )
+
+            fighter_a_probability = float(model.predict_proba(input_df)[:, 1][0])
+
+        prediction = build_probability_prediction_payload(
+            model_name=model_name,
+            fighter_a=fighter_a_clean,
+            fighter_b=fighter_b_clean,
+            weight_class=clean_text(weight_class),
+            fighter_a_probability=fighter_a_probability,
+            fighter_b_probability=1.0 - fighter_a_probability,
+        )
+
+        prediction["is_best_model"] = False
+        prediction["is_shadow_model"] = True
+        prediction["model_metrics"] = {
+            "model_type": model_type or "market_shadow_model",
+            "description": clean_text(metadata.get("description", "")),
+            "calibration_method": clean_text(metadata.get("calibration_method", "")),
+            **metadata.get("metrics", {}),
+        }
+        predictions.append(prediction)
+
+    return predictions
+
+
 def predict_fight_data(
     fighter_a: str,
     fighter_b: str,
     weight_class: str,
+    fight_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     model, numeric_features, categorical_features = load_model_and_features()
 
@@ -1278,6 +1877,7 @@ def predict_fight_data(
         model=model,
         numeric_features=numeric_features,
         categorical_features=categorical_features,
+        fight_context=fight_context,
         include_explanations=True,
     )
 
@@ -1286,6 +1886,8 @@ def predict_fight_all_models(
     fighter_a: str,
     fighter_b: str,
     weight_class: str,
+    fight_context: dict[str, Any] | None = None,
+    market_features: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     models, model_metadata, best_model_name, numeric_features, categorical_features = (
         load_all_prediction_models_and_features()
@@ -1302,6 +1904,7 @@ def predict_fight_all_models(
             model=model,
             numeric_features=numeric_features,
             categorical_features=categorical_features,
+            fight_context=fight_context,
             include_explanations=False,
         )
 
@@ -1332,10 +1935,25 @@ def predict_fight_all_models(
         }
         model_predictions.append(ensemble_prediction)
 
+    market_base_prediction = choose_base_prediction_for_market_shadow(
+        model_predictions=model_predictions,
+        best_model_name=best_model_name,
+    )
+    model_predictions.extend(
+        build_market_shadow_predictions(
+            fighter_a=fighter_a,
+            fighter_b=fighter_b,
+            weight_class=weight_class,
+            base_prediction=market_base_prediction,
+            market_features=market_features,
+        )
+    )
+
     return {
         "fighter_a": clean_text(fighter_a),
         "fighter_b": clean_text(fighter_b),
         "weight_class": clean_text(weight_class),
+        "fight_context": {**default_fight_context(), **(fight_context or {})},
         "best_model_name": best_model_name,
         "model_count": len(model_predictions),
         "model_predictions": model_predictions,
@@ -1350,4 +1968,6 @@ def clear_prediction_cache() -> None:
     """
     load_current_features.cache_clear()
     load_model_and_features.cache_clear()
+    load_all_prediction_models_and_features.cache_clear()
+    load_market_shadow_models.cache_clear()
     load_weight_size_prediction_context.cache_clear()

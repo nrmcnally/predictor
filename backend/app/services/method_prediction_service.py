@@ -10,6 +10,7 @@ import pandas as pd
 
 from app.services.prediction_service import (
     clean_text,
+    file_aware_cache,
     get_fighter_row,
     load_current_features,
 )
@@ -37,7 +38,7 @@ def format_percent(value: float) -> str:
     return f"{value * 100.0:.1f}%"
 
 
-@lru_cache(maxsize=1)
+@file_aware_cache(lambda: [BROAD_MODEL_PATH, DETAILED_MODEL_PATH, FEATURES_PATH])
 def load_method_models_and_features():
     if not BROAD_MODEL_PATH.exists():
         raise FileNotFoundError(

@@ -43,6 +43,15 @@ from app.data.scrape_fight_details import (
     get_soup,
 )
 
+from app.data.scrape_fight_round_stats import (
+    scrape_round_stats as scrape_round_stats_incrementally,
+)
+
+from app.features.add_cardio_features import (
+    add_cardio_features,
+    load_round_stats as load_cardio_round_stats,
+)
+
 from app.data.scrape_fighter_profiles import (
     scrape_all_fighter_profiles,
     save_profiles_csv,
@@ -72,6 +81,7 @@ from app.features.build_matchups import (
     build_matchup_training_rows,
     save_training_matchups,
 )
+from app.features.fight_context_features import FIGHT_CONTEXT_NUMERIC_FEATURES
 
 from app.features.build_current_fighter_features import (
     load_fight_stats as load_current_feature_fight_stats,
@@ -82,6 +92,11 @@ from app.features.build_current_fighter_features import (
 )
 
 from app.models.train_calibrated_models import main as train_calibrated_models
+from app.models.train_market_shadow_models import (
+    MARKET_SHADOW_METRICS_PATH,
+    MARKET_SHADOW_REGISTRY_PATH,
+    main as train_market_shadow_models,
+)
 
 from app.services.future_card_service import refresh_upcoming_cards
 
@@ -214,6 +229,30 @@ def read_csv_or_empty(path: Path) -> pd.DataFrame:
         return pd.read_csv(path)
     except pd.errors.EmptyDataError:
         return pd.DataFrame()
+
+
+def find_event_urls_with_incomplete_results(event_fights_df: pd.DataFrame) -> set[str]:
+    if event_fights_df.empty or "event_url" not in event_fights_df.columns:
+        return set()
+
+    result_columns = ["result_1", "result_2", "winner", "loser", "method"]
+    df = event_fights_df.copy()
+
+    for column in result_columns:
+        if column not in df.columns:
+            df[column] = ""
+
+    result_text = df[result_columns].fillna("").apply(
+        lambda column: column.map(clean_text)
+    )
+    blank_result_rows = result_text.eq("").all(axis=1)
+
+    return set(
+        df.loc[blank_result_rows, "event_url"]
+        .dropna()
+        .astype(str)
+        .map(clean_text)
+    )
     
 def refresh_future_fight_odds_stage() -> dict[str, Any]:
     try:
@@ -342,23 +381,44 @@ def update_event_fights_incrementally_stage() -> dict[str, Any]:
     if existing_fights_df.empty or "event_url" not in existing_fights_df.columns:
         existing_event_urls = set()
     else:
-        existing_event_urls = set(existing_fights_df["event_url"].dropna().astype(str))
+        existing_event_urls = set(
+            existing_fights_df["event_url"]
+            .dropna()
+            .astype(str)
+            .map(clean_text)
+        )
+
+    incomplete_event_urls = find_event_urls_with_incomplete_results(existing_fights_df)
 
     new_fight_rows: list[dict[str, Any]] = []
 
+    completed_events_df["url_clean"] = completed_events_df["url"].astype(str).map(clean_text)
+
     missing_events_df = completed_events_df[
-        ~completed_events_df["url"].astype(str).isin(existing_event_urls)
+        ~completed_events_df["url_clean"].isin(existing_event_urls)
     ].copy()
+    incomplete_events_df = completed_events_df[
+        completed_events_df["url_clean"].isin(incomplete_event_urls)
+    ].copy()
+    events_to_scrape_df = pd.concat(
+        [missing_events_df, incomplete_events_df],
+        ignore_index=True,
+    ).drop_duplicates(subset=["url_clean"], keep="last")
 
     print(f"Completed events found: {len(completed_events_df)}")
     print(f"Events already in event_fights.csv: {len(existing_event_urls)}")
-    print(f"Events needing fight-list scrape: {len(missing_events_df)}")
+    print(f"Events missing from event_fights.csv: {len(missing_events_df)}")
+    print(f"Events with incomplete fight results: {len(incomplete_events_df)}")
+    print(f"Events needing fight-list scrape: {len(events_to_scrape_df)}")
 
-    for index, event in missing_events_df.iterrows():
+    refreshed_event_urls: set[str] = set()
+
+    for index, event in events_to_scrape_df.iterrows():
         event_name = clean_text(event["name"])
         event_date = clean_text(event["date"])
         event_location = clean_text(event["location"])
         event_url = clean_text(event["url"])
+        refreshed_event_urls.add(event_url)
 
         print(f"Scraping new event fights: {event_name}")
 
@@ -377,6 +437,18 @@ def update_event_fights_incrementally_stage() -> dict[str, Any]:
         time.sleep(0.25)
 
     new_fights_df = pd.DataFrame(new_fight_rows)
+
+    if (
+        not existing_fights_df.empty
+        and refreshed_event_urls
+        and "event_url" in existing_fights_df.columns
+    ):
+        existing_fights_df = existing_fights_df[
+            ~existing_fights_df["event_url"]
+            .astype(str)
+            .map(clean_text)
+            .isin(refreshed_event_urls)
+        ].copy()
 
     if existing_fights_df.empty:
         combined_fights_df = new_fights_df
@@ -397,7 +469,9 @@ def update_event_fights_incrementally_stage() -> dict[str, Any]:
     write_dataframe_csv(combined_fights_df, EVENT_FIGHTS_CSV)
 
     return {
-        "events_needing_scrape": int(len(missing_events_df)),
+        "events_missing_from_event_fights": int(len(missing_events_df)),
+        "events_with_incomplete_results": int(len(incomplete_events_df)),
+        "events_needing_scrape": int(len(events_to_scrape_df)),
         "new_event_fights": int(len(new_fights_df)),
         "total_event_fights": int(len(combined_fights_df)),
         "output_file": str(EVENT_FIGHTS_CSV),
@@ -500,6 +574,11 @@ def update_fight_stats_incrementally_stage() -> dict[str, Any]:
     }
 
 
+def update_round_stats_incrementally_stage() -> dict[str, Any]:
+    # Scrapes per-round stats only for fights not already in fight_round_stats.csv.
+    return scrape_round_stats_incrementally(only_missing=True)
+
+
 def refresh_fighter_profiles_stage() -> dict[str, Any]:
     profiles = scrape_all_fighter_profiles()
     save_profiles_csv(profiles)
@@ -515,8 +594,19 @@ def build_fighter_snapshots_stage() -> dict[str, Any]:
     snapshots_df = build_fighter_snapshots(fight_stats_df)
     save_fighter_snapshots(snapshots_df)
 
+    generated_columns = [
+        column
+        for column in snapshots_df.columns
+        if column.startswith(("bayes_", "decayed_", "path_", "style_", "vulnerability_"))
+        or column.startswith("avg_opponent_adjusted_")
+        or column.startswith("recent_3_opponent_adjusted_")
+        or column.startswith("volatility_")
+        or column in {"sample_reliability", "durability_risk_score"}
+    ]
+
     return {
         "fighter_snapshots": len(snapshots_df),
+        "generated_analytics_columns": len(generated_columns),
         "output_file": str(PROCESSED_DATA_DIR / "fighter_snapshots.csv"),
     }
 
@@ -528,6 +618,25 @@ def add_elo_features_stage() -> dict[str, Any]:
 
     return {
         "fighter_snapshots": len(snapshots_with_elo_df),
+        "output_file": str(PROCESSED_DATA_DIR / "fighter_snapshots.csv"),
+    }
+
+
+def add_cardio_features_stage() -> dict[str, Any]:
+    snapshots_df = load_snapshots()
+    round_stats_df = load_cardio_round_stats()
+
+    updated_snapshots_df = add_cardio_features(snapshots_df, round_stats_df)
+    save_snapshots(updated_snapshots_df)
+
+    coverage = 0
+    if "prior_avg_cardio_sig_output_slope" in updated_snapshots_df.columns:
+        coverage = int(updated_snapshots_df["prior_avg_cardio_sig_output_slope"].notna().sum())
+
+    return {
+        "fighter_snapshots": len(updated_snapshots_df),
+        "round_rows_available": int(len(round_stats_df)),
+        "rows_with_prior_cardio": coverage,
         "output_file": str(PROCESSED_DATA_DIR / "fighter_snapshots.csv"),
     }
 
@@ -586,6 +695,9 @@ def build_matchups_stage() -> dict[str, Any]:
                 if column.startswith("diff_")
             ]
         ),
+        "direct_fight_context_columns": [
+            column for column in FIGHT_CONTEXT_NUMERIC_FEATURES if column in matchups_df.columns
+        ],
         "output_file": str(PROCESSED_DATA_DIR / "training_matchups.csv"),
     }
 
@@ -608,6 +720,24 @@ def train_model_stage() -> dict[str, Any]:
         "best_model_metrics": metrics.get("results", {}).get(best_model_name, {}),
         "metrics_file": str(metrics_path),
         "model_file": str(PROJECT_ROOT / "models" / "best_winner_model.joblib"),
+    }
+
+
+def train_market_shadow_models_stage() -> dict[str, Any]:
+    train_market_shadow_models()
+
+    metrics = {}
+
+    if MARKET_SHADOW_METRICS_PATH.exists():
+        with open(MARKET_SHADOW_METRICS_PATH, "r", encoding="utf-8") as file:
+            metrics = json.load(file)
+
+    return {
+        "available": bool(metrics.get("available", False)),
+        "training_rows": metrics.get("training_rows", 0),
+        "model_names": metrics.get("model_names", []),
+        "metrics_file": str(MARKET_SHADOW_METRICS_PATH),
+        "registry_file": str(MARKET_SHADOW_REGISTRY_PATH),
     }
 
 
@@ -693,6 +823,7 @@ def run_incremental_update(
         ("Refresh completed events", refresh_completed_events_stage),
         ("Update completed fight list incrementally", update_event_fights_incrementally_stage),
         ("Update fight stats incrementally", update_fight_stats_incrementally_stage),
+        ("Update fight round stats incrementally", update_round_stats_incrementally_stage),
         ("Refresh fighter profiles", refresh_fighter_profiles_stage),
         ("Restore fighter DOBs", restore_fighter_dobs_stage),
         ("Build fighter snapshots", build_fighter_snapshots_stage),
@@ -700,6 +831,7 @@ def run_incremental_update(
         ("Add physical features", add_physical_features_stage),
         ("Add weight/size features", add_weight_size_features_stage),
         ("Add age features", add_age_features_stage),
+        ("Add cardio features", add_cardio_features_stage),
         ("Build matchup training rows", build_matchups_stage),
         ("Build method labels", build_method_labels_stage),
         ("Build method training data", build_method_training_data_stage),
@@ -710,6 +842,7 @@ def run_incremental_update(
         ("Refresh future cards", refresh_future_cards_stage),
         ("Refresh fighter images", refresh_fighter_images_stage),
         ("Refresh future fight odds", refresh_future_fight_odds_stage),
+        ("Train market shadow models", train_market_shadow_models_stage),
         ("Save future-card predictions", save_future_card_predictions_stage),
 ]
 

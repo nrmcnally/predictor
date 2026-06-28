@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppContext } from "./AppContext.js";
-import { USE_MOCK, checkHealth, getFighterImages, getWeightClasses } from "./api/client.js";
+import {
+  USE_MOCK,
+  checkHealth,
+  getDataQualitySummary,
+  getFighterImages,
+  getWeightClasses,
+} from "./api/client.js";
 import { normalizeFighterName } from "./lib/format.js";
 import FightLab from "./views/FightLab.jsx";
+import TestLab from "./views/TestLab.jsx";
 import FighterProfile from "./views/FighterProfile.jsx";
 import FutureCards from "./views/FutureCards.jsx";
 import RecentCards from "./views/RecentCards.jsx";
@@ -49,8 +56,18 @@ const NAV_GROUPS = [
   },
 ];
 
+// Test Lab is a dev-only UX scratch view. Keep it out of production builds; a dev
+// can force it on with VITE_SHOW_TEST_LAB=1.
+const SHOW_TEST_LAB =
+  import.meta.env.DEV || import.meta.env.VITE_SHOW_TEST_LAB === "1";
+
+if (SHOW_TEST_LAB) {
+  NAV_GROUPS[0].items.splice(1, 0, { value: "test-lab", label: "Test Lab", icon: "UX" });
+}
+
 const VIEWS = {
   lab: FightLab,
+  "test-lab": TestLab,
   fighters: FighterProfile,
   future: FutureCards,
   recent: RecentCards,
@@ -67,6 +84,7 @@ export default function App() {
   const [imageLookup, setImageLookup] = useState({});
   const [fightLabPrefill, setFightLabPrefill] = useState({ a: "", b: "" });
   const [profileFighter, setProfileFighter] = useState("");
+  const [dataFreshness, setDataFreshness] = useState(null);
 
   useEffect(() => {
     checkHealth()
@@ -95,6 +113,10 @@ export default function App() {
 
         setImageLookup(lookup);
       })
+      .catch(() => {});
+
+    getDataQualitySummary()
+      .then((summary) => setDataFreshness(summary?.data_freshness ?? null))
       .catch(() => {});
   }, []);
 
@@ -219,6 +241,24 @@ export default function App() {
                 Backend unreachable at the configured API URL. Start it with{" "}
                 <code>uvicorn app.main:app --reload</code> in <code>backend/</code>, or
                 run the frontend with <code>npm run dev:mock</code> for demo data.
+              </div>
+            )}
+            {dataFreshness?.latest_event_date && (
+              <div
+                className={`data-age-banner ${
+                  dataFreshness.days_since_latest_event > 30 ? "stale" : ""
+                }`}
+              >
+                {dataFreshness.days_since_latest_event > 30 ? "⚠ " : ""}
+                Data current through {dataFreshness.latest_event_date}
+                {Number.isFinite(dataFreshness.days_since_latest_event)
+                  ? ` · ${dataFreshness.days_since_latest_event} day${
+                      dataFreshness.days_since_latest_event === 1 ? "" : "s"
+                    } ago`
+                  : ""}
+                {dataFreshness.days_since_latest_event > 30
+                  ? " — open Data Ops to refresh."
+                  : ""}
               </div>
             )}
             <ActiveView key={view} />

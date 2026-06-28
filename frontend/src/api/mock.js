@@ -468,6 +468,8 @@ const FUTURE_CARDS = [
   },
 ];
 
+const FUTURE_ROUND_OVERRIDES = new Map();
+
 export function getFutureCards() {
   return delay(
     FUTURE_CARDS.map(({ fights, ...card }) => ({ ...card, fight_count: fights.length }))
@@ -484,12 +486,28 @@ export async function getFutureCardPredictions(eventId) {
   const fights = await Promise.all(
     card.fights.map(async ([fighter1, fighter2, weightClass], index) => {
       const noPrediction = index === card.fights.length - 1 && card.event_id === "mock-card-1";
+      const fightId = `${card.event_id}-fight-${index}`;
+      const override = FUTURE_ROUND_OVERRIDES.get(fightId);
+      const scheduledRounds = override ?? (index === 0 ? 5 : 3);
+      const isFightNight = String(card.event_name || "")
+        .toLowerCase()
+        .startsWith("ufc fight night");
       const base = {
-        fight_id: `${card.event_id}-fight-${index}`,
+        fight_id: fightId,
         fight_url: `mock://future/${card.event_id}/${index}`,
         fighter_1: fighter1,
         fighter_2: fighter2,
         weight_class: weightClass,
+        scheduled_rounds: scheduledRounds,
+        is_main_event: index === 0,
+        card_position_from_top: index + 1,
+        round_override_eligible: (index === 1 || index === 2) && !isFightNight,
+        round_override_saved: FUTURE_ROUND_OVERRIDES.has(fightId),
+        round_override_source: FUTURE_ROUND_OVERRIDES.has(fightId)
+          ? "manual_override"
+          : index === 0
+            ? "main_event_inference"
+            : "default_three_round",
       };
 
       if (noPrediction) {
@@ -508,6 +526,34 @@ export async function getFutureCardPredictions(eventId) {
   );
 
   return delay({ ...card, fights }, 350);
+}
+
+export async function updateFutureFightScheduledRounds(eventId, fightId, scheduledRounds) {
+  const card = FUTURE_CARDS.find((row) => row.event_id === eventId);
+
+  if (!card) {
+    throw new Error("Unknown future card.");
+  }
+
+  if (![3, 5].includes(Number(scheduledRounds))) {
+    throw new Error("Scheduled rounds must be 3 or 5.");
+  }
+
+  FUTURE_ROUND_OVERRIDES.set(fightId, Number(scheduledRounds));
+
+  return delay(
+    {
+      message: "Scheduled-rounds override saved.",
+      event_id: eventId,
+      fight_id: fightId,
+      override: {
+        scheduled_rounds: Number(scheduledRounds),
+        source: "manual",
+      },
+      card: await getFutureCardPredictions(eventId),
+    },
+    180
+  );
 }
 
 export function getFutureFightOdds() {
@@ -899,6 +945,41 @@ export function getModelMarketEvaluation() {
   });
 }
 
+export function getWalkForwardEvaluation() {
+  const folds = [
+    { test_year: 2021, train_fights: 5789, test_fights: 497, test_rows: 994, accuracy: 0.618, brier_score: 0.245, log_loss: 0.694, roc_auc: 0.627, elo_baseline_accuracy: 0.562, model_minus_elo_accuracy: 0.055 },
+    { test_year: 2022, train_fights: 6286, test_fights: 506, test_rows: 1012, accuracy: 0.621, brier_score: 0.232, log_loss: 0.658, roc_auc: 0.656, elo_baseline_accuracy: 0.574, model_minus_elo_accuracy: 0.046 },
+    { test_year: 2023, train_fights: 6792, test_fights: 504, test_rows: 1008, accuracy: 0.601, brier_score: 0.234, log_loss: 0.66, roc_auc: 0.648, elo_baseline_accuracy: 0.552, model_minus_elo_accuracy: 0.05 },
+    { test_year: 2024, train_fights: 7296, test_fights: 513, test_rows: 1026, accuracy: 0.63, brier_score: 0.227, log_loss: 0.647, roc_auc: 0.673, elo_baseline_accuracy: 0.55, model_minus_elo_accuracy: 0.08 },
+    { test_year: 2025, train_fights: 7809, test_fights: 515, test_rows: 1030, accuracy: 0.666, brier_score: 0.221, log_loss: 0.633, roc_auc: 0.702, elo_baseline_accuracy: 0.57, model_minus_elo_accuracy: 0.096 },
+  ];
+
+  return delay({
+    available: true,
+    message: "",
+    metadata: {
+      model_type: "logistic_regression",
+      calibration_method: "none",
+      n_folds: folds.length,
+      requested_folds: folds.length,
+      min_test_fights: 150,
+      min_train_fights: 1000,
+      feature_count: 96,
+      metric_note:
+        "Each fold trains a fresh model on every fight before that test year, then scores that year out-of-sample.",
+    },
+    aggregate: {
+      accuracy: { mean: 0.6272, std: 0.0247, ci95: 0.0217, n: folds.length },
+      brier_score: { mean: 0.2318, std: 0.0089, ci95: 0.0078, n: folds.length },
+      log_loss: { mean: 0.6584, std: 0.0223, ci95: 0.0196, n: folds.length },
+      roc_auc: { mean: 0.6612, std: 0.0277, ci95: 0.0243, n: folds.length },
+      model_minus_elo_accuracy: { mean: 0.0654, std: 0.0218, ci95: 0.0191, n: folds.length },
+      elo_baseline_accuracy: { mean: 0.5616, std: 0.0103, ci95: 0.009, n: folds.length },
+    },
+    folds,
+  });
+}
+
 export function getModelSnapshotEvaluation() {
   return delay({
     message: "Prospective evaluation of saved pre-fight prediction snapshots.",
@@ -950,13 +1031,59 @@ export function getModelSnapshotEvaluation() {
   });
 }
 
+export function getDataQualitySummary() {
+  return delay({
+    available: true,
+    generated_at: "2026-06-26T12:00:00",
+    fighters: {
+      total: 2688,
+      inactive_over_3_years: 1801,
+      inactive_over_3_years_percentage: "67.0%",
+      low_sample_under_3_fights: 842,
+      low_sample_under_3_fights_percentage: "31.3%",
+      low_sample_under_5_fights: 1220,
+      low_sample_under_5_fights_percentage: "45.4%",
+      missing_reach: 164,
+      missing_age: 29,
+      missing_height: 81,
+    },
+    future_cards: {
+      upcoming_fights: 63,
+      future_odds_rows: 63,
+      odds_available: 19,
+      odds_missing: 44,
+      odds_coverage_percentage: "30.2%",
+    },
+    saved_predictions: {
+      saved_card_rows: 121,
+      prediction_available: 99,
+      prediction_unavailable: 22,
+      prediction_coverage_percentage: "81.8%",
+      odds_available: 34,
+      odds_missing: 87,
+      odds_coverage_percentage: "28.1%",
+      top_unavailable_fighters: [
+        { fighter: "Juan Diaz", count: 1 },
+        { fighter: "Christian Edwards", count: 1 },
+      ],
+    },
+    historical_results: {
+      event_fights: 7850,
+      clear_win_loss: 7728,
+      draws: 46,
+      no_contests: 76,
+      dq_or_overturned: 24,
+    },
+  });
+}
+
 let mockUpdateState = {
   running: false,
   started_at: null,
   finished_at: "2026-06-08T22:41:10",
   current_stage: null,
   current_stage_index: 0,
-  total_stages: 20,
+  total_stages: 22,
   progress_percent: 0,
   message: "No update has been started this session.",
   success: true,
@@ -979,6 +1106,7 @@ const MOCK_STAGES = [
   "Rebuild current fighter data",
   "Refresh future cards",
   "Refresh future fight odds",
+  "Train market shadow models",
   "Save future-card predictions",
 ];
 
