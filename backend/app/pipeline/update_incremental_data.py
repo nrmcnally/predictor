@@ -28,6 +28,8 @@ from app.services.saved_prediction_service import (
     SAVED_MODEL_PREDICTIONS_CSV,
 )
 
+from app.repositories import saved_predictions_repository
+
 from app.data.scrape_ufcstats import (
     fetch_completed_events,
     save_completed_events_csv,
@@ -790,7 +792,7 @@ def build_summary(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
         "fighter_images_rows": count_csv_rows(RAW_DATA_DIR / "fighter_images.csv"),
         "failed_stages": failed_stages,
         "success": len(failed_stages) == 0,
-        "saved_card_predictions_rows": count_csv_rows(PROCESSED_DATA_DIR / "saved_card_predictions.csv"),
+        "saved_card_predictions_rows": saved_predictions_repository.count(),
         "saved_model_predictions_rows": count_csv_rows(PROCESSED_DATA_DIR / "saved_model_predictions.csv"),
     }
 

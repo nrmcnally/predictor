@@ -16,6 +16,7 @@ from app.models.model_version import (
     estimate_version_for_date,
     load_current_provenance,
 )
+from app.repositories import saved_predictions_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -115,7 +116,7 @@ def make_event_id_from_url(event_url: Any) -> str:
 
 
 def load_saved_predictions() -> pd.DataFrame:
-    return read_csv_or_empty(SAVED_CARD_PREDICTIONS_CSV)
+    return saved_predictions_repository.read_all_df()
 
 
 def load_actual_results() -> pd.DataFrame:

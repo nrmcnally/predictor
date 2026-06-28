@@ -19,6 +19,7 @@ from app.services.prediction_service import (
     predict_fight_all_models,
 )
 from app.models.model_version import load_current_provenance
+from app.repositories import saved_predictions_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -70,18 +71,9 @@ def load_model_metadata() -> dict[str, Any]:
 
 
 def read_saved_predictions() -> pd.DataFrame:
-    if not SAVED_CARD_PREDICTIONS_CSV.exists():
-        return pd.DataFrame()
-
-    try:
-        return pd.read_csv(SAVED_CARD_PREDICTIONS_CSV)
-    except pd.errors.EmptyDataError:
-        return pd.DataFrame()
-
-
-def write_saved_predictions(df: pd.DataFrame) -> None:
-    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_csv(SAVED_CARD_PREDICTIONS_CSV, index=False)
+    # Saved card predictions live in SQLite (Phase 1 #16). The repository returns a
+    # DataFrame matching the legacy CSV columns, so consumers are unchanged.
+    return saved_predictions_repository.read_all_df()
 
 
 def read_saved_model_predictions() -> pd.DataFrame:
@@ -378,7 +370,6 @@ def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
 
 
 def save_predictions_for_card(event_id: str) -> dict[str, Any]:
-    existing_df = read_saved_predictions()
     saved_at = now_iso()
 
     new_rows = build_saved_prediction_rows_for_card(event_id)
@@ -386,21 +377,9 @@ def save_predictions_for_card(event_id: str) -> dict[str, Any]:
         row["saved_at"] = saved_at
     new_df = pd.DataFrame(new_rows)
 
-    if existing_df.empty:
-        combined_df = new_df
-    else:
-        # Replace previous saved predictions for this card.
-        # This keeps one latest saved snapshot per event/fight instead of growing duplicates.
-        existing_df = existing_df[
-            existing_df["event_id"].astype(str) != str(event_id)
-        ].copy()
-
-        combined_df = pd.concat(
-            [existing_df, new_df],
-            ignore_index=True,
-        )
-
-    write_saved_predictions(combined_df)
+    # Atomic per-card replace (delete this event's rows + insert the new ones in one
+    # transaction) — one latest saved snapshot per card, no read-all/rewrite-all.
+    saved_predictions_repository.replace_card(event_id, new_rows)
 
     model_prediction_result = save_model_predictions_for_card(
         event_id=event_id,
@@ -414,7 +393,7 @@ def save_predictions_for_card(event_id: str) -> dict[str, Any]:
         "saved_rows": int(len(new_df)),
         "prediction_available_count": prediction_available_count,
         "prediction_unavailable_count": int(len(new_df) - prediction_available_count),
-        "output_file": str(SAVED_CARD_PREDICTIONS_CSV),
+        "storage": "sqlite:saved_card_predictions",
         "saved_model_rows": model_prediction_result["saved_model_rows"],
         "model_prediction_available_count": model_prediction_result["model_prediction_available_count"],
         "model_prediction_unavailable_count": model_prediction_result["model_prediction_unavailable_count"],
@@ -455,7 +434,7 @@ def save_predictions_for_all_future_cards() -> dict[str, Any]:
         "total_model_prediction_available": total_model_available,
         "total_model_prediction_unavailable": total_model_unavailable,
         "cards": saved_cards,
-        "output_file": str(SAVED_CARD_PREDICTIONS_CSV),
+        "storage": "sqlite:saved_card_predictions",
         "model_predictions_output_file": str(SAVED_MODEL_PREDICTIONS_CSV),
     }
 

@@ -2,9 +2,72 @@ from __future__ import annotations
 
 import sqlite3
 
-# Idempotent DDL. Each transactional dataset migrated to SQLite adds its table here.
-# (Phase 1 #16: results, saved predictions, odds track, future cards. First up: the
-# odds track, whose accumulate-over-time upsert benefits most from atomic writes.)
+# Canonical typed column specs. Each transactional dataset migrated to SQLite lists
+# its columns here (single source of truth), and the DDL + repository inserts are
+# generated from them so the table definition and the code never drift.
+
+# (column_name, sqlite_type) — order mirrors the legacy CSV header for faithful import.
+SAVED_CARD_COLUMNS: list[tuple[str, str]] = [
+    ("saved_at", "TEXT"),
+    ("event_id", "TEXT"),
+    ("event_name", "TEXT"),
+    ("event_date", "TEXT"),
+    ("event_location", "TEXT"),
+    ("event_url", "TEXT"),
+    ("fight_id", "TEXT"),
+    ("fight_url", "TEXT"),
+    ("fighter_1", "TEXT"),
+    ("fighter_2", "TEXT"),
+    ("weight_class", "TEXT"),
+    ("prediction_available", "INTEGER"),
+    ("error_json", "TEXT"),
+    ("predicted_winner", "TEXT"),
+    ("fighter_1_probability", "REAL"),
+    ("fighter_2_probability", "REAL"),
+    ("fighter_1_percentage", "TEXT"),
+    ("fighter_2_percentage", "TEXT"),
+    ("confidence", "REAL"),
+    ("confidence_percentage", "TEXT"),
+    ("confidence_label", "TEXT"),
+    ("model_name", "TEXT"),
+    ("model_metrics_json", "TEXT"),
+    ("basic_matchup_edges_json", "TEXT"),
+    ("odds_available", "INTEGER"),
+    ("odds_bookmaker", "TEXT"),
+    ("odds_last_update", "TEXT"),
+    ("bookmakers_matched", "INTEGER"),
+    ("fighter_1_odds_american", "REAL"),
+    ("fighter_2_odds_american", "REAL"),
+    ("fighter_1_market_probability", "REAL"),
+    ("fighter_2_market_probability", "REAL"),
+    ("fighter_1_market_percentage", "TEXT"),
+    ("fighter_2_market_percentage", "TEXT"),
+    ("market_favorite", "TEXT"),
+    ("market_favorite_probability", "REAL"),
+    ("market_favorite_percentage", "TEXT"),
+    ("scheduled_rounds", "INTEGER"),
+    ("is_main_event", "INTEGER"),
+    ("round_override_saved", "INTEGER"),
+    ("round_override_source", "TEXT"),
+    ("round_override_updated_at", "TEXT"),
+    ("model_version", "TEXT"),
+    ("model_recipe_hash", "TEXT"),
+    ("model_trained_at", "TEXT"),
+    ("model_git_commit", "TEXT"),
+]
+
+
+def create_table_sql(name: str, columns: list[tuple[str, str]]) -> str:
+    body = ",\n        ".join(f"{column} {sql_type}" for column, sql_type in columns)
+    return (
+        f"CREATE TABLE IF NOT EXISTS {name} (\n"
+        f"        id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+        f"        {body}\n"
+        f"    )"
+    )
+
+
+# Idempotent DDL run on every connection. Add tables here as datasets migrate.
 SCHEMA_STATEMENTS: list[str] = [
     """
     CREATE TABLE IF NOT EXISTS fight_odds_track (
@@ -20,10 +83,13 @@ SCHEMA_STATEMENTS: list[str] = [
         capture_count INTEGER NOT NULL DEFAULT 1
     )
     """,
+    create_table_sql("saved_card_predictions", SAVED_CARD_COLUMNS),
+    "CREATE INDEX IF NOT EXISTS idx_saved_card_event ON saved_card_predictions(event_id)",
+    "CREATE INDEX IF NOT EXISTS idx_saved_card_fight_url ON saved_card_predictions(fight_url)",
 ]
 
 
 def init_db(conn: sqlite3.Connection) -> None:
-    """Create any missing tables. Safe to call on every connection."""
+    """Create any missing tables/indexes. Safe to call on every connection."""
     for statement in SCHEMA_STATEMENTS:
         conn.execute(statement)

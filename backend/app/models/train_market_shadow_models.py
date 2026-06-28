@@ -18,6 +18,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from app.services.model_market_evaluation_service import add_actual_result_columns
+from app.repositories import saved_predictions_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -154,13 +155,7 @@ def normalize_probability_pair(
 
 
 def read_saved_card_predictions() -> pd.DataFrame:
-    if not SAVED_CARD_PREDICTIONS_CSV.exists():
-        return pd.DataFrame()
-
-    try:
-        return pd.read_csv(SAVED_CARD_PREDICTIONS_CSV)
-    except pd.errors.EmptyDataError:
-        return pd.DataFrame()
+    return saved_predictions_repository.read_all_df()
 
 
 def build_target(row: pd.Series) -> int | None:

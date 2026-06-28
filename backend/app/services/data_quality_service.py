@@ -9,6 +9,8 @@ from typing import Any
 
 import pandas as pd
 
+from app.repositories import saved_predictions_repository
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
@@ -257,7 +259,7 @@ def build_data_quality_summary() -> dict[str, Any]:
     current_fighters_df = read_csv_or_empty(CURRENT_FIGHTER_FEATURES_CSV)
     event_fights_df = read_csv_or_empty(EVENT_FIGHTS_CSV)
     future_odds_df = read_csv_or_empty(FUTURE_FIGHT_ODDS_CSV)
-    saved_predictions_df = read_csv_or_empty(SAVED_CARD_PREDICTIONS_CSV)
+    saved_predictions_df = saved_predictions_repository.read_all_df()
     upcoming_fights_df = read_csv_or_empty(UPCOMING_FIGHTS_CSV)
 
     return {

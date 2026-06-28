@@ -19,7 +19,7 @@ from typing import Any
 
 import pandas as pd
 
-from app.repositories import odds_track_repository
+from app.repositories import odds_track_repository, saved_predictions_repository
 from app.services.odds_service import (
     optional_float,
     optional_int,
@@ -95,7 +95,7 @@ def build_clv_evaluation() -> dict[str, Any]:
             "per fight (ideally near fight time)."
         )
 
-    saved = read_csv_or_empty(SAVED_CARD_PREDICTIONS_CSV)
+    saved = saved_predictions_repository.read_all_df()
     results = read_csv_or_empty(EVENT_FIGHTS_CSV)
 
     pick_by_url: dict[str, str] = {}

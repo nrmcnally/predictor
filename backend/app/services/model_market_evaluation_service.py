@@ -10,6 +10,7 @@ from app.services.recent_card_service import (
     load_actual_results,
     normalize_fight_url,
 )
+from app.repositories import saved_predictions_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -85,13 +86,7 @@ def format_percentage(value: float | None) -> str:
 
 
 def load_saved_predictions() -> pd.DataFrame:
-    if not SAVED_CARD_PREDICTIONS_CSV.exists():
-        return pd.DataFrame()
-
-    try:
-        return pd.read_csv(SAVED_CARD_PREDICTIONS_CSV)
-    except pd.errors.EmptyDataError:
-        return pd.DataFrame()
+    return saved_predictions_repository.read_all_df()
 
 
 def add_actual_result_columns(df: pd.DataFrame) -> pd.DataFrame:

@@ -12,6 +12,8 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
+from app.repositories import saved_predictions_repository
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -153,13 +155,7 @@ def load_fighters_from_upcoming() -> list[str]:
 
 
 def load_fighters_from_saved_predictions() -> list[str]:
-    if not SAVED_CARD_PREDICTIONS_CSV.exists():
-        return []
-
-    try:
-        df = pd.read_csv(SAVED_CARD_PREDICTIONS_CSV)
-    except pd.errors.EmptyDataError:
-        return []
+    df = saved_predictions_repository.read_all_df()
 
     names = []
 
