@@ -10,6 +10,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from app.data.ufcstats_fetcher import fetch_ufcstats_html
+from app.repositories import event_fights_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -278,14 +279,11 @@ def load_completed_events(limit: Optional[int] = None) -> pd.DataFrame:
 
 def save_event_fights_csv(fights: List[EventFight]) -> None:
     """
-    Saves all scraped fights to backend/data/raw/event_fights.csv.
+    Saves all scraped fights to the event_fights table (SQLite). A full scrape
+    replaces the table.
     """
-    RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-
     fight_rows = [asdict(fight) for fight in fights]
-    df = pd.DataFrame(fight_rows)
-
-    df.to_csv(EVENT_FIGHTS_CSV, index=False)
+    event_fights_repository.replace_all(fight_rows)
 
 
 def scrape_event_fights(limit: Optional[int] = None) -> List[EventFight]:

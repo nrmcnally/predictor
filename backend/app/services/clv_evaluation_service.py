@@ -19,7 +19,11 @@ from typing import Any
 
 import pandas as pd
 
-from app.repositories import odds_track_repository, saved_predictions_repository
+from app.repositories import (
+    event_fights_repository,
+    odds_track_repository,
+    saved_predictions_repository,
+)
 from app.services.odds_service import (
     optional_float,
     optional_int,
@@ -96,7 +100,7 @@ def build_clv_evaluation() -> dict[str, Any]:
         )
 
     saved = saved_predictions_repository.read_all_df()
-    results = read_csv_or_empty(EVENT_FIGHTS_CSV)
+    results = event_fights_repository.read_all_df()
 
     pick_by_url: dict[str, str] = {}
     for _, row in saved.iterrows():

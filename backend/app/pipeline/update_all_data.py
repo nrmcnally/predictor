@@ -81,7 +81,7 @@ from app.services.saved_prediction_service import (
     SAVED_MODEL_PREDICTIONS_CSV,
     save_predictions_for_all_future_cards,
 )
-from app.repositories import saved_predictions_repository
+from app.repositories import event_fights_repository, saved_predictions_repository
 
 from app.analysis.explore_method_labels import build_method_label_exploration
 from app.features.build_method_training_data import build_method_training_data
@@ -544,7 +544,7 @@ def build_summary_report(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
 
     return {
         "completed_events_rows": count_csv_rows(completed_events_path),
-        "event_fights_rows": count_csv_rows(event_fights_path),
+        "event_fights_rows": event_fights_repository.count(),
         "fight_stats_rows": count_csv_rows(fight_stats_path),
         "fighter_profiles_rows": count_csv_rows(fighter_profiles_path),
         "fighter_snapshots_rows": count_csv_rows(fighter_snapshots_path),

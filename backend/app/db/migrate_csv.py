@@ -14,12 +14,18 @@ from pathlib import Path
 import pandas as pd
 
 from app.db import connection
-from app.repositories import odds_track_repository, saved_predictions_repository
+from app.repositories import (
+    event_fights_repository,
+    odds_track_repository,
+    saved_predictions_repository,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
 PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 FIGHT_ODDS_TRACK_CSV = PROCESSED_DATA_DIR / "fight_odds_track.csv"
 SAVED_CARD_PREDICTIONS_CSV = PROCESSED_DATA_DIR / "saved_card_predictions.csv"
+EVENT_FIGHTS_CSV = RAW_DATA_DIR / "event_fights.csv"
 
 
 def migrate_fight_odds_track() -> int:
@@ -42,12 +48,23 @@ def migrate_saved_card_predictions() -> int:
     return saved_predictions_repository.import_rows(df.to_dict(orient="records"))
 
 
+def migrate_event_fights() -> int:
+    if not EVENT_FIGHTS_CSV.exists():
+        return 0
+    try:
+        df = pd.read_csv(EVENT_FIGHTS_CSV)
+    except pd.errors.EmptyDataError:
+        return 0
+    return event_fights_repository.import_rows(df.to_dict(orient="records"))
+
+
 def main() -> None:
     track = migrate_fight_odds_track()
     saved = migrate_saved_card_predictions()
+    results = migrate_event_fights()
     print(
-        f"Imported {track} fight_odds_track row(s) and "
-        f"{saved} saved_card_predictions row(s) into {connection.get_db_path()}"
+        f"Imported {track} fight_odds_track, {saved} saved_card_predictions, "
+        f"{results} event_fights row(s) into {connection.get_db_path()}"
     )
 
 

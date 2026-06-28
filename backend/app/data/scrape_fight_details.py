@@ -10,6 +10,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from app.data.ufcstats_fetcher import fetch_ufcstats_html
+from app.repositories import event_fights_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -452,13 +453,7 @@ def build_fighter_stat_rows(fight_row: pd.Series, soup: BeautifulSoup) -> list[F
 
 
 def load_event_fights(limit: Optional[int] = None) -> pd.DataFrame:
-    if not EVENT_FIGHTS_CSV.exists():
-        raise FileNotFoundError(
-            f"Missing {EVENT_FIGHTS_CSV}. "
-            "Run scrape_event_fights.py first."
-        )
-
-    fights_df = pd.read_csv(EVENT_FIGHTS_CSV)
+    fights_df = event_fights_repository.read_all_df()
 
     # For the model, we only want fights with a clear winner/loser.
     # Draws and no contests are not useful for basic winner prediction.

@@ -16,7 +16,7 @@ from app.models.model_version import (
     estimate_version_for_date,
     load_current_provenance,
 )
-from app.repositories import saved_predictions_repository
+from app.repositories import event_fights_repository, saved_predictions_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -120,7 +120,7 @@ def load_saved_predictions() -> pd.DataFrame:
 
 
 def load_actual_results() -> pd.DataFrame:
-    return read_csv_or_empty(EVENT_FIGHTS_CSV)
+    return event_fights_repository.read_all_df()
 
 
 def build_actual_result_lookup(event_fights_df: pd.DataFrame) -> dict[str, dict[str, Any]]:

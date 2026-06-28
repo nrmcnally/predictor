@@ -28,7 +28,7 @@ from app.services.saved_prediction_service import (
     SAVED_MODEL_PREDICTIONS_CSV,
 )
 
-from app.repositories import saved_predictions_repository
+from app.repositories import event_fights_repository, saved_predictions_repository
 
 from app.data.scrape_ufcstats import (
     fetch_completed_events,
@@ -378,7 +378,7 @@ def update_event_fights_incrementally_stage() -> dict[str, Any]:
         )
 
     completed_events_df = pd.read_csv(COMPLETED_EVENTS_CSV)
-    existing_fights_df = read_csv_or_empty(EVENT_FIGHTS_CSV)
+    existing_fights_df = event_fights_repository.read_all_df()
 
     if existing_fights_df.empty or "event_url" not in existing_fights_df.columns:
         existing_event_urls = set()
@@ -468,7 +468,7 @@ def update_event_fights_incrementally_stage() -> dict[str, Any]:
             keep="last",
         )
 
-    write_dataframe_csv(combined_fights_df, EVENT_FIGHTS_CSV)
+    event_fights_repository.replace_all(combined_fights_df.to_dict(orient="records"))
 
     return {
         "events_missing_from_event_fights": int(len(missing_events_df)),
@@ -481,12 +481,12 @@ def update_event_fights_incrementally_stage() -> dict[str, Any]:
 
 
 def update_fight_stats_incrementally_stage() -> dict[str, Any]:
-    if not EVENT_FIGHTS_CSV.exists():
-        raise FileNotFoundError(
-            f"Missing {EVENT_FIGHTS_CSV}. Update event fight list first."
-        )
+    event_fights_df = event_fights_repository.read_all_df()
 
-    event_fights_df = pd.read_csv(EVENT_FIGHTS_CSV)
+    if event_fights_df.empty:
+        raise FileNotFoundError(
+            "No event_fights in the database. Update the event fight list first."
+        )
     existing_stats_df = read_csv_or_empty(FIGHT_STATS_CSV)
 
     event_fights_df = event_fights_df[
@@ -781,7 +781,7 @@ def build_summary(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
 
     return {
         "completed_events_rows": count_csv_rows(COMPLETED_EVENTS_CSV),
-        "event_fights_rows": count_csv_rows(EVENT_FIGHTS_CSV),
+        "event_fights_rows": event_fights_repository.count(),
         "fight_stats_rows": count_csv_rows(FIGHT_STATS_CSV),
         "fighter_profiles_rows": count_csv_rows(RAW_DATA_DIR / "fighter_profiles.csv"),
         "fighter_snapshots_rows": count_csv_rows(PROCESSED_DATA_DIR / "fighter_snapshots.csv"),

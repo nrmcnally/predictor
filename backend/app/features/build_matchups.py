@@ -10,6 +10,7 @@ from app.features.fight_context_features import (
     build_event_fight_context_lookup,
     normalize_fight_url,
 )
+from app.repositories import event_fights_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -52,10 +53,7 @@ def load_fighter_snapshots() -> pd.DataFrame:
 
 
 def load_event_fights() -> pd.DataFrame:
-    if not EVENT_FIGHTS_CSV.exists():
-        return pd.DataFrame()
-
-    return pd.read_csv(EVENT_FIGHTS_CSV)
+    return event_fights_repository.read_all_df()
 
 
 def get_numeric_feature_columns(df: pd.DataFrame) -> list[str]:

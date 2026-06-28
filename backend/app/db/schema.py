@@ -57,14 +57,50 @@ SAVED_CARD_COLUMNS: list[tuple[str, str]] = [
 ]
 
 
-def create_table_sql(name: str, columns: list[tuple[str, str]]) -> str:
-    body = ",\n        ".join(f"{column} {sql_type}" for column, sql_type in columns)
-    return (
-        f"CREATE TABLE IF NOT EXISTS {name} (\n"
-        f"        id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
-        f"        {body}\n"
-        f"    )"
-    )
+# event_fights (completed results). fight_url is the natural key (one row per fight),
+# so it's the PRIMARY KEY — no surrogate id — which makes incremental upserts clean.
+EVENT_FIGHTS_COLUMNS: list[tuple[str, str]] = [
+    ("event_name", "TEXT"),
+    ("event_date", "TEXT"),
+    ("event_location", "TEXT"),
+    ("event_url", "TEXT"),
+    ("fight_url", "TEXT"),
+    ("fighter_1", "TEXT"),
+    ("fighter_2", "TEXT"),
+    ("result_1", "TEXT"),
+    ("result_2", "TEXT"),
+    ("winner", "TEXT"),
+    ("loser", "TEXT"),
+    ("weight_class", "TEXT"),
+    ("method", "TEXT"),
+    ("round", "INTEGER"),
+    ("time", "TEXT"),
+]
+
+
+def create_table_sql(
+    name: str,
+    columns: list[tuple[str, str]],
+    primary_key: str | None = None,
+) -> str:
+    col_defs = []
+    for column, sql_type in columns:
+        if column == primary_key:
+            col_defs.append(f"{column} {sql_type} PRIMARY KEY")
+        else:
+            col_defs.append(f"{column} {sql_type}")
+    body = ",\n        ".join(col_defs)
+
+    if primary_key is None:
+        # Surrogate autoincrement id (multiple rows per natural key).
+        return (
+            f"CREATE TABLE IF NOT EXISTS {name} (\n"
+            f"        id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+            f"        {body}\n"
+            f"    )"
+        )
+
+    return f"CREATE TABLE IF NOT EXISTS {name} (\n        {body}\n    )"
 
 
 # Idempotent DDL run on every connection. Add tables here as datasets migrate.
@@ -86,6 +122,8 @@ SCHEMA_STATEMENTS: list[str] = [
     create_table_sql("saved_card_predictions", SAVED_CARD_COLUMNS),
     "CREATE INDEX IF NOT EXISTS idx_saved_card_event ON saved_card_predictions(event_id)",
     "CREATE INDEX IF NOT EXISTS idx_saved_card_fight_url ON saved_card_predictions(fight_url)",
+    create_table_sql("event_fights", EVENT_FIGHTS_COLUMNS, primary_key="fight_url"),
+    "CREATE INDEX IF NOT EXISTS idx_event_fights_event_url ON event_fights(event_url)",
 ]
 
 
