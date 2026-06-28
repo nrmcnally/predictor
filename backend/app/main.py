@@ -71,6 +71,10 @@ from app.services.model_snapshot_evaluation_service import build_model_snapshot_
 from app.services.clv_evaluation_service import build_clv_evaluation
 from app.services.data_quality_service import build_data_quality_summary
 
+from app.auth.dependencies import get_current_user, require_admin
+from app.services.auth_service import authenticate, ensure_seed_admin, register_user
+from app.repositories import users_repository
+
 app = FastAPI(
     title="UFC Fight Predictor API",
     description="Predicts UFC fight winner probabilities using historical fight data.",
@@ -91,16 +95,14 @@ app.add_middleware(
 
 logger = logging.getLogger("ufc_predictor")
 
-# Optional admin token. When unset, the admin/heavy endpoints stay open (local dev).
-# Set ADMIN_TOKEN to require an `X-Admin-Token` header on those endpoints.
-ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "").strip()
 
-
-def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
-    if not ADMIN_TOKEN:
-        return
-    if x_admin_token != ADMIN_TOKEN:
-        raise HTTPException(status_code=401, detail={"message": "Admin token required."})
+@app.on_event("startup")
+def _seed_admin_on_startup() -> None:
+    # Create the bootstrap admin from ADMIN_USERNAME / ADMIN_PASSWORD when configured.
+    try:
+        ensure_seed_admin()
+    except Exception:
+        logger.exception("Admin seed failed")
 
 
 # --- Centralized error handling -------------------------------------------------
@@ -161,6 +163,20 @@ class ScheduledRoundsOverrideRequest(BaseModel):
     scheduled_rounds: int
 
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class RoleUpdateRequest(BaseModel):
+    role: str
+
+
 @app.get("/")
 def root() -> dict[str, str]:
     return {
@@ -173,6 +189,49 @@ def health_check() -> dict[str, str]:
     return {
         "status": "ok",
     }
+
+
+# --- Auth: accounts, login, admin (Phase 2) -------------------------------------
+# Auth endpoints translate ValueError to the correct status (400/401) themselves,
+# instead of falling through to the generic ValueError->404 handler.
+
+
+@app.post("/auth/register")
+def auth_register(request: RegisterRequest) -> dict[str, Any]:
+    try:
+        user = register_user(request.username, request.password)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+    return {"user": user}
+
+
+@app.post("/auth/login")
+def auth_login(request: LoginRequest) -> dict[str, Any]:
+    try:
+        return authenticate(request.username, request.password)
+    except ValueError as error:
+        raise HTTPException(status_code=401, detail={"message": str(error)})
+
+
+@app.get("/auth/me")
+def auth_me(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
+    return {"user": current_user}
+
+
+@app.get("/admin/users", dependencies=[Depends(require_admin)])
+def admin_list_users() -> dict[str, Any]:
+    return {"users": users_repository.list_users()}
+
+
+@app.post("/admin/users/{user_id}/role", dependencies=[Depends(require_admin)])
+def admin_set_user_role(user_id: int, request: RoleUpdateRequest) -> dict[str, Any]:
+    if request.role not in {"user", "admin"}:
+        raise HTTPException(
+            status_code=400, detail={"message": "Role must be 'user' or 'admin'."}
+        )
+    if not users_repository.set_role(user_id, request.role):
+        raise HTTPException(status_code=404, detail={"message": "User not found."})
+    return {"user_id": user_id, "role": request.role}
 
 
 @app.get("/fighters/search")

@@ -217,6 +217,16 @@ SCHEMA_STATEMENTS: list[str] = [
     create_table_sql("upcoming_fights", UPCOMING_FIGHTS_COLUMNS),
     "CREATE INDEX IF NOT EXISTS idx_upcoming_fights_event ON upcoming_fights(event_id)",
     create_table_sql("model_runs", MODEL_RUNS_COLUMNS),
+    # users: accounts + roles (Phase 2). username is the unique login identifier.
+    """
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
+        created_at TEXT
+    )
+    """,
 ]
 
 
