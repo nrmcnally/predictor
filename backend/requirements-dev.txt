@@ -2,3 +2,5 @@
 #   pip install -r requirements-dev.txt
 #   pytest
 pytest>=8.0
+pytest-cov
+httpx          # FastAPI TestClient (e2e HTTP tests)

@@ -5,7 +5,13 @@ from typing import Any
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from app.api_hardening import (
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    cors_origins,
+)
 
 import json
 import logging
@@ -82,12 +88,14 @@ app = FastAPI(
 )
 
 
+# Middleware order: the LAST added is the OUTERMOST. CORS must be outermost so even
+# rate-limited / errored responses carry CORS headers; rate limiting and security
+# headers sit inside it.
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -154,9 +162,9 @@ METHOD_MODEL_METRICS_PATH = PROJECT_ROOT / "models" / "method_model_metrics.json
 
 
 class PredictionRequest(BaseModel):
-    fighter_a: str
-    fighter_b: str
-    weight_class: str
+    fighter_a: str = Field(min_length=1, max_length=120)
+    fighter_b: str = Field(min_length=1, max_length=120)
+    weight_class: str = Field(min_length=1, max_length=60)
 
 
 class ScheduledRoundsOverrideRequest(BaseModel):
@@ -164,13 +172,13 @@ class ScheduledRoundsOverrideRequest(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=8, max_length=200)
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=1, max_length=50)
+    password: str = Field(min_length=1, max_length=200)
 
 
 class RoleUpdateRequest(BaseModel):
