@@ -1,6 +1,9 @@
 """
 Tests for closing-line-value (CLV) computation.
 
+The odds track now lives in SQLite (Phase 1 #16); saved predictions and results are
+still CSV-backed, so this seeds a temp DB for the track and temp CSVs for the rest.
+
 Runs under pytest, or standalone:  python tests/test_clv_evaluation.py
 """
 
@@ -15,6 +18,8 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import app.db.connection as db_connection  # noqa: E402
+from app.repositories import odds_track_repository  # noqa: E402
 import app.services.clv_evaluation_service as clv  # noqa: E402
 
 
@@ -24,12 +29,17 @@ def _write(tmp, name, rows):
     return path
 
 
+def _seed_track(tmp, rows):
+    db_connection.set_db_path(Path(tmp) / "app.db")
+    odds_track_repository.import_rows(rows)
+
+
 def test_clv_beat_close_and_average(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
 
     # Fight 1: picked A (fighter_1). Opening 0.40 -> closing 0.55 = line moved TO us (+0.15).
     # Fight 2: picked D (fighter_2). Opening 0.60 -> closing 0.50 = line moved AWAY (-0.10).
-    track = _write(tmp, "track.csv", [
+    _seed_track(tmp, [
         {"fight_url": "f1", "fighter_1": "A", "fighter_2": "B",
          "opening_fighter_1_probability": 0.40, "opening_fighter_2_probability": 0.60,
          "closing_fighter_1_probability": 0.55, "closing_fighter_2_probability": 0.45,
@@ -48,7 +58,6 @@ def test_clv_beat_close_and_average(tmp_path=None):
         {"fight_url": "f2", "winner": "C"},
     ])
 
-    clv.FIGHT_ODDS_TRACK_CSV = track
     clv.SAVED_CARD_PREDICTIONS_CSV = saved
     clv.EVENT_FIGHTS_CSV = results
 
@@ -63,7 +72,7 @@ def test_clv_beat_close_and_average(tmp_path=None):
 
 def test_single_capture_has_no_clv_signal(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
-    track = _write(tmp, "track1.csv", [
+    _seed_track(tmp, [
         {"fight_url": "f1", "fighter_1": "A", "fighter_2": "B",
          "opening_fighter_1_probability": 0.50, "opening_fighter_2_probability": 0.50,
          "closing_fighter_1_probability": 0.50, "closing_fighter_2_probability": 0.50,
@@ -74,7 +83,6 @@ def test_single_capture_has_no_clv_signal(tmp_path=None):
     ])
     results = _write(tmp, "results1.csv", [{"fight_url": "f1", "winner": "A"}])
 
-    clv.FIGHT_ODDS_TRACK_CSV = track
     clv.SAVED_CARD_PREDICTIONS_CSV = saved
     clv.EVENT_FIGHTS_CSV = results
 

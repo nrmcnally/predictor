@@ -12,6 +12,8 @@ from typing import Any
 import pandas as pd
 import requests
 
+from app.repositories import odds_track_repository
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -463,67 +465,39 @@ def _normalize_fight_url(value: Any) -> str:
 
 def update_fight_odds_track() -> dict[str, Any]:
     """
-    Maintains fight_odds_track.csv: per fight, freeze the OPENING line the first time
-    we see odds, and overwrite the CLOSING line every refresh. Once a fight drops out
-    of the current odds (event passed), its last-seen closing line is preserved. Run
-    this on every odds refresh so the closing line is captured as near to fight time
-    as the pipeline is run.
+    Maintains the fight_odds_track table: per fight, freeze the OPENING line the first
+    time we see odds and overwrite the CLOSING line every refresh. Fights that drop out
+    of the current odds (event passed) keep their last-seen row automatically — no
+    rewrite needed. Run on every odds refresh so the closing line is captured as near
+    to fight time as the pipeline runs. Each fight is upserted atomically (SQLite).
     """
     if not FUTURE_FIGHT_ODDS_CSV.exists():
-        return {"tracked_fights": 0, "output_file": str(FIGHT_ODDS_TRACK_CSV)}
+        return {"tracked_fights": 0, "updated_this_run": 0, "storage": "sqlite"}
 
     current = pd.read_csv(FUTURE_FIGHT_ODDS_CSV)
     if "fighter_1_market_probability" in current.columns:
         current = current[current["fighter_1_market_probability"].notna()].copy()
 
     now = datetime.now().isoformat(timespec="seconds")
-
-    existing: dict[str, dict[str, Any]] = {}
-    if FIGHT_ODDS_TRACK_CSV.exists():
-        try:
-            prior = pd.read_csv(FIGHT_ODDS_TRACK_CSV)
-            existing = {_normalize_fight_url(r.get("fight_url", "")): r.to_dict() for _, r in prior.iterrows()}
-        except pd.errors.EmptyDataError:
-            existing = {}
-
-    rows: dict[str, dict[str, Any]] = dict(existing)  # keep frozen rows for fights no longer listed
+    updated = 0
 
     for _, row in current.iterrows():
         url = _normalize_fight_url(row.get("fight_url", ""))
         if not url:
             continue
 
-        f1 = optional_float(row.get("fighter_1_market_probability"))
-        f2 = optional_float(row.get("fighter_2_market_probability"))
-        prior = existing.get(url)
+        odds_track_repository.record_capture(
+            fight_url=url,
+            fighter_1=clean_text(row.get("fighter_1", "")),
+            fighter_2=clean_text(row.get("fighter_2", "")),
+            fighter_1_probability=optional_float(row.get("fighter_1_market_probability")),
+            fighter_2_probability=optional_float(row.get("fighter_2_market_probability")),
+            captured_at=now,
+        )
+        updated += 1
 
-        if prior is None:
-            rows[url] = {
-                "fight_url": url,
-                "fighter_1": clean_text(row.get("fighter_1", "")),
-                "fighter_2": clean_text(row.get("fighter_2", "")),
-                "opening_fighter_1_probability": f1,
-                "opening_fighter_2_probability": f2,
-                "opening_captured_at": now,
-                "closing_fighter_1_probability": f1,
-                "closing_fighter_2_probability": f2,
-                "closing_captured_at": now,
-                "capture_count": 1,
-            }
-        else:
-            updated = dict(prior)
-            updated["closing_fighter_1_probability"] = f1
-            updated["closing_fighter_2_probability"] = f2
-            updated["closing_captured_at"] = now
-            updated["capture_count"] = optional_int(prior.get("capture_count")) or 0
-            updated["capture_count"] += 1
-            rows[url] = updated
-
-    track_df = pd.DataFrame(list(rows.values()))
-    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    track_df.to_csv(FIGHT_ODDS_TRACK_CSV, index=False)
-
-    return {"tracked_fights": int(len(track_df)), "output_file": str(FIGHT_ODDS_TRACK_CSV)}
+    total = int(len(odds_track_repository.read_all_df()))
+    return {"tracked_fights": total, "updated_this_run": updated, "storage": "sqlite"}
 
 
 def load_future_fight_odds() -> dict[str, Any]:

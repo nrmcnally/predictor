@@ -19,8 +19,8 @@ from typing import Any
 
 import pandas as pd
 
+from app.repositories import odds_track_repository
 from app.services.odds_service import (
-    FIGHT_ODDS_TRACK_CSV,
     optional_float,
     optional_int,
 )
@@ -87,7 +87,7 @@ def _empty(message: str) -> dict[str, Any]:
 
 
 def build_clv_evaluation() -> dict[str, Any]:
-    track = read_csv_or_empty(FIGHT_ODDS_TRACK_CSV)
+    track = odds_track_repository.read_all_df()
 
     if track.empty:
         return _empty(
