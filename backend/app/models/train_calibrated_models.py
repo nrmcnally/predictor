@@ -22,7 +22,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from app.features.fight_context_features import FIGHT_CONTEXT_NUMERIC_FEATURES
-from app.models.model_version import build_provenance
+from app.models.model_version import build_provenance, compute_training_data_hash
+from app.repositories import model_runs_repository
 
 
 try:
@@ -547,6 +548,12 @@ def save_outputs(
         ),
     }
 
+    # #17 real reproducibility: fingerprint the exact training data the model was fit
+    # on, stamp it into provenance, and record the run in the model_runs audit table.
+    feature_columns = numeric_features + categorical_features
+    training_data_hash = compute_training_data_hash(train_df, feature_columns)
+    metrics_payload["provenance"]["training_data_hash"] = training_data_hash
+
     with open(CALIBRATED_METRICS_PATH, "w", encoding="utf-8") as file:
         json.dump(metrics_payload, file, indent=2)
 
@@ -566,6 +573,24 @@ def save_outputs(
 
     with open(FEATURES_PATH, "w", encoding="utf-8") as file:
         json.dump(features_payload, file, indent=2)
+
+    provenance = metrics_payload["provenance"]
+    model_runs_repository.record_run(
+        {
+            "trained_at": provenance.get("trained_at", ""),
+            "model_version": provenance.get("model_version", ""),
+            "recipe_hash": provenance.get("recipe_hash", ""),
+            "git_commit": provenance.get("git_commit", ""),
+            "git_dirty": provenance.get("git_dirty", False),
+            "model_type": provenance.get("model_type", ""),
+            "calibration_method": provenance.get("calibration_method", ""),
+            "best_model_name": best_model_name,
+            "training_data_hash": training_data_hash,
+            "training_rows": int(len(train_df)),
+            "training_fights": int(train_df["fight_url"].nunique()),
+            "feature_count": len(feature_columns),
+        }
+    )
 
 
 def main() -> None:

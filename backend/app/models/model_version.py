@@ -82,6 +82,22 @@ def compute_recipe_hash(
     return hashlib.sha256(blob).hexdigest()[:10]
 
 
+def compute_training_data_hash(training_df, columns: list[str]) -> str:
+    """A deterministic, order-independent fingerprint of the exact training data
+    (selected columns x rows) a model was fit on. Lets us later prove which data
+    produced a given model (#17: real reproducibility)."""
+    import pandas as pd
+
+    subset = training_df[list(columns)]
+    row_hashes = pd.util.hash_pandas_object(subset, index=False)
+
+    digest = hashlib.sha256()
+    for value in sorted(int(h) for h in row_hashes.to_numpy()):
+        digest.update(int(value).to_bytes(8, "little", signed=False))
+    digest.update("|".join(str(c) for c in columns).encode("utf-8"))
+    return digest.hexdigest()[:16]
+
+
 def get_git_info() -> dict[str, Any]:
     def _run(args: list[str]) -> str:
         try:

@@ -125,6 +125,23 @@ UPCOMING_FIGHTS_COLUMNS: list[tuple[str, str]] = [
     ("weight_class", "TEXT"),
 ]
 
+# model_runs — append-only audit log of training runs (#17: real reproducibility).
+# Each row fingerprints the exact training data + the recipe/lineage it produced.
+MODEL_RUNS_COLUMNS: list[tuple[str, str]] = [
+    ("trained_at", "TEXT"),
+    ("model_version", "TEXT"),
+    ("recipe_hash", "TEXT"),
+    ("git_commit", "TEXT"),
+    ("git_dirty", "INTEGER"),
+    ("model_type", "TEXT"),
+    ("calibration_method", "TEXT"),
+    ("best_model_name", "TEXT"),
+    ("training_data_hash", "TEXT"),
+    ("training_rows", "INTEGER"),
+    ("training_fights", "INTEGER"),
+    ("feature_count", "INTEGER"),
+]
+
 
 # event_fights (completed results). fight_url is the natural key (one row per fight),
 # so it's the PRIMARY KEY — no surrogate id — which makes incremental upserts clean.
@@ -199,6 +216,7 @@ SCHEMA_STATEMENTS: list[str] = [
     create_table_sql("upcoming_events", UPCOMING_EVENTS_COLUMNS),
     create_table_sql("upcoming_fights", UPCOMING_FIGHTS_COLUMNS),
     "CREATE INDEX IF NOT EXISTS idx_upcoming_fights_event ON upcoming_fights(event_id)",
+    create_table_sql("model_runs", MODEL_RUNS_COLUMNS),
 ]
 
 

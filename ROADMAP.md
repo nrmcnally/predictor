@@ -295,11 +295,21 @@ Phasing rule: build the multi-user foundation before the redesign so the UX isn'
 - [x] #12 Label heuristic leaderboard/style scores as heuristic. #14 Rename "Why this prediction?" →
       "Matchup breakdown". #9 Letter-grade context _(already present)_. #22 Data-age banner.
 
-### Phase 1 — SQLite data layer _(foundational for multi-user/online)_
-- [ ] #16 Migrate transactional data (results, saved predictions, odds track, future cards) to
+### Phase 1 — SQLite data layer _(foundational for multi-user/online)_ ✅ _(2026-06-28)_
+_Decision (2026-06-28): go all-in on SQLite — scrapers write directly to the DB, every
+reader (app AND offline ML/pipeline) reads from the repository, no CSV interchange.
+The big ML *artifacts* (snapshots/matchups/trained models) stay as files for now; the
+feature pipeline reads results from the DB and writes those artifacts to CSV._
+- [x] #16 Migrate transactional data (results, saved predictions, odds track, future cards) to
       SQLite with atomic transactions + WAL; a repository/data-access layer replacing direct CSV
-      reads. (Big ML artifacts — snapshots/matchups/models — can stay files initially.)
-- [ ] #17 Real reproducibility: store a training-data hash/snapshot per trained model in the DB.
+      reads. Done dataset-by-dataset, each verified faithful + behind tests:
+      `fight_odds_track`, `saved_card_predictions`, `saved_model_predictions`, `event_fights`
+      (results — TDD + golden-master proof the training data is byte-identical), and future
+      cards (`upcoming_events`/`upcoming_fights`). Foundation: `app/db/` (WAL connection +
+      schema) + `app/repositories/` (typed repos, shared `SnapshotTable`).
+- [x] #17 Real reproducibility: `compute_training_data_hash` fingerprints the exact training
+      matrix; every train records a row in the `model_runs` audit table (data hash + recipe +
+      git lineage + metrics), and the hash is stamped into the model's provenance.
 
 ### Phase 2 — Accounts + API security
 - [ ] User auth (registration/login, hashed passwords, sessions or JWT); per-user data (saved
