@@ -83,6 +83,7 @@ from app.services.saved_prediction_service import (
 )
 from app.repositories import (
     event_fights_repository,
+    future_cards_repository,
     saved_model_predictions_repository,
     saved_predictions_repository,
 )
@@ -554,8 +555,8 @@ def build_summary_report(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
         "fighter_snapshots_rows": count_csv_rows(fighter_snapshots_path),
         "training_matchups_rows": count_csv_rows(training_matchups_path),
         "current_fighter_features_rows": count_csv_rows(current_features_path),
-        "upcoming_events_rows": count_csv_rows(upcoming_events_path),
-        "upcoming_fights_rows": count_csv_rows(upcoming_fights_path),
+        "upcoming_events_rows": future_cards_repository.count_upcoming_events(),
+        "upcoming_fights_rows": future_cards_repository.count_upcoming_fights(),
         "fighter_images_rows": count_csv_rows(RAW_DATA_DIR / "fighter_images.csv"),
         "saved_card_predictions_rows": saved_predictions_repository.count(),
         "saved_model_predictions_rows": saved_model_predictions_repository.count(),

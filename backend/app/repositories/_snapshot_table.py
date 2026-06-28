@@ -94,6 +94,9 @@ class SnapshotTable:
                 )
         return len(rows)
 
+    # Full overwrite (a scraper's full scrape == a one-time import).
+    replace_all = import_rows
+
     def count(self) -> int:
         with connection.transaction() as conn:
             schema.init_db(conn)

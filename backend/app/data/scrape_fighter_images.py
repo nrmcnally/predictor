@@ -12,7 +12,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-from app.repositories import saved_predictions_repository
+from app.repositories import future_cards_repository, saved_predictions_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -137,13 +137,7 @@ def load_existing_images() -> dict[str, FighterImage]:
 
 
 def load_fighters_from_upcoming() -> list[str]:
-    if not UPCOMING_FIGHTS_CSV.exists():
-        return []
-
-    try:
-        df = pd.read_csv(UPCOMING_FIGHTS_CSV)
-    except pd.errors.EmptyDataError:
-        return []
+    df = future_cards_repository.read_upcoming_fights_df()
 
     names = []
 

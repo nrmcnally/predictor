@@ -9,6 +9,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from app.data.ufcstats_fetcher import fetch_ufcstats_html
+from app.repositories import future_cards_repository
 
 
 BASE_URL = "http://ufcstats.com"
@@ -223,13 +224,9 @@ def fetch_upcoming_fights_for_event(event: UpcomingEvent) -> list[UpcomingFight]
 
 
 def save_csvs(events: list[UpcomingEvent], fights: list[UpcomingFight]) -> None:
-    RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-    events_df = pd.DataFrame([asdict(event) for event in events])
-    fights_df = pd.DataFrame([asdict(fight) for fight in fights])
-
-    events_df.to_csv(UPCOMING_EVENTS_CSV, index=False)
-    fights_df.to_csv(UPCOMING_FIGHTS_CSV, index=False)
+    # Full-replace both future-card tables in SQLite (kept the name for callers).
+    future_cards_repository.replace_upcoming_events([asdict(event) for event in events])
+    future_cards_repository.replace_upcoming_fights([asdict(fight) for fight in fights])
 
 
 def scrape_upcoming_cards() -> tuple[list[UpcomingEvent], list[UpcomingFight]]:

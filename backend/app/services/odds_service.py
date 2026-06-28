@@ -12,7 +12,7 @@ from typing import Any
 import pandas as pd
 import requests
 
-from app.repositories import odds_track_repository
+from app.repositories import future_cards_repository, odds_track_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -154,12 +154,7 @@ def fetch_current_mma_odds(api_key: str | None = None) -> list[dict[str, Any]]:
 
 
 def load_upcoming_fights() -> pd.DataFrame:
-    if not UPCOMING_FIGHTS_CSV.exists():
-        raise FileNotFoundError(
-            f"Missing {UPCOMING_FIGHTS_CSV}. Refresh future cards first."
-        )
-
-    return pd.read_csv(UPCOMING_FIGHTS_CSV)
+    return future_cards_repository.read_upcoming_fights_df()
 
 
 def find_outcome_for_fighter(

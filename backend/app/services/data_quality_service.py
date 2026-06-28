@@ -9,7 +9,11 @@ from typing import Any
 
 import pandas as pd
 
-from app.repositories import event_fights_repository, saved_predictions_repository
+from app.repositories import (
+    event_fights_repository,
+    future_cards_repository,
+    saved_predictions_repository,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -260,7 +264,7 @@ def build_data_quality_summary() -> dict[str, Any]:
     event_fights_df = event_fights_repository.read_all_df()
     future_odds_df = read_csv_or_empty(FUTURE_FIGHT_ODDS_CSV)
     saved_predictions_df = saved_predictions_repository.read_all_df()
-    upcoming_fights_df = read_csv_or_empty(UPCOMING_FIGHTS_CSV)
+    upcoming_fights_df = future_cards_repository.read_upcoming_fights_df()
 
     return {
         "available": True,

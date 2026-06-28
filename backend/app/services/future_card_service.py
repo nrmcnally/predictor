@@ -13,6 +13,7 @@ from app.services.fight_context_override_service import (
     upsert_scheduled_rounds_override,
 )
 from app.services.prediction_service import FighterNotFoundError, predict_fight_data
+from app.repositories import future_cards_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -48,18 +49,18 @@ def refresh_upcoming_cards() -> dict[str, int]:
 
 @lru_cache(maxsize=1)
 def load_upcoming_events() -> pd.DataFrame:
-    if not UPCOMING_EVENTS_CSV.exists():
+    if future_cards_repository.count_upcoming_events() == 0:
         refresh_upcoming_cards()
 
-    return pd.read_csv(UPCOMING_EVENTS_CSV)
+    return future_cards_repository.read_upcoming_events_df()
 
 
 @lru_cache(maxsize=1)
 def load_upcoming_fights() -> pd.DataFrame:
-    if not UPCOMING_FIGHTS_CSV.exists():
+    if future_cards_repository.count_upcoming_fights() == 0:
         refresh_upcoming_cards()
 
-    return pd.read_csv(UPCOMING_FIGHTS_CSV)
+    return future_cards_repository.read_upcoming_fights_df()
 
 
 def get_future_cards() -> list[dict[str, Any]]:

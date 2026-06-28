@@ -104,6 +104,28 @@ SAVED_MODEL_COLUMNS: list[tuple[str, str]] = [
 ]
 
 
+# Future cards — full-replace on every scrape, so a surrogate id is fine.
+UPCOMING_EVENTS_COLUMNS: list[tuple[str, str]] = [
+    ("event_id", "TEXT"),
+    ("event_name", "TEXT"),
+    ("event_date", "TEXT"),
+    ("event_location", "TEXT"),
+    ("event_url", "TEXT"),
+]
+
+UPCOMING_FIGHTS_COLUMNS: list[tuple[str, str]] = [
+    ("event_id", "TEXT"),
+    ("event_name", "TEXT"),
+    ("event_date", "TEXT"),
+    ("event_location", "TEXT"),
+    ("event_url", "TEXT"),
+    ("fight_url", "TEXT"),
+    ("fighter_1", "TEXT"),
+    ("fighter_2", "TEXT"),
+    ("weight_class", "TEXT"),
+]
+
+
 # event_fights (completed results). fight_url is the natural key (one row per fight),
 # so it's the PRIMARY KEY — no surrogate id — which makes incremental upserts clean.
 EVENT_FIGHTS_COLUMNS: list[tuple[str, str]] = [
@@ -174,6 +196,9 @@ SCHEMA_STATEMENTS: list[str] = [
     "CREATE INDEX IF NOT EXISTS idx_saved_model_fight_url ON saved_model_predictions(fight_url)",
     create_table_sql("event_fights", EVENT_FIGHTS_COLUMNS, primary_key="fight_url"),
     "CREATE INDEX IF NOT EXISTS idx_event_fights_event_url ON event_fights(event_url)",
+    create_table_sql("upcoming_events", UPCOMING_EVENTS_COLUMNS),
+    create_table_sql("upcoming_fights", UPCOMING_FIGHTS_COLUMNS),
+    "CREATE INDEX IF NOT EXISTS idx_upcoming_fights_event ON upcoming_fights(event_id)",
 ]
 
 
