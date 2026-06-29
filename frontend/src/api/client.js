@@ -6,6 +6,28 @@ export const API_BASE_URL =
 export const USE_MOCK =
   import.meta.env.MODE === "mock" || import.meta.env.VITE_USE_MOCK === "1";
 
+const TOKEN_KEY = "fightiq_token";
+
+export function getToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+export function setToken(token) {
+  try {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  } catch {
+    /* ignore storage errors (private mode, etc.) */
+  }
+}
+
 function extractErrorMessage(data, fallback) {
   const detail = data?.detail;
 
@@ -21,9 +43,18 @@ function extractErrorMessage(data, fallback) {
 }
 
 async function request(path, { method = "GET", body, fallbackError } = {}) {
+  const token = getToken();
+  const headers = {};
+  if (body) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -40,6 +71,42 @@ async function request(path, { method = "GET", body, fallbackError } = {}) {
   }
 
   return data;
+}
+
+export async function loginUser(username, password) {
+  if (USE_MOCK) {
+    setToken("mock-token");
+    return {
+      token: "mock-token",
+      user: { id: 0, username, role: username === "admin" ? "admin" : "user" },
+    };
+  }
+
+  return request("/auth/login", {
+    method: "POST",
+    body: { username, password },
+    fallbackError: "Login failed.",
+  });
+}
+
+export async function registerUser(username, password) {
+  if (USE_MOCK) {
+    return { user: { id: 0, username, role: "user" } };
+  }
+
+  return request("/auth/register", {
+    method: "POST",
+    body: { username, password },
+    fallbackError: "Registration failed.",
+  });
+}
+
+export async function getMe() {
+  if (USE_MOCK) {
+    return { user: { id: 0, username: "demo", role: "user" } };
+  }
+
+  return request("/auth/me", { fallbackError: "Session expired." });
 }
 
 export async function checkHealth() {

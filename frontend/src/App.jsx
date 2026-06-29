@@ -9,13 +9,14 @@ import {
 } from "./api/client.js";
 import { normalizeFighterName } from "./lib/format.js";
 import FightLab from "./views/FightLab.jsx";
-import TestLab from "./views/TestLab.jsx";
 import FighterProfile from "./views/FighterProfile.jsx";
 import FutureCards from "./views/FutureCards.jsx";
 import RecentCards from "./views/RecentCards.jsx";
 import Leaderboards from "./views/Leaderboards.jsx";
 import Evaluation from "./views/Evaluation.jsx";
 import UpdateData from "./views/UpdateData.jsx";
+import Login from "./views/Login.jsx";
+import { AuthProvider, useAuth } from "./auth/AuthProvider.jsx";
 
 const FALLBACK_WEIGHT_CLASSES = [
   "Flyweight",
@@ -56,18 +57,8 @@ const NAV_GROUPS = [
   },
 ];
 
-// Test Lab is a dev-only UX scratch view. Keep it out of production builds; a dev
-// can force it on with VITE_SHOW_TEST_LAB=1.
-const SHOW_TEST_LAB =
-  import.meta.env.DEV || import.meta.env.VITE_SHOW_TEST_LAB === "1";
-
-if (SHOW_TEST_LAB) {
-  NAV_GROUPS[0].items.splice(1, 0, { value: "test-lab", label: "Test Lab", icon: "UX" });
-}
-
 const VIEWS = {
   lab: FightLab,
-  "test-lab": TestLab,
   fighters: FighterProfile,
   future: FutureCards,
   recent: RecentCards,
@@ -77,6 +68,32 @@ const VIEWS = {
 };
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
+  );
+}
+
+function AuthGate() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="login-screen">
+        <div className="login-boot">Loading FIGHT IQ…</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  return <AppShell />;
+}
+
+function AppShell() {
   const [view, setView] = useState("lab");
   const [navOpen, setNavOpen] = useState(false);
   const [apiOnline, setApiOnline] = useState(null);
@@ -85,6 +102,7 @@ export default function App() {
   const [fightLabPrefill, setFightLabPrefill] = useState({ a: "", b: "" });
   const [profileFighter, setProfileFighter] = useState("");
   const [dataFreshness, setDataFreshness] = useState(null);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     checkHealth()
@@ -193,6 +211,21 @@ export default function App() {
                   ? "API connected"
                   : "API offline"}
             </span>
+            {user && (
+              <div className="user-chip">
+                <span className="user-name">{user.username}</span>
+                {user.role === "admin" && <span className="user-role">admin</span>}
+                <button
+                  type="button"
+                  className="user-logout"
+                  onClick={logout}
+                  title="Log out"
+                  aria-label="Log out"
+                >
+                  ⎋
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
