@@ -338,6 +338,37 @@ feature pipeline reads results from the DB and writes those artifacts to CSV._
 
 ---
 
+## 8c. Phase 6 — Account-based predictions & social
+
+_Direction (2026-06-29): turn FIGHT IQ from a model viewer into a prediction game —
+users make their own picks, build a track record, and compare against friends and
+the model. The ML model stays shared/global; predictions/stats are per-account._
+
+- [~] **Make the admin role functional** _(started 2026-06-29)_. Backend roles exist
+      but the UI ignores them. Gate admin-only surfaces (Data Ops, user management) to
+      admins; add a Users admin view over `/admin/users` (+ role promote/demote).
+- [ ] **Account profile page** — view your account (username, role, joined), your
+      prediction stats, and a place for future settings. Foundation for the social bits.
+- [ ] **Account-based card predictions** — let a logged-in user pick winners on upcoming
+      cards; store per-user picks (new `user_predictions` table); lock at event start;
+      score against actual results once events complete. Distinct from the model's own
+      predictions (which stay the shared baseline to beat).
+- [ ] **User prediction stats** — per-account accuracy, record, streaks, and "vs the
+      model" / "vs the market" deltas, using the same proper-scoring tooling as the
+      model evaluation (Brier/log-loss + calibration).
+- [ ] **Public leaderboards** — rank users by prediction performance (overall +
+      per-time-window). Opt-in public profiles.
+- [ ] **Friend vs friend comparisons** — direct head-to-head: same cards, whose picks
+      did better. Needs a lightweight friend/connection concept.
+
+_Open design decisions (resolve before building the prediction game):_
+  - Friend model: follow / mutual-accept / shareable compare links?
+  - Public vs private profiles + opt-in to leaderboards.
+  - Primary ranking metric: raw accuracy vs Brier vs beat-the-model rate.
+  - Pick window: lock at event start; how to handle prelims / late additions.
+
+---
+
 ## 9. Status log
 
 - 2026-06-26 — Roadmap created. Confirmed design decision: production model stays market-free;

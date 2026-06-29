@@ -109,6 +109,31 @@ export async function getMe() {
   return request("/auth/me", { fallbackError: "Session expired." });
 }
 
+export async function getUsers() {
+  if (USE_MOCK) {
+    return {
+      users: [
+        { id: 1, username: "admin", role: "admin", created_at: "2026-06-28" },
+        { id: 2, username: "demo", role: "user", created_at: "2026-06-28" },
+      ],
+    };
+  }
+
+  return request("/admin/users", { fallbackError: "Failed to load users." });
+}
+
+export async function setUserRole(userId, role) {
+  if (USE_MOCK) {
+    return { user_id: userId, role };
+  }
+
+  return request(`/admin/users/${userId}/role`, {
+    method: "POST",
+    body: { role },
+    fallbackError: "Failed to update role.",
+  });
+}
+
 export async function checkHealth() {
   if (USE_MOCK) {
     return { status: "ok" };

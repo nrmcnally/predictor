@@ -15,6 +15,7 @@ import RecentCards from "./views/RecentCards.jsx";
 import Leaderboards from "./views/Leaderboards.jsx";
 import Evaluation from "./views/Evaluation.jsx";
 import UpdateData from "./views/UpdateData.jsx";
+import UsersAdmin from "./views/UsersAdmin.jsx";
 import Login from "./views/Login.jsx";
 import { AuthProvider, useAuth } from "./auth/AuthProvider.jsx";
 
@@ -51,11 +52,18 @@ const NAV_GROUPS = [
       { value: "evaluation", label: "Evaluation", icon: "◫" },
     ],
   },
-  {
-    label: "System",
-    items: [{ value: "update", label: "Data Ops", icon: "⟳" }],
-  },
 ];
+
+// Admin-only nav — appended for admins, hidden from regular users.
+const ADMIN_NAV_GROUP = {
+  label: "Admin",
+  items: [
+    { value: "users", label: "Users", icon: "⚇" },
+    { value: "update", label: "Data Ops", icon: "⟳" },
+  ],
+};
+
+const ADMIN_VIEWS = new Set(["users", "update"]);
 
 const VIEWS = {
   lab: FightLab,
@@ -65,6 +73,7 @@ const VIEWS = {
   leaderboards: Leaderboards,
   evaluation: Evaluation,
   update: UpdateData,
+  users: UsersAdmin,
 };
 
 export default function App() {
@@ -173,7 +182,10 @@ function AppShell() {
     [imageLookup, weightClasses, openProfile, sendToFightLab, fightLabPrefill, profileFighter]
   );
 
-  const ActiveView = VIEWS[view] ?? FightLab;
+  const isAdmin = user?.role === "admin";
+  const navGroups = isAdmin ? [...NAV_GROUPS, ADMIN_NAV_GROUP] : NAV_GROUPS;
+  const ActiveView =
+    ADMIN_VIEWS.has(view) && !isAdmin ? FightLab : VIEWS[view] ?? FightLab;
 
   return (
     <AppContext.Provider value={contextValue}>
@@ -231,7 +243,7 @@ function AppShell() {
 
         <div className="shell-body">
           <nav className={`sidebar ${navOpen ? "open" : ""}`}>
-            {NAV_GROUPS.map((group) => (
+            {navGroups.map((group) => (
               <div className="nav-group" key={group.label}>
                 <span className="nav-group-label">{group.label}</span>
                 {group.items.map((item) => (
