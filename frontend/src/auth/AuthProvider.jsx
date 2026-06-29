@@ -10,6 +10,7 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [transition, setTransition] = useState(false);
 
   // On boot: if we have a stored token, validate it; otherwise show the login.
   useEffect(() => {
@@ -27,9 +28,12 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (username, password) => {
     const data = await loginUser(username, password);
     setToken(data.token);
+    setTransition(true); // play the knockout entry; the gate clears it when done
     setUser(data.user);
     return data.user;
   }, []);
+
+  const endTransition = useCallback(() => setTransition(false), []);
 
   const register = useCallback(
     async (username, password) => {
@@ -46,7 +50,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, transition, endTransition, login, register, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../auth/AuthProvider.jsx";
+import OctagonScene from "../three/OctagonScene.jsx";
 
 export default function Login() {
   const { login, register } = useAuth();
@@ -34,8 +35,7 @@ export default function Login() {
   return (
     <div className="login-screen">
       <div className="login-bg" aria-hidden="true">
-        <div className="login-octagon login-octagon-outer" />
-        <div className="login-octagon login-octagon-inner" />
+        <OctagonScene className="login-scene" />
         <div className="login-spot" />
       </div>
 
