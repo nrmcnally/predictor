@@ -76,7 +76,7 @@ export default function App() {
 }
 
 function AuthGate() {
-  const { user, loading, transition, endTransition } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -86,31 +86,11 @@ function AuthGate() {
     );
   }
 
-  return (
-    <>
-      <div className={transition ? "knockout-shake" : undefined}>
-        {user ? <AppShell /> : <Login />}
-      </div>
-      {transition && <KnockoutOverlay onDone={endTransition} />}
-    </>
-  );
-}
+  if (!user) {
+    return <Login />;
+  }
 
-// Plays on a successful login: an impact flash + shockwave rings (with a screen
-// shake on the wrapper above), masking the swap from the login to the app.
-function KnockoutOverlay({ onDone }) {
-  useEffect(() => {
-    const timer = setTimeout(onDone, 760);
-    return () => clearTimeout(timer);
-  }, [onDone]);
-
-  return (
-    <div className="knockout" aria-hidden="true">
-      <div className="knockout-flash" />
-      <div className="knockout-ring" />
-      <div className="knockout-ring knockout-ring--late" />
-    </div>
-  );
+  return <AppShell />;
 }
 
 function AppShell() {
