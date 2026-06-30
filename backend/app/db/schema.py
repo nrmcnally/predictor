@@ -224,13 +224,25 @@ SCHEMA_STATEMENTS: list[str] = [
         username TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'user',
+        is_public INTEGER NOT NULL DEFAULT 0,
         created_at TEXT
     )
     """,
 ]
 
 
+def _ensure_columns(conn: sqlite3.Connection, table: str, columns: dict[str, str]) -> None:
+    """Add missing columns to an existing table (lightweight forward migration)."""
+    existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    for name, declaration in columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {declaration}")
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     """Create any missing tables/indexes. Safe to call on every connection."""
     for statement in SCHEMA_STATEMENTS:
         conn.execute(statement)
+
+    # Forward-migrate older DBs that predate a column.
+    _ensure_columns(conn, "users", {"is_public": "INTEGER NOT NULL DEFAULT 0"})

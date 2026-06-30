@@ -95,6 +95,37 @@ def test_authenticate_bad_credentials(tmp_path=None):
     assert _raises_value_error(auth_service.authenticate, "ghost", "password123")
 
 
+# --- change password ----------------------------------------------------------
+
+def test_change_password(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+
+    user = auth_service.register_user("dave", "password123")
+    # Wrong current password / too-short new password are rejected.
+    assert _raises_value_error(auth_service.change_password, user["id"], "nope", "newpassword123")
+    assert _raises_value_error(auth_service.change_password, user["id"], "password123", "short")
+
+    auth_service.change_password(user["id"], "password123", "newpassword123")
+    # Old password no longer authenticates; the new one does.
+    assert _raises_value_error(auth_service.authenticate, "dave", "password123")
+    assert auth_service.authenticate("dave", "newpassword123")["user"]["username"] == "dave"
+
+
+# --- profile visibility -------------------------------------------------------
+
+def test_visibility_defaults_private_and_toggles(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+
+    user = auth_service.register_user("erin", "password123")
+    assert user["is_public"] is False  # private by default (opt-in)
+
+    auth_service.set_visibility(user["id"], True)
+    refreshed = users_repository.public_user(users_repository.get_by_id(user["id"]))
+    assert refreshed["is_public"] is True
+
+
 # --- admin seed ---------------------------------------------------------------
 
 def test_seed_admin_from_env_is_idempotent(tmp_path=None):

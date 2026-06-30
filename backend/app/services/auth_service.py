@@ -44,6 +44,25 @@ def authenticate(username: str, password: str) -> dict[str, Any]:
     return {"token": token, "user": users_repository.public_user(user)}
 
 
+def change_password(user_id: Any, current_password: str, new_password: str) -> None:
+    """Change a user's password after verifying the current one. Raises ValueError
+    on a wrong current password or an invalid new one."""
+    user = users_repository.get_by_id(user_id)
+    if user is None:
+        raise ValueError("Account not found.")
+    if not security.verify_password(current_password or "", user["password_hash"]):
+        raise ValueError("Current password is incorrect.")
+    if len(new_password or "") < MIN_PASSWORD_LENGTH:
+        raise ValueError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
+
+    users_repository.update_password(user_id, security.hash_password(new_password))
+
+
+def set_visibility(user_id: Any, is_public: bool) -> bool:
+    """Set whether the account is publicly visible (opt-in for future leaderboards)."""
+    return users_repository.set_visibility(user_id, bool(is_public))
+
+
 def ensure_seed_admin() -> dict[str, Any] | None:
     """Bootstrap the admin from ADMIN_USERNAME / ADMIN_PASSWORD env vars.
 

@@ -78,7 +78,13 @@ from app.services.clv_evaluation_service import build_clv_evaluation
 from app.services.data_quality_service import build_data_quality_summary
 
 from app.auth.dependencies import get_current_user, require_admin
-from app.services.auth_service import authenticate, ensure_seed_admin, register_user
+from app.services.auth_service import (
+    authenticate,
+    change_password,
+    ensure_seed_admin,
+    register_user,
+    set_visibility,
+)
 from app.repositories import users_repository
 
 app = FastAPI(
@@ -185,6 +191,15 @@ class RoleUpdateRequest(BaseModel):
     role: str
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=8, max_length=200)
+
+
+class VisibilityRequest(BaseModel):
+    is_public: bool
+
+
 @app.get("/")
 def root() -> dict[str, str]:
     return {
@@ -224,6 +239,27 @@ def auth_login(request: LoginRequest) -> dict[str, Any]:
 @app.get("/auth/me")
 def auth_me(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
     return {"user": current_user}
+
+
+@app.post("/auth/change-password")
+def auth_change_password(
+    request: ChangePasswordRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    try:
+        change_password(current_user["id"], request.current_password, request.new_password)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+    return {"message": "Password updated."}
+
+
+@app.post("/auth/visibility")
+def auth_set_visibility(
+    request: VisibilityRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    set_visibility(current_user["id"], request.is_public)
+    return {"is_public": request.is_public}
 
 
 @app.get("/admin/users", dependencies=[Depends(require_admin)])

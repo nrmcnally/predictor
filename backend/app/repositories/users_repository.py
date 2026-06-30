@@ -6,7 +6,7 @@ from typing import Any
 
 from app.db import connection, schema
 
-_FULL_COLUMNS = "id, username, password_hash, role, created_at"
+_FULL_COLUMNS = "id, username, password_hash, role, is_public, created_at"
 
 
 def _now() -> str:
@@ -57,6 +57,24 @@ def set_role(user_id: Any, role: str) -> bool:
         return cursor.rowcount > 0
 
 
+def update_password(user_id: Any, password_hash: str) -> bool:
+    with connection.transaction() as conn:
+        schema.init_db(conn)
+        cursor = conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id)
+        )
+        return cursor.rowcount > 0
+
+
+def set_visibility(user_id: Any, is_public: bool) -> bool:
+    with connection.transaction() as conn:
+        schema.init_db(conn)
+        cursor = conn.execute(
+            "UPDATE users SET is_public = ? WHERE id = ?", (1 if is_public else 0, user_id)
+        )
+        return cursor.rowcount > 0
+
+
 def list_users() -> list[dict[str, Any]]:
     with connection.transaction() as conn:
         schema.init_db(conn)
@@ -86,5 +104,6 @@ def public_user(user: dict[str, Any]) -> dict[str, Any]:
         "id": user["id"],
         "username": user["username"],
         "role": user["role"],
+        "is_public": bool(user.get("is_public", 0)),
         "created_at": user.get("created_at"),
     }
