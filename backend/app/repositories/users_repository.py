@@ -80,6 +80,20 @@ def set_visibility(user_id: Any, is_public: bool) -> bool:
         return cursor.rowcount > 0
 
 
+def update_profile(user_id: Any, email: str, display_name: str | None) -> bool:
+    """Update a user's email + display name. Raises ValueError on a duplicate email."""
+    with connection.transaction() as conn:
+        schema.init_db(conn)
+        try:
+            cursor = conn.execute(
+                "UPDATE users SET email = ?, display_name = ? WHERE id = ?",
+                (email, display_name, user_id),
+            )
+        except sqlite3.IntegrityError as error:
+            raise ValueError("That email is already in use.") from error
+        return cursor.rowcount > 0
+
+
 def list_users() -> list[dict[str, Any]]:
     with connection.transaction() as conn:
         schema.init_db(conn)

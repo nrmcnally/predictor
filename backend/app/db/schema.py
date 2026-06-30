@@ -194,6 +194,31 @@ EVENT_FIGHTS_COLUMNS: list[tuple[str, str]] = [
 ]
 
 
+# user_predictions — per-account winner picks on upcoming fights (Phase 6).
+# Surrogate id PK + a UNIQUE(user_id, fight_url) index = one pick per user per fight.
+# fighter_1/fighter_2 are SNAPSHOTTED at pick time so a later card change (fighter
+# swap / cancellation) is detectable at scoring, and such picks are voided not graded.
+USER_PREDICTIONS_COLUMNS: list[tuple[str, str]] = [
+    ("user_id", "INTEGER"),
+    ("fight_url", "TEXT"),
+    ("event_id", "TEXT"),
+    ("event_name", "TEXT"),
+    ("event_url", "TEXT"),
+    ("event_date", "TEXT"),
+    ("fighter_1", "TEXT"),
+    ("fighter_2", "TEXT"),
+    ("weight_class", "TEXT"),
+    ("picked_fighter", "TEXT"),
+    ("picked_method", "TEXT"),  # optional: ko_tko | submission | decision
+    ("status", "TEXT"),         # open | locked | scored | void
+    ("result_correct", "INTEGER"),
+    ("method_correct", "INTEGER"),
+    ("scored_at", "TEXT"),
+    ("created_at", "TEXT"),
+    ("updated_at", "TEXT"),
+]
+
+
 def create_table_sql(
     name: str,
     columns: list[tuple[str, str]],
@@ -261,6 +286,11 @@ SCHEMA_STATEMENTS: list[str] = [
         created_at TEXT
     )
     """,
+    create_table_sql("user_predictions", USER_PREDICTIONS_COLUMNS),
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_user_predictions_user_fight "
+    "ON user_predictions(user_id, fight_url)",
+    "CREATE INDEX IF NOT EXISTS idx_user_predictions_user ON user_predictions(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_user_predictions_event ON user_predictions(event_id)",
 ]
 
 

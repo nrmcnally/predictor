@@ -84,8 +84,15 @@ from app.services.auth_service import (
     ensure_seed_admin,
     register_user,
     set_visibility,
+    update_profile,
 )
 from app.repositories import users_repository
+from app.db import connection
+from app.services import (
+    predictions_service,
+    predictions_scoring_service,
+    predictions_stats_service,
+)
 
 app = FastAPI(
     title="UFC Fight Predictor API",
@@ -112,7 +119,14 @@ logger = logging.getLogger("ufc_predictor")
 
 @app.on_event("startup")
 def _seed_admin_on_startup() -> None:
-    # Create the bootstrap admin from ADMIN_USERNAME / ADMIN_PASSWORD when configured.
+    # In demo mode, seed the isolated sandbox DB from prod before anything reads it.
+    try:
+        connection.ensure_demo_db()
+    except Exception:
+        logger.exception("Demo DB seed failed")
+    if connection.is_demo():
+        logger.warning("FIGHT IQ running in DEMO mode (sandbox DB: %s)", connection.get_db_path())
+    # Create the bootstrap admin from ADMIN_EMAIL / ADMIN_PASSWORD when configured.
     try:
         ensure_seed_admin()
     except Exception:
@@ -201,6 +215,17 @@ class VisibilityRequest(BaseModel):
     is_public: bool
 
 
+class ProfileUpdateRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=200)
+    display_name: str | None = Field(default=None, max_length=60)
+
+
+class PredictionRequest(BaseModel):
+    fight_url: str = Field(min_length=1, max_length=500)
+    picked_fighter: str = Field(min_length=1, max_length=200)
+    picked_method: str | None = Field(default=None, max_length=20)
+
+
 @app.get("/")
 def root() -> dict[str, str]:
     return {
@@ -209,9 +234,10 @@ def root() -> dict[str, str]:
 
 
 @app.get("/health")
-def health_check() -> dict[str, str]:
+def health_check() -> dict[str, Any]:
     return {
         "status": "ok",
+        "mode": "demo" if connection.is_demo() else "prod",
     }
 
 
@@ -261,6 +287,73 @@ def auth_set_visibility(
 ) -> dict[str, Any]:
     set_visibility(current_user["id"], request.is_public)
     return {"is_public": request.is_public}
+
+
+@app.post("/auth/profile")
+def auth_update_profile(
+    request: ProfileUpdateRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    try:
+        user = update_profile(current_user["id"], request.email, request.display_name)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+    return {"user": user}
+
+
+# --- user predictions (account-based picks on upcoming fights) ----------------
+
+@app.post("/predictions")
+def create_prediction(
+    request: PredictionRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    try:
+        prediction = predictions_service.make_prediction(
+            current_user["id"],
+            request.fight_url,
+            request.picked_fighter,
+            request.picked_method,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+    return {"prediction": prediction}
+
+
+@app.get("/predictions")
+def list_predictions(
+    event_id: str | None = None,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    return {
+        "predictions": predictions_service.list_predictions(current_user["id"], event_id)
+    }
+
+
+@app.delete("/predictions")
+def delete_prediction(
+    fight_url: str,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    try:
+        removed = predictions_service.remove_prediction(current_user["id"], fight_url)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+    return {"removed": removed}
+
+
+@app.get("/predictions/stats")
+def my_prediction_stats(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    """The signed-in user's prediction record (accuracy primary) for the profile page."""
+    return {"stats": predictions_stats_service.build_user_stats(current_user["id"])}
+
+
+@app.post("/predictions/score", dependencies=[Depends(require_admin)])
+def score_predictions() -> dict[str, Any]:
+    """Grade all pending account picks against completed results (admin/batch)."""
+    return predictions_scoring_service.score_all_pending()
 
 
 @app.get("/admin/users", dependencies=[Depends(require_admin)])

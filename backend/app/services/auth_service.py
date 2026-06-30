@@ -74,6 +74,22 @@ def set_visibility(user_id: Any, is_public: bool) -> bool:
     return users_repository.set_visibility(user_id, bool(is_public))
 
 
+def update_profile(user_id: Any, email: str, display_name: str | None) -> dict[str, Any]:
+    """Update the account's email + display name. Raises ValueError on invalid or
+    already-used email."""
+    email = _clean_email(email)
+    if not is_valid_email(email):
+        raise ValueError("Enter a valid email address.")
+
+    existing = users_repository.get_by_email(email)
+    if existing is not None and existing["id"] != user_id:
+        raise ValueError("That email is already in use.")
+
+    display = (display_name or "").strip() or email.split("@")[0]
+    users_repository.update_profile(user_id, email, display)
+    return users_repository.public_user(users_repository.get_by_id(user_id))
+
+
 def ensure_seed_admin() -> dict[str, Any] | None:
     """Bootstrap the admin from ADMIN_EMAIL / ADMIN_PASSWORD env vars."""
     email = _clean_email(os.environ.get("ADMIN_EMAIL", ""))

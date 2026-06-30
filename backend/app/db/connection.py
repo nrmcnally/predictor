@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import shutil
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -7,10 +9,41 @@ from typing import Iterator
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data"
-DEFAULT_DB_PATH = DATA_DIR / "app.db"
+PROD_DB_PATH = DATA_DIR / "app.db"
+DEMO_DB_PATH = DATA_DIR / "app.demo.db"
+
+_TRUTHY = {"1", "true", "yes", "on"}
+
+
+def _demo_requested() -> bool:
+    return os.environ.get("FIGHTIQ_DEMO", "").strip().lower() in _TRUTHY
+
+
+def _resolve_default_db() -> Path:
+    """Prod by default; FIGHTIQ_DEMO=1 -> an isolated sandbox DB; FIGHTIQ_DB_PATH wins."""
+    override = os.environ.get("FIGHTIQ_DB_PATH", "").strip()
+    if override:
+        return Path(override)
+    return DEMO_DB_PATH if _demo_requested() else PROD_DB_PATH
+
+
+DEFAULT_DB_PATH = _resolve_default_db()
 
 # Module-level so tests can point the whole data layer at a temp DB via set_db_path().
 _db_path: Path = DEFAULT_DB_PATH
+
+
+def is_demo() -> bool:
+    """True when the live DB is the isolated demo sandbox (FIGHTIQ_DEMO)."""
+    return _db_path == DEMO_DB_PATH
+
+
+def ensure_demo_db() -> None:
+    """Seed the demo sandbox from prod on first run so it has the real fight/model data
+    while keeping accounts + picks isolated from production. No-op outside demo mode."""
+    if _db_path == DEMO_DB_PATH and not DEMO_DB_PATH.exists() and PROD_DB_PATH.exists():
+        DEMO_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(PROD_DB_PATH, DEMO_DB_PATH)
 
 
 def get_db_path() -> Path:

@@ -131,6 +131,28 @@ def test_visibility_defaults_private_and_toggles(tmp_path=None):
     assert refreshed["is_public"] is True
 
 
+# --- update profile -----------------------------------------------------------
+
+def test_update_profile(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+
+    a = auth_service.register_user("frank@example.com", "password123", "Frank")
+    auth_service.register_user("grace@example.com", "password123")
+
+    updated = auth_service.update_profile(a["id"], "frank2@example.com", "Frankie")
+    assert updated["email"] == "frank2@example.com"
+    assert updated["display_name"] == "Frankie"
+
+    # Can't take another account's email; invalid email rejected.
+    assert _raises_value_error(auth_service.update_profile, a["id"], "grace@example.com", "x")
+    assert _raises_value_error(auth_service.update_profile, a["id"], "not-an-email", "x")
+
+    # Keeping your own email (just changing the display name) is fine.
+    same = auth_service.update_profile(a["id"], "frank2@example.com", "Frank III")
+    assert same["display_name"] == "Frank III"
+
+
 # --- admin seed ---------------------------------------------------------------
 
 def test_seed_admin_from_env_is_idempotent(tmp_path=None):
