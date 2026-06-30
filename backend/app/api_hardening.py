@@ -85,4 +85,10 @@ def cors_origins() -> list[str]:
     raw = os.environ.get("CORS_ORIGINS", "").strip()
     if raw:
         return [origin.strip() for origin in raw.split(",") if origin.strip()]
-    return ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # Local Vite dev origins. Vite bumps the port (5173 -> 5174 -> ...) when one is
+    # taken, so allow a small range on both hosts to avoid "failed to fetch".
+    return [
+        f"http://{host}:{port}"
+        for host in ("localhost", "127.0.0.1")
+        for port in (5173, 5174, 5175)
+    ]
