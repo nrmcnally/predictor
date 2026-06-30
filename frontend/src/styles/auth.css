@@ -310,3 +310,185 @@
   height: 100%;
   opacity: 0.85;
 }
+
+/* ---- topbar name as a button (opens the profile view) ---- */
+
+button.user-name {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+button.user-name:hover,
+button.user-name.active {
+  color: var(--accent-gold);
+}
+
+/* ---- account profile view ---- */
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 6px 0 26px;
+}
+
+.profile-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 196, 81, 0.35);
+  background:
+    radial-gradient(120% 120% at 30% 20%, var(--gold-soft), transparent 70%),
+    var(--surface2);
+  color: var(--accent-gold);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 850;
+  letter-spacing: 0.5px;
+}
+
+.profile-identity-body {
+  min-width: 0;
+}
+
+/* override the fighter-hero .profile-name for the account header */
+.profile-identity .profile-name {
+  font-size: 24px;
+  font-style: normal;
+  text-transform: none;
+  margin: 0;
+}
+
+.profile-email {
+  color: var(--dim);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.profile-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 460px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-field span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.profile-field input {
+  appearance: none;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+}
+
+.profile-field input:focus {
+  border-color: var(--red);
+}
+
+.profile-form .btn-primary {
+  align-self: flex-start;
+}
+
+.form-ok {
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.profile-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.profile-toggle-label {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ---- toggle switch ---- */
+
+.switch {
+  flex: none;
+  position: relative;
+  width: 52px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.switch.on {
+  background: var(--green-soft);
+  border-color: rgba(47, 213, 139, 0.5);
+}
+
+.switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.switch-knob {
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--dim);
+  transform: translate(0, -50%);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.switch.on .switch-knob {
+  background: var(--green);
+  transform: translate(24px, -50%);
+}
+
+.profile-logout {
+  margin-top: 26px;
+}
+
+.profile-stat-note {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+}

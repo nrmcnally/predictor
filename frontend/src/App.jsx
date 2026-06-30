@@ -17,6 +17,8 @@ import Evaluation from "./views/Evaluation.jsx";
 import UpdateData from "./views/UpdateData.jsx";
 import UsersAdmin from "./views/UsersAdmin.jsx";
 import Login from "./views/Login.jsx";
+import Profile from "./views/Profile.jsx";
+import MyPicks from "./views/MyPicks.jsx";
 import { AuthProvider, useAuth } from "./auth/AuthProvider.jsx";
 
 const FALLBACK_WEIGHT_CLASSES = [
@@ -41,6 +43,7 @@ const NAV_GROUPS = [
   {
     label: "Events",
     items: [
+      { value: "picks", label: "My Picks", icon: "✓" },
       { value: "future", label: "Future Cards", icon: "▸" },
       { value: "recent", label: "Recent Cards", icon: "↺" },
     ],
@@ -68,12 +71,14 @@ const ADMIN_VIEWS = new Set(["users", "update"]);
 const VIEWS = {
   lab: FightLab,
   fighters: FighterProfile,
+  picks: MyPicks,
   future: FutureCards,
   recent: RecentCards,
   leaderboards: Leaderboards,
   evaluation: Evaluation,
   update: UpdateData,
   users: UsersAdmin,
+  profile: Profile,
 };
 
 export default function App() {
@@ -106,6 +111,7 @@ function AppShell() {
   const [view, setView] = useState("lab");
   const [navOpen, setNavOpen] = useState(false);
   const [apiOnline, setApiOnline] = useState(null);
+  const [apiMode, setApiMode] = useState(null);
   const [weightClasses, setWeightClasses] = useState(FALLBACK_WEIGHT_CLASSES);
   const [imageLookup, setImageLookup] = useState({});
   const [fightLabPrefill, setFightLabPrefill] = useState({ a: "", b: "" });
@@ -115,7 +121,10 @@ function AppShell() {
 
   useEffect(() => {
     checkHealth()
-      .then(() => setApiOnline(true))
+      .then((data) => {
+        setApiOnline(true);
+        setApiMode(data?.mode ?? null);
+      })
       .catch(() => setApiOnline(false));
 
     getWeightClasses()
@@ -211,6 +220,7 @@ function AppShell() {
 
           <div className="topbar-right">
             {USE_MOCK && <span className="mode-pill mock">Demo data</span>}
+            {apiMode === "demo" && <span className="mode-pill mock">Sandbox DB</span>}
             <span
               className={`mode-pill ${
                 apiOnline === null ? "pending" : apiOnline ? "online" : "offline"
@@ -225,7 +235,17 @@ function AppShell() {
             </span>
             {user && (
               <div className="user-chip">
-                <span className="user-name">{user.display_name || user.email}</span>
+                <button
+                  type="button"
+                  className={`user-name ${view === "profile" ? "active" : ""}`}
+                  onClick={() => {
+                    setView("profile");
+                    setNavOpen(false);
+                  }}
+                  title="Your profile"
+                >
+                  {user.display_name || user.email}
+                </button>
                 {user.role === "admin" && <span className="user-role">admin</span>}
                 <button
                   type="button"

@@ -108,10 +108,46 @@ export async function registerUser(email, password, displayName) {
 
 export async function getMe() {
   if (USE_MOCK) {
-    return { user: { id: 0, username: "demo", role: "user" } };
+    return { user: { id: 0, email: "demo@fightiq.local", display_name: "demo", role: "user" } };
   }
 
   return request("/auth/me", { fallbackError: "Session expired." });
+}
+
+export async function updateProfile(email, displayName) {
+  if (USE_MOCK) {
+    return { user: { id: 0, email, display_name: displayName, role: "user" } };
+  }
+
+  return request("/auth/profile", {
+    method: "POST",
+    body: { email, display_name: displayName },
+    fallbackError: "Failed to update profile.",
+  });
+}
+
+export async function changePassword(currentPassword, newPassword) {
+  if (USE_MOCK) {
+    return { message: "Password updated." };
+  }
+
+  return request("/auth/change-password", {
+    method: "POST",
+    body: { current_password: currentPassword, new_password: newPassword },
+    fallbackError: "Failed to change password.",
+  });
+}
+
+export async function setVisibility(isPublic) {
+  if (USE_MOCK) {
+    return { is_public: isPublic };
+  }
+
+  return request("/auth/visibility", {
+    method: "POST",
+    body: { is_public: isPublic },
+    fallbackError: "Failed to update visibility.",
+  });
 }
 
 export async function getUsers() {
@@ -240,6 +276,71 @@ export async function getFutureCardPredictions(eventId) {
   return request(`/future-cards/${eventId}/predictions`, {
     fallbackError: "Failed to load card predictions.",
   });
+}
+
+// Model-free card detail (just the fights) — the source for the picks tab, so the
+// engine's prediction never shows here.
+export async function getFutureCardDetail(eventId) {
+  if (USE_MOCK) {
+    return mock.getFutureCardDetail(eventId);
+  }
+
+  return request(`/future-cards/${encodeURIComponent(eventId)}`, {
+    fallbackError: "Failed to load card.",
+  });
+}
+
+// --- account picks (Phase 6) ---
+
+export async function getMyPredictions(eventId) {
+  if (USE_MOCK) {
+    return mock.listPredictions(eventId);
+  }
+
+  const query = eventId ? `?event_id=${encodeURIComponent(eventId)}` : "";
+  const data = await request(`/predictions${query}`, {
+    fallbackError: "Failed to load your picks.",
+  });
+  return data.predictions ?? [];
+}
+
+export async function savePrediction(fightUrl, pickedFighter, pickedMethod = null) {
+  if (USE_MOCK) {
+    return mock.savePrediction(fightUrl, pickedFighter, pickedMethod);
+  }
+
+  const data = await request("/predictions", {
+    method: "POST",
+    body: {
+      fight_url: fightUrl,
+      picked_fighter: pickedFighter,
+      picked_method: pickedMethod,
+    },
+    fallbackError: "Failed to save your pick.",
+  });
+  return data.prediction;
+}
+
+export async function deletePrediction(fightUrl) {
+  if (USE_MOCK) {
+    return mock.deletePrediction(fightUrl);
+  }
+
+  return request(`/predictions?fight_url=${encodeURIComponent(fightUrl)}`, {
+    method: "DELETE",
+    fallbackError: "Failed to remove your pick.",
+  });
+}
+
+export async function getMyStats() {
+  if (USE_MOCK) {
+    return mock.getMyStats();
+  }
+
+  const data = await request("/predictions/stats", {
+    fallbackError: "Failed to load your stats.",
+  });
+  return data.stats;
 }
 
 export async function updateFutureFightScheduledRounds(eventId, fightId, scheduledRounds) {

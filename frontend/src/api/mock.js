@@ -528,6 +528,133 @@ export async function getFutureCardPredictions(eventId) {
   return delay({ ...card, fights }, 350);
 }
 
+// Model-free card detail for the picks tab (no predictions).
+export function getFutureCardDetail(eventId) {
+  const card = FUTURE_CARDS.find((row) => row.event_id === eventId);
+
+  if (!card) {
+    throw new Error("Unknown future card.");
+  }
+
+  const fights = card.fights.map(([fighter_1, fighter_2, weight_class], index) => ({
+    fight_id: `${card.event_id}-fight-${index}`,
+    fight_url: `mock://future/${card.event_id}/${index}`,
+    fighter_1,
+    fighter_2,
+    weight_class,
+  }));
+
+  return delay(
+    {
+      event_id: card.event_id,
+      event_name: card.event_name,
+      event_date: card.event_date,
+      event_location: card.event_location,
+      fights,
+    },
+    200
+  );
+}
+
+// --- account picks (Phase 6) — in-memory so the picks tab works under mock ---
+
+const MOCK_PICKS = new Map(); // fight_url -> pick
+
+function mockLocked(eventDate) {
+  const eventDay = new Date(eventDate);
+  if (Number.isNaN(eventDay.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  eventDay.setHours(0, 0, 0, 0);
+  return today >= eventDay;
+}
+
+function mockFindFight(fightUrl) {
+  for (const card of FUTURE_CARDS) {
+    const index = card.fights.findIndex(
+      (_, i) => `mock://future/${card.event_id}/${i}` === fightUrl
+    );
+    if (index >= 0) {
+      const [fighter_1, fighter_2, weight_class] = card.fights[index];
+      return { card, fighter_1, fighter_2, weight_class };
+    }
+  }
+  return null;
+}
+
+export function listPredictions(eventId) {
+  const picks = [...MOCK_PICKS.values()].filter(
+    (pick) => !eventId || pick.event_id === eventId
+  );
+  return delay(picks, 120);
+}
+
+export function savePrediction(fightUrl, pickedFighter, pickedMethod = null) {
+  const found = mockFindFight(fightUrl);
+  if (!found) {
+    throw new Error("That fight isn't on an upcoming card.");
+  }
+  const { card, fighter_1, fighter_2, weight_class } = found;
+  if (![fighter_1, fighter_2].includes(pickedFighter)) {
+    throw new Error("Pick one of the two fighters in this bout.");
+  }
+  if (mockLocked(card.event_date)) {
+    throw new Error("Picks for this event are locked.");
+  }
+
+  const pick = {
+    fight_url: fightUrl,
+    event_id: card.event_id,
+    event_name: card.event_name,
+    event_date: card.event_date,
+    fighter_1,
+    fighter_2,
+    weight_class,
+    picked_fighter: pickedFighter,
+    picked_method: pickedMethod || null,
+    status: "open",
+    result_correct: null,
+    method_correct: null,
+    locked: false,
+  };
+  MOCK_PICKS.set(fightUrl, pick);
+  return delay(pick, 120);
+}
+
+export function deletePrediction(fightUrl) {
+  const existing = MOCK_PICKS.get(fightUrl);
+  if (existing && mockLocked(existing.event_date)) {
+    throw new Error("Picks for this event are locked.");
+  }
+  const removed = MOCK_PICKS.delete(fightUrl);
+  return delay({ removed }, 100);
+}
+
+// Demo stats so the profile tiles look alive under mock (no real scoring in mock).
+export function getMyStats() {
+  return delay(
+    {
+      rating: 1063,
+      record: { wins: 7, losses: 4 },
+      graded: 11,
+      accuracy: 7 / 11,
+      streak: { type: "W", count: 2 },
+      method: { picks: 5, hits: 3, accuracy: 3 / 5 },
+      vs_model: {
+        overlap: 11,
+        user_accuracy: 7 / 11,
+        model_accuracy: 6 / 11,
+        delta: 1 / 11,
+        user_beats: 3,
+        model_beats: 2,
+      },
+      pending: 1,
+      voided: 0,
+    },
+    150
+  );
+}
+
 export async function updateFutureFightScheduledRounds(eventId, fightId, scheduledRounds) {
   const card = FUTURE_CARDS.find((row) => row.event_id === eventId);
 
