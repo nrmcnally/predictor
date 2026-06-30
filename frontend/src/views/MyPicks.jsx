@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { AppContext } from "../AppContext.js";
+import { normalizeFighterName } from "../lib/format.js";
 import {
   getFutureCards,
-  getFutureCardDetail,
+  getFutureCardPredictions,
+  getFutureFightOdds,
   getMyPredictions,
   savePrediction,
   deletePrediction,
 } from "../api/client.js";
 import { EmptyState, ErrorNote, SectionCard, Spinner, Tag } from "../components/ui.jsx";
+import { FighterAvatar } from "../components/FighterDisplay.jsx";
 
 const METHODS = [
   { value: "ko_tko", label: "KO/TKO" },
@@ -23,10 +27,48 @@ function isLocked(eventDate) {
   return today >= eventDay;
 }
 
+function pct(value) {
+  const n = Number(value);
+  return value === null || value === undefined || !Number.isFinite(n)
+    ? "—"
+    : `${Math.round(n * 100)}%`;
+}
+
+function fightKey(url) {
+  return String(url || "").replace(/\/+$/, "").split("/").pop();
+}
+
+function findOdds(oddsRows, fightUrl) {
+  if (!oddsRows?.length) return null;
+  const exact = oddsRows.find((row) => row.fight_url === fightUrl);
+  if (exact) return exact;
+  const key = fightKey(fightUrl);
+  return oddsRows.find((row) => fightKey(row.fight_url) === key) || null;
+}
+
+function modelProb(prediction, name) {
+  if (!prediction) return null;
+  const n = normalizeFighterName(name);
+  if (normalizeFighterName(prediction.fighter_a) === n) return prediction.fighter_a_probability;
+  if (normalizeFighterName(prediction.fighter_b) === n) return prediction.fighter_b_probability;
+  return null;
+}
+
+function marketProb(odds, name) {
+  if (!odds?.odds_available) return null;
+  const n = normalizeFighterName(name);
+  if (normalizeFighterName(odds.fighter_1) === n) return odds.fighter_1_market_probability;
+  if (normalizeFighterName(odds.fighter_2) === n) return odds.fighter_2_market_probability;
+  return null;
+}
+
 export default function MyPicks() {
+  const { imageLookup } = useContext(AppContext);
+
   const [cards, setCards] = useState([]);
   const [selectedId, setSelectedId] = useState("");
   const [detail, setDetail] = useState(null);
+  const [oddsRows, setOddsRows] = useState([]);
   const [picks, setPicks] = useState({}); // fight_url -> pick
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -54,10 +96,15 @@ export default function MyPicks() {
     let active = true;
     setDetailLoading(true);
     setError("");
-    Promise.all([getFutureCardDetail(selectedId), getMyPredictions(selectedId)])
-      .then(([card, myPicks]) => {
+    Promise.all([
+      getFutureCardPredictions(selectedId),
+      getFutureFightOdds().catch(() => []),
+      getMyPredictions(selectedId),
+    ])
+      .then(([card, odds, myPicks]) => {
         if (!active) return;
         setDetail(card);
+        setOddsRows(Array.isArray(odds) ? odds : odds?.fights ?? []);
         const byUrl = {};
         for (const pick of myPicks) byUrl[pick.fight_url] = pick;
         setPicks(byUrl);
@@ -173,6 +220,7 @@ export default function MyPicks() {
                   {detail.fights.map((fight) => {
                     const pick = picks[fight.fight_url];
                     const busy = busyFight === fight.fight_url;
+                    const odds = findOdds(oddsRows, fight.fight_url);
                     const stale =
                       pick &&
                       pick.picked_fighter !== fight.fighter_1 &&
@@ -181,10 +229,15 @@ export default function MyPicks() {
                       <div className="pick-fight" key={fight.fight_url}>
                         <div className="pick-fight-meta">
                           <span className="muted">{fight.weight_class}</span>
+                          {fight.prediction?.predicted_winner && (
+                            <span className="muted">
+                              engine favors {fight.prediction.predicted_winner}
+                            </span>
+                          )}
                           {stale && <Tag tone="warn">Card changed — re-pick</Tag>}
                         </div>
                         <div className="pick-options">
-                          {[fight.fighter_1, fight.fighter_2].map((fighter) => {
+                          {[fight.fighter_1, fight.fighter_2].map((fighter, index) => {
                             const active = pick?.picked_fighter === fighter;
                             return (
                               <button
@@ -194,7 +247,19 @@ export default function MyPicks() {
                                 onClick={() => onPickFighter(fight, fighter)}
                                 disabled={locked || busy}
                               >
-                                {fighter}
+                                <span className="pick-option-head">
+                                  <FighterAvatar
+                                    name={fighter}
+                                    imageLookup={imageLookup}
+                                    size="sm"
+                                    corner={index === 0 ? "red" : "blue"}
+                                  />
+                                  <span className="pick-option-name">{fighter}</span>
+                                </span>
+                                <span className="pick-option-odds">
+                                  <span>Model {pct(modelProb(fight.prediction, fighter))}</span>
+                                  <span className="muted">Mkt {pct(marketProb(odds, fighter))}</span>
+                                </span>
                               </button>
                             );
                           })}

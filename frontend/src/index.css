@@ -3940,18 +3940,40 @@ p {
 }
 
 .pick-option {
-  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  text-align: left;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line-strong);
   background: var(--surface);
   color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
+}
+
+.pick-option-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pick-option-name {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
+  line-height: 1.05;
+}
+
+.pick-option-odds {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
 }
 .pick-option:hover:not(:disabled) {
   border-color: var(--red);
@@ -3959,8 +3981,10 @@ p {
 .pick-option.active {
   background: var(--red-soft);
   border-color: var(--red);
-  color: #ff8aa0;
   box-shadow: inset 0 0 0 1px rgba(255, 51, 85, 0.4);
+}
+.pick-option.active .pick-option-name {
+  color: #ff8aa0;
 }
 .pick-option:disabled {
   opacity: 0.5;
