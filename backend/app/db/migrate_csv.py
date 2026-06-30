@@ -17,6 +17,7 @@ from app.db import connection
 from app.repositories import (
     event_fights_repository,
     future_cards_repository,
+    future_fight_odds_repository,
     odds_track_repository,
     saved_model_predictions_repository,
     saved_predictions_repository,
@@ -31,6 +32,7 @@ SAVED_MODEL_PREDICTIONS_CSV = PROCESSED_DATA_DIR / "saved_model_predictions.csv"
 EVENT_FIGHTS_CSV = RAW_DATA_DIR / "event_fights.csv"
 UPCOMING_EVENTS_CSV = RAW_DATA_DIR / "upcoming_events.csv"
 UPCOMING_FIGHTS_CSV = RAW_DATA_DIR / "upcoming_fights.csv"
+FUTURE_FIGHT_ODDS_CSV = PROCESSED_DATA_DIR / "future_fight_odds.csv"
 
 
 def _import_csv(path, importer):
@@ -89,17 +91,22 @@ def migrate_future_cards() -> tuple[int, int]:
     return events, fights
 
 
+def migrate_future_fight_odds() -> int:
+    return _import_csv(FUTURE_FIGHT_ODDS_CSV, future_fight_odds_repository.replace_all)
+
+
 def main() -> None:
     track = migrate_fight_odds_track()
     saved = migrate_saved_card_predictions()
     saved_model = migrate_saved_model_predictions()
     results = migrate_event_fights()
     up_events, up_fights = migrate_future_cards()
+    future_odds = migrate_future_fight_odds()
     print(
         f"Imported {track} fight_odds_track, {saved} saved_card_predictions, "
         f"{saved_model} saved_model_predictions, {results} event_fights, "
-        f"{up_events} upcoming_events, {up_fights} upcoming_fights row(s) "
-        f"into {connection.get_db_path()}"
+        f"{up_events} upcoming_events, {up_fights} upcoming_fights, "
+        f"{future_odds} future_fight_odds row(s) into {connection.get_db_path()}"
     )
 
 

@@ -20,6 +20,7 @@ from app.services.prediction_service import (
 )
 from app.models.model_version import load_current_provenance
 from app.repositories import (
+    future_fight_odds_repository,
     saved_model_predictions_repository,
     saved_predictions_repository,
 )
@@ -476,13 +477,7 @@ def get_saved_card_predictions() -> dict[str, Any]:
     }
 
 def load_future_odds_lookup() -> dict[str, dict[str, Any]]:
-    if not FUTURE_FIGHT_ODDS_CSV.exists():
-        return {}
-
-    try:
-        odds_df = pd.read_csv(FUTURE_FIGHT_ODDS_CSV)
-    except Exception:
-        return {}
+    odds_df = future_fight_odds_repository.read_all_df()
 
     if odds_df.empty or "fight_url" not in odds_df.columns:
         return {}

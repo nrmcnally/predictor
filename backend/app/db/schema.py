@@ -142,6 +142,36 @@ MODEL_RUNS_COLUMNS: list[tuple[str, str]] = [
     ("feature_count", "INTEGER"),
 ]
 
+# future_fight_odds — current market odds per upcoming fight; full-replaced on each
+# odds refresh. (The 2 trailing flag columns postdate some older CSVs -> NULL on import.)
+FUTURE_FIGHT_ODDS_COLUMNS: list[tuple[str, str]] = [
+    ("event_name", "TEXT"),
+    ("event_date", "TEXT"),
+    ("event_url", "TEXT"),
+    ("fight_url", "TEXT"),
+    ("fighter_1", "TEXT"),
+    ("fighter_2", "TEXT"),
+    ("weight_class", "TEXT"),
+    ("odds_available", "INTEGER"),
+    ("odds_event_id", "TEXT"),
+    ("odds_commence_time", "TEXT"),
+    ("odds_match_score", "REAL"),
+    ("odds_match_min_score", "REAL"),
+    ("odds_match_low_confidence", "INTEGER"),
+    ("odds_bookmaker", "TEXT"),
+    ("odds_last_update", "TEXT"),
+    ("bookmakers_matched", "INTEGER"),
+    ("fighter_1_odds_american", "REAL"),
+    ("fighter_2_odds_american", "REAL"),
+    ("fighter_1_market_probability", "REAL"),
+    ("fighter_2_market_probability", "REAL"),
+    ("fighter_1_market_percentage", "TEXT"),
+    ("fighter_2_market_percentage", "TEXT"),
+    ("market_favorite", "TEXT"),
+    ("market_favorite_probability", "REAL"),
+    ("market_favorite_percentage", "TEXT"),
+]
+
 
 # event_fights (completed results). fight_url is the natural key (one row per fight),
 # so it's the PRIMARY KEY — no surrogate id — which makes incremental upserts clean.
@@ -217,6 +247,8 @@ SCHEMA_STATEMENTS: list[str] = [
     create_table_sql("upcoming_fights", UPCOMING_FIGHTS_COLUMNS),
     "CREATE INDEX IF NOT EXISTS idx_upcoming_fights_event ON upcoming_fights(event_id)",
     create_table_sql("model_runs", MODEL_RUNS_COLUMNS),
+    create_table_sql("future_fight_odds", FUTURE_FIGHT_ODDS_COLUMNS),
+    "CREATE INDEX IF NOT EXISTS idx_future_fight_odds_fight_url ON future_fight_odds(fight_url)",
     # users: accounts + roles (Phase 2). username is the unique login identifier.
     """
     CREATE TABLE IF NOT EXISTS users (

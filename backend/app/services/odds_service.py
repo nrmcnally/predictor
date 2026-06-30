@@ -12,7 +12,11 @@ from typing import Any
 import pandas as pd
 import requests
 
-from app.repositories import future_cards_repository, odds_track_repository
+from app.repositories import (
+    future_cards_repository,
+    future_fight_odds_repository,
+    odds_track_repository,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -420,8 +424,7 @@ def refresh_future_fight_odds(api_key: str | None = None) -> dict[str, Any]:
 
     odds_df = pd.DataFrame(rows)
 
-    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    odds_df.to_csv(FUTURE_FIGHT_ODDS_CSV, index=False)
+    future_fight_odds_repository.replace_all(odds_df.to_dict(orient="records"))
 
     # Capture the opening/closing line track for CLV.
     track_result = update_fight_odds_track()
@@ -429,7 +432,7 @@ def refresh_future_fight_odds(api_key: str | None = None) -> dict[str, Any]:
     odds_available_count = int(odds_df["odds_available"].sum()) if not odds_df.empty else 0
 
     return {
-        "output_file": str(FUTURE_FIGHT_ODDS_CSV),
+        "storage": "sqlite:future_fight_odds",
         "odds_track_fights": track_result.get("tracked_fights", 0),
         "raw_odds_file": str(CURRENT_MMA_ODDS_JSON),
         "upcoming_fights": int(len(upcoming_fights_df)),
@@ -466,10 +469,10 @@ def update_fight_odds_track() -> dict[str, Any]:
     rewrite needed. Run on every odds refresh so the closing line is captured as near
     to fight time as the pipeline runs. Each fight is upserted atomically (SQLite).
     """
-    if not FUTURE_FIGHT_ODDS_CSV.exists():
+    current = future_fight_odds_repository.read_all_df()
+    if current.empty:
         return {"tracked_fights": 0, "updated_this_run": 0, "storage": "sqlite"}
 
-    current = pd.read_csv(FUTURE_FIGHT_ODDS_CSV)
     if "fighter_1_market_probability" in current.columns:
         current = current[current["fighter_1_market_probability"].notna()].copy()
 
@@ -496,14 +499,21 @@ def update_fight_odds_track() -> dict[str, Any]:
 
 
 def load_future_fight_odds() -> dict[str, Any]:
-    if not FUTURE_FIGHT_ODDS_CSV.exists():
+    odds_df = future_fight_odds_repository.read_all_df()
+
+    if odds_df.empty:
         return {
             "available": False,
             "message": "Future fight odds have not been refreshed yet.",
             "odds": [],
         }
 
-    odds_df = pd.read_csv(FUTURE_FIGHT_ODDS_CSV)
+    # Booleans are stored as 0/1 in SQLite; restore them so the API shape is unchanged.
+    for column in ("odds_available", "odds_match_low_confidence"):
+        if column in odds_df.columns:
+            odds_df[column] = odds_df[column].apply(
+                lambda value: bool(value) if value not in (None, "") else False
+            )
 
     return {
         "available": True,

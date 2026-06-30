@@ -12,6 +12,7 @@ import pandas as pd
 from app.repositories import (
     event_fights_repository,
     future_cards_repository,
+    future_fight_odds_repository,
     saved_predictions_repository,
 )
 
@@ -262,7 +263,7 @@ def summarize_data_freshness(event_fights_df: pd.DataFrame) -> dict[str, Any]:
 def build_data_quality_summary() -> dict[str, Any]:
     current_fighters_df = read_csv_or_empty(CURRENT_FIGHTER_FEATURES_CSV)
     event_fights_df = event_fights_repository.read_all_df()
-    future_odds_df = read_csv_or_empty(FUTURE_FIGHT_ODDS_CSV)
+    future_odds_df = future_fight_odds_repository.read_all_df()
     saved_predictions_df = saved_predictions_repository.read_all_df()
     upcoming_fights_df = future_cards_repository.read_upcoming_fights_df()
 
