@@ -225,7 +225,7 @@ function AppShell() {
             </span>
             {user && (
               <div className="user-chip">
-                <span className="user-name">{user.username}</span>
+                <span className="user-name">{user.display_name || user.email}</span>
                 {user.role === "admin" && <span className="user-role">admin</span>}
                 <button
                   type="button"

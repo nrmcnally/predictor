@@ -6,25 +6,30 @@ from typing import Any
 
 from app.db import connection, schema
 
-_FULL_COLUMNS = "id, username, password_hash, role, is_public, created_at"
+_FULL_COLUMNS = "id, email, display_name, password_hash, role, is_public, created_at"
 
 
 def _now() -> str:
     return datetime.now().isoformat(timespec="seconds")
 
 
-def create_user(username: str, password_hash: str, role: str = "user") -> dict[str, Any]:
-    """Insert a user. Raises ValueError if the username is already taken."""
+def create_user(
+    email: str,
+    password_hash: str,
+    display_name: str | None = None,
+    role: str = "user",
+) -> dict[str, Any]:
+    """Insert a user. Raises ValueError if the email is already registered."""
     with connection.transaction() as conn:
         schema.init_db(conn)
         try:
             cursor = conn.execute(
-                "INSERT INTO users (username, password_hash, role, created_at) "
-                "VALUES (?, ?, ?, ?)",
-                (username, password_hash, role, _now()),
+                "INSERT INTO users (email, display_name, password_hash, role, created_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (email, display_name, password_hash, role, _now()),
             )
         except sqlite3.IntegrityError as error:
-            raise ValueError("Username is already taken.") from error
+            raise ValueError("An account with that email already exists.") from error
 
         row = conn.execute(
             f"SELECT {_FULL_COLUMNS} FROM users WHERE id = ?", (cursor.lastrowid,)
@@ -32,11 +37,11 @@ def create_user(username: str, password_hash: str, role: str = "user") -> dict[s
     return dict(row)
 
 
-def get_by_username(username: str) -> dict[str, Any] | None:
+def get_by_email(email: str) -> dict[str, Any] | None:
     with connection.transaction() as conn:
         schema.init_db(conn)
         row = conn.execute(
-            f"SELECT {_FULL_COLUMNS} FROM users WHERE username = ?", (username,)
+            f"SELECT {_FULL_COLUMNS} FROM users WHERE email = ?", (email,)
         ).fetchone()
     return dict(row) if row is not None else None
 
@@ -79,7 +84,7 @@ def list_users() -> list[dict[str, Any]]:
     with connection.transaction() as conn:
         schema.init_db(conn)
         rows = conn.execute(
-            "SELECT id, username, role, created_at FROM users ORDER BY id"
+            "SELECT id, email, display_name, role, created_at FROM users ORDER BY id"
         ).fetchall()
     return [dict(row) for row in rows]
 
@@ -102,7 +107,8 @@ def public_user(user: dict[str, Any]) -> dict[str, Any]:
     """Strip the password hash for anything client-facing."""
     return {
         "id": user["id"],
-        "username": user["username"],
+        "email": user["email"],
+        "display_name": user.get("display_name"),
         "role": user["role"],
         "is_public": bool(user.get("is_public", 0)),
         "created_at": user.get("created_at"),

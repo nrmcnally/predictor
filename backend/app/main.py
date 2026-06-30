@@ -178,12 +178,13 @@ class ScheduledRoundsOverrideRequest(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    username: str = Field(min_length=3, max_length=50)
+    email: str = Field(min_length=3, max_length=200)
     password: str = Field(min_length=8, max_length=200)
+    display_name: str | None = Field(default=None, max_length=60)
 
 
 class LoginRequest(BaseModel):
-    username: str = Field(min_length=1, max_length=50)
+    email: str = Field(min_length=3, max_length=200)
     password: str = Field(min_length=1, max_length=200)
 
 
@@ -222,7 +223,7 @@ def health_check() -> dict[str, str]:
 @app.post("/auth/register")
 def auth_register(request: RegisterRequest) -> dict[str, Any]:
     try:
-        user = register_user(request.username, request.password)
+        user = register_user(request.email, request.password, request.display_name)
     except ValueError as error:
         raise HTTPException(status_code=400, detail={"message": str(error)})
     return {"user": user}
@@ -231,7 +232,7 @@ def auth_register(request: RegisterRequest) -> dict[str, Any]:
 @app.post("/auth/login")
 def auth_login(request: LoginRequest) -> dict[str, Any]:
     try:
-        return authenticate(request.username, request.password)
+        return authenticate(request.email, request.password)
     except ValueError as error:
         raise HTTPException(status_code=401, detail={"message": str(error)})
 

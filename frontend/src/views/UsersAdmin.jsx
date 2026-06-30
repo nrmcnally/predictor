@@ -64,7 +64,7 @@ export default function UsersAdmin() {
                 return (
                   <tr key={u.id}>
                     <td>
-                      {u.username}
+                      {u.email}
                       {isMe && <span className="muted"> (you)</span>}
                     </td>
                     <td>

@@ -4,30 +4,28 @@ from __future__ import annotations
 
   python -m app.auth.seed_example_users
 
-These are obvious demo credentials for local use only — change/remove them before
-deploying. Note: once an admin exists, admin endpoints stop being dev-open and
-require admin auth (Bearer token) or a configured ADMIN_TOKEN.
+Obvious demo credentials for local use only — change/remove before deploying.
 """
 
 from app.auth import security
 from app.repositories import users_repository
 
-# (username, password, role)
+# (email, password, display_name, role)
 EXAMPLE_USERS = [
-    ("admin", "admin12345", "admin"),
-    ("demo", "demo12345", "user"),
+    ("admin@fightiq.local", "admin12345", "admin", "admin"),
+    ("demo@fightiq.local", "demo12345", "demo", "user"),
 ]
 
 
 def seed_example_users() -> list[tuple[str, str]]:
     created: list[tuple[str, str]] = []
-    for username, password, role in EXAMPLE_USERS:
-        if users_repository.get_by_username(username) is not None:
+    for email, password, display_name, role in EXAMPLE_USERS:
+        if users_repository.get_by_email(email) is not None:
             continue
         users_repository.create_user(
-            username, security.hash_password(password), role=role
+            email, security.hash_password(password), display_name=display_name, role=role
         )
-        created.append((username, role))
+        created.append((email, role))
     return created
 
 
@@ -36,8 +34,8 @@ def main() -> None:
     if not created:
         print("Example users already exist — nothing to do.")
         return
-    for username, role in created:
-        print(f"Created {role:5} account: {username}")
+    for email, role in created:
+        print(f"Created {role:5} account: {email}")
 
 
 if __name__ == "__main__":

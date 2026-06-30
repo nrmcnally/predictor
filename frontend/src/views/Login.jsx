@@ -3,9 +3,8 @@ import { useAuth } from "../auth/AuthProvider.jsx";
 import OctagonScene from "../three/OctagonScene.jsx";
 
 export default function Login() {
-  const { login, register } = useAuth();
-  const [mode, setMode] = useState("login"); // "login" | "register"
-  const [username, setUsername] = useState("");
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -15,21 +14,12 @@ export default function Login() {
     setError("");
     setBusy(true);
     try {
-      if (mode === "login") {
-        await login(username.trim(), password);
-      } else {
-        await register(username.trim(), password);
-      }
+      await login(email.trim(), password);
       // On success the auth gate swaps this screen for the app.
     } catch (err) {
       setError(err?.message || "Something went wrong.");
       setBusy(false);
     }
-  };
-
-  const toggleMode = () => {
-    setMode((current) => (current === "login" ? "register" : "login"));
-    setError("");
   };
 
   return (
@@ -52,23 +42,17 @@ export default function Login() {
       <form className="login-card" onSubmit={submit}>
         <div className="login-card-head">
           <span className="login-eyebrow">▸ Tale of the Tape</span>
-          <h1 className="login-title">
-            {mode === "login" ? "Fighter Access" : "New Challenger"}
-          </h1>
-          <p className="login-sub">
-            {mode === "login"
-              ? "Step in to the predictor."
-              : "Create your corner and step in."}
-          </p>
+          <h1 className="login-title">Fighter Access</h1>
+          <p className="login-sub">Sign in to the predictor. Accounts are invite-only.</p>
         </div>
 
         <label className="login-field">
-          <span>Fighter</span>
+          <span>Email</span>
           <input
-            type="text"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            placeholder="username"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
             autoComplete="username"
             autoFocus
             required
@@ -82,7 +66,7 @@ export default function Login() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="••••••••"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            autoComplete="current-password"
             required
           />
         </label>
@@ -90,18 +74,11 @@ export default function Login() {
         {error && <p className="login-error" role="alert">{error}</p>}
 
         <button type="submit" className="login-enter" disabled={busy}>
-          {busy ? "…" : mode === "login" ? "Enter ▸" : "Create & Enter ▸"}
+          {busy ? "…" : "Enter ▸"}
         </button>
 
-        <p className="login-toggle">
-          {mode === "login" ? "New challenger? " : "Already have a corner? "}
-          <button type="button" onClick={toggleMode}>
-            {mode === "login" ? "Create account" : "Sign in"}
-          </button>
-        </p>
-
         <p className="login-demo">
-          Demo · <code>demo / demo12345</code>
+          Demo · <code>demo@fightiq.local / demo12345</code>
         </p>
       </form>
     </div>

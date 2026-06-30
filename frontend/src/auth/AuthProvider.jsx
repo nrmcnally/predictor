@@ -24,18 +24,18 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (username, password) => {
-    const data = await loginUser(username, password);
+  const login = useCallback(async (email, password) => {
+    const data = await loginUser(email, password);
     setToken(data.token);
     setUser(data.user);
     return data.user;
   }, []);
 
   const register = useCallback(
-    async (username, password) => {
-      await registerUser(username, password);
+    async (email, password, displayName) => {
+      await registerUser(email, password, displayName);
       // Auto-login straight after registering.
-      return login(username, password);
+      return login(email, password);
     },
     [login]
   );

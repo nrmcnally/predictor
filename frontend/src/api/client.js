@@ -73,30 +73,35 @@ async function request(path, { method = "GET", body, fallbackError } = {}) {
   return data;
 }
 
-export async function loginUser(username, password) {
+export async function loginUser(email, password) {
   if (USE_MOCK) {
     setToken("mock-token");
     return {
       token: "mock-token",
-      user: { id: 0, username, role: username === "admin" ? "admin" : "user" },
+      user: {
+        id: 0,
+        email,
+        display_name: email.split("@")[0],
+        role: email.startsWith("admin") ? "admin" : "user",
+      },
     };
   }
 
   return request("/auth/login", {
     method: "POST",
-    body: { username, password },
+    body: { email, password },
     fallbackError: "Login failed.",
   });
 }
 
-export async function registerUser(username, password) {
+export async function registerUser(email, password, displayName) {
   if (USE_MOCK) {
-    return { user: { id: 0, username, role: "user" } };
+    return { user: { id: 0, email, display_name: displayName || email.split("@")[0], role: "user" } };
   }
 
   return request("/auth/register", {
     method: "POST",
-    body: { username, password },
+    body: { email, password, display_name: displayName },
     fallbackError: "Registration failed.",
   });
 }

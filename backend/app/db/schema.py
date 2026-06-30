@@ -249,11 +249,12 @@ SCHEMA_STATEMENTS: list[str] = [
     create_table_sql("model_runs", MODEL_RUNS_COLUMNS),
     create_table_sql("future_fight_odds", FUTURE_FIGHT_ODDS_COLUMNS),
     "CREATE INDEX IF NOT EXISTS idx_future_fight_odds_fight_url ON future_fight_odds(fight_url)",
-    # users: accounts + roles (Phase 2). username is the unique login identifier.
+    # users: accounts + roles. email is the unique login identifier (Phase 6).
     """
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        display_name TEXT,
         password_hash TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'user',
         is_public INTEGER NOT NULL DEFAULT 0,
@@ -271,10 +272,43 @@ def _ensure_columns(conn: sqlite3.Connection, table: str, columns: dict[str, str
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {declaration}")
 
 
+def _migrate_users_to_email(conn: sqlite3.Connection) -> None:
+    """One-time conversion of the legacy username-keyed users table to the
+    email-keyed one: email := '<username>@fightiq.local', display_name := username."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+    if "username" not in cols or "email" in cols:
+        return
+
+    conn.execute(
+        """
+        CREATE TABLE users_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL UNIQUE,
+            display_name TEXT,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'user',
+            is_public INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT
+        )
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO users_new (id, email, display_name, password_hash, role, is_public, created_at)
+        SELECT id, username || '@fightiq.local', username, password_hash, role,
+               COALESCE(is_public, 0), created_at
+        FROM users
+        """
+    )
+    conn.execute("DROP TABLE users")
+    conn.execute("ALTER TABLE users_new RENAME TO users")
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     """Create any missing tables/indexes. Safe to call on every connection."""
     for statement in SCHEMA_STATEMENTS:
         conn.execute(statement)
 
-    # Forward-migrate older DBs that predate a column.
+    # Forward-migrate older DBs.
+    _migrate_users_to_email(conn)
     _ensure_columns(conn, "users", {"is_public": "INTEGER NOT NULL DEFAULT 0"})

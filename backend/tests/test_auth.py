@@ -1,6 +1,6 @@
 """
-Tests for Phase 2 auth: password hashing, signed tokens, register/login, the
-admin seed, and the require_admin gate.
+Tests for auth: password hashing, signed tokens, register/login (email-based), the
+admin seed, change-password / visibility, and the require_admin gate.
 
 Runs under pytest, or standalone:  python tests/test_auth.py
 """
@@ -39,7 +39,6 @@ def test_password_hash_verifies_and_is_salted():
     stored = security.hash_password("hunter2pass")
     assert security.verify_password("hunter2pass", stored)
     assert not security.verify_password("wrong-password", stored)
-    # Salted: hashing the same password twice yields different stored values.
     assert security.hash_password("hunter2pass") != stored
 
 
@@ -54,7 +53,7 @@ def test_token_roundtrip_and_tamper_rejected():
 
 
 def test_expired_token_rejected():
-    token = security.create_token({"sub": 1}, ttl_seconds=-5)  # already expired
+    token = security.create_token({"sub": 1}, ttl_seconds=-5)
     assert security.decode_token(token) is None
 
 
@@ -64,35 +63,43 @@ def test_register_and_authenticate(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
     _use_temp_db(tmp)
 
-    user = auth_service.register_user("alice", "password123")
-    assert user["username"] == "alice"
+    user = auth_service.register_user("Alice@Example.com", "password123", "Alice")
+    assert user["email"] == "alice@example.com"  # normalized lowercase
+    assert user["display_name"] == "Alice"
     assert user["role"] == "user"
-    assert "password_hash" not in user  # never leak the hash
+    assert "password_hash" not in user
 
-    result = auth_service.authenticate("alice", "password123")
+    result = auth_service.authenticate("alice@example.com", "password123")
     assert "token" in result
-    assert result["user"]["username"] == "alice"
+    assert result["user"]["email"] == "alice@example.com"
     assert security.decode_token(result["token"])["sub"] == user["id"]
+
+
+def test_register_defaults_display_name_to_email_prefix(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+    user = auth_service.register_user("bob@example.com", "password123")
+    assert user["display_name"] == "bob"
 
 
 def test_register_validation_and_duplicates(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
     _use_temp_db(tmp)
 
-    assert _raises_value_error(auth_service.register_user, "ab", "password123")  # short username
-    assert _raises_value_error(auth_service.register_user, "alice", "short")     # short password
+    assert _raises_value_error(auth_service.register_user, "not-an-email", "password123")
+    assert _raises_value_error(auth_service.register_user, "ok@example.com", "short")
 
-    auth_service.register_user("bob", "password123")
-    assert _raises_value_error(auth_service.register_user, "bob", "password123")  # duplicate
+    auth_service.register_user("carol@example.com", "password123")
+    assert _raises_value_error(auth_service.register_user, "carol@example.com", "password123")
 
 
 def test_authenticate_bad_credentials(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
     _use_temp_db(tmp)
 
-    auth_service.register_user("carol", "password123")
-    assert _raises_value_error(auth_service.authenticate, "carol", "wrong-password")
-    assert _raises_value_error(auth_service.authenticate, "ghost", "password123")
+    auth_service.register_user("dana@example.com", "password123")
+    assert _raises_value_error(auth_service.authenticate, "dana@example.com", "wrong-password")
+    assert _raises_value_error(auth_service.authenticate, "ghost@example.com", "password123")
 
 
 # --- change password ----------------------------------------------------------
@@ -101,15 +108,13 @@ def test_change_password(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
     _use_temp_db(tmp)
 
-    user = auth_service.register_user("dave", "password123")
-    # Wrong current password / too-short new password are rejected.
+    user = auth_service.register_user("dave@example.com", "password123")
     assert _raises_value_error(auth_service.change_password, user["id"], "nope", "newpassword123")
     assert _raises_value_error(auth_service.change_password, user["id"], "password123", "short")
 
     auth_service.change_password(user["id"], "password123", "newpassword123")
-    # Old password no longer authenticates; the new one does.
-    assert _raises_value_error(auth_service.authenticate, "dave", "password123")
-    assert auth_service.authenticate("dave", "newpassword123")["user"]["username"] == "dave"
+    assert _raises_value_error(auth_service.authenticate, "dave@example.com", "password123")
+    assert auth_service.authenticate("dave@example.com", "newpassword123")["user"]["email"] == "dave@example.com"
 
 
 # --- profile visibility -------------------------------------------------------
@@ -118,8 +123,8 @@ def test_visibility_defaults_private_and_toggles(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
     _use_temp_db(tmp)
 
-    user = auth_service.register_user("erin", "password123")
-    assert user["is_public"] is False  # private by default (opt-in)
+    user = auth_service.register_user("erin@example.com", "password123")
+    assert user["is_public"] is False
 
     auth_service.set_visibility(user["id"], True)
     refreshed = users_repository.public_user(users_repository.get_by_id(user["id"]))
@@ -132,18 +137,18 @@ def test_seed_admin_from_env_is_idempotent(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
     _use_temp_db(tmp)
 
-    os.environ["ADMIN_USERNAME"] = "root"
+    os.environ["ADMIN_EMAIL"] = "root@example.com"
     os.environ["ADMIN_PASSWORD"] = "rootpassword"
     try:
         auth_service.ensure_seed_admin()
-        seeded = users_repository.get_by_username("root")
+        seeded = users_repository.get_by_email("root@example.com")
         assert seeded is not None and seeded["role"] == "admin"
         assert auth_service.admin_exists()
 
-        auth_service.ensure_seed_admin()  # idempotent
+        auth_service.ensure_seed_admin()
         assert users_repository.count_admins() == 1
     finally:
-        os.environ.pop("ADMIN_USERNAME", None)
+        os.environ.pop("ADMIN_EMAIL", None)
         os.environ.pop("ADMIN_PASSWORD", None)
 
 
@@ -155,7 +160,7 @@ def test_require_admin_allows_admin_jwt(tmp_path=None):
     os.environ.pop("ADMIN_TOKEN", None)
 
     admin = users_repository.create_user(
-        "admin1", security.hash_password("password123"), role="admin"
+        "admin1@example.com", security.hash_password("password123"), role="admin"
     )
     token = security.create_token({"sub": admin["id"], "role": "admin"})
 
@@ -168,9 +173,8 @@ def test_require_admin_denies_regular_user(tmp_path=None):
     _use_temp_db(tmp)
     os.environ.pop("ADMIN_TOKEN", None)
 
-    # An admin exists, so the dev-open path is off.
-    users_repository.create_user("admin1", security.hash_password("password123"), role="admin")
-    user = users_repository.create_user("user1", security.hash_password("password123"), role="user")
+    users_repository.create_user("admin1@example.com", security.hash_password("password123"), role="admin")
+    user = users_repository.create_user("user1@example.com", security.hash_password("password123"), role="user")
     token = security.create_token({"sub": user["id"], "role": "user"})
 
     try:
@@ -184,8 +188,6 @@ def test_require_admin_dev_open_when_unconfigured(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
     _use_temp_db(tmp)
     os.environ.pop("ADMIN_TOKEN", None)
-
-    # No admin account + no ADMIN_TOKEN -> open for local dev.
     assert dependencies.require_admin(authorization=None, x_admin_token=None) is None
 
 

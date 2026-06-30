@@ -1,52 +1,63 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 from app.auth import security
 from app.repositories import users_repository
 
-MIN_USERNAME_LENGTH = 3
 MIN_PASSWORD_LENGTH = 8
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
-def register_user(username: str, password: str, role: str = "user") -> dict[str, Any]:
-    """Create a new account. Raises ValueError on invalid input or duplicate username."""
-    username = (username or "").strip()
+def _clean_email(email: str) -> str:
+    return (email or "").strip().lower()
 
-    if len(username) < MIN_USERNAME_LENGTH:
-        raise ValueError(f"Username must be at least {MIN_USERNAME_LENGTH} characters.")
+
+def is_valid_email(email: str) -> bool:
+    return bool(_EMAIL_RE.match(email or ""))
+
+
+def register_user(
+    email: str, password: str, display_name: str | None = None, role: str = "user"
+) -> dict[str, Any]:
+    """Create a new account. Raises ValueError on invalid input or duplicate email."""
+    email = _clean_email(email)
+
+    if not is_valid_email(email):
+        raise ValueError("Enter a valid email address.")
     if len(password or "") < MIN_PASSWORD_LENGTH:
         raise ValueError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
-    if users_repository.get_by_username(username):
-        raise ValueError("Username is already taken.")
+    if users_repository.get_by_email(email):
+        raise ValueError("An account with that email already exists.")
 
+    display = (display_name or "").strip() or email.split("@")[0]
     user = users_repository.create_user(
-        username, security.hash_password(password), role=role
+        email, security.hash_password(password), display_name=display, role=role
     )
     return users_repository.public_user(user)
 
 
-def authenticate(username: str, password: str) -> dict[str, Any]:
+def authenticate(email: str, password: str) -> dict[str, Any]:
     """Return {token, user} on success; raise ValueError on bad credentials.
 
-    The same generic error is used for unknown user vs wrong password (no enumeration).
+    The same generic error is used for unknown account vs wrong password.
     """
-    username = (username or "").strip()
-    user = users_repository.get_by_username(username)
+    email = _clean_email(email)
+    user = users_repository.get_by_email(email)
 
     if user is None or not security.verify_password(password or "", user["password_hash"]):
-        raise ValueError("Invalid username or password.")
+        raise ValueError("Invalid email or password.")
 
     token = security.create_token(
-        {"sub": user["id"], "username": user["username"], "role": user["role"]}
+        {"sub": user["id"], "email": user["email"], "role": user["role"]}
     )
     return {"token": token, "user": users_repository.public_user(user)}
 
 
 def change_password(user_id: Any, current_password: str, new_password: str) -> None:
-    """Change a user's password after verifying the current one. Raises ValueError
-    on a wrong current password or an invalid new one."""
+    """Change a user's password after verifying the current one."""
     user = users_repository.get_by_id(user_id)
     if user is None:
         raise ValueError("Account not found.")
@@ -64,25 +75,21 @@ def set_visibility(user_id: Any, is_public: bool) -> bool:
 
 
 def ensure_seed_admin() -> dict[str, Any] | None:
-    """Bootstrap the admin from ADMIN_USERNAME / ADMIN_PASSWORD env vars.
-
-    Creates the admin if missing; promotes the account to admin if it exists with a
-    lower role. No-op when the env vars aren't set.
-    """
-    username = os.environ.get("ADMIN_USERNAME", "").strip()
+    """Bootstrap the admin from ADMIN_EMAIL / ADMIN_PASSWORD env vars."""
+    email = _clean_email(os.environ.get("ADMIN_EMAIL", ""))
     password = os.environ.get("ADMIN_PASSWORD", "")
 
-    if not username or not password:
+    if not email or not password:
         return None
 
-    existing = users_repository.get_by_username(username)
+    existing = users_repository.get_by_email(email)
     if existing is not None:
         if existing["role"] != "admin":
             users_repository.set_role(existing["id"], "admin")
         return users_repository.public_user(existing)
 
     user = users_repository.create_user(
-        username, security.hash_password(password), role="admin"
+        email, security.hash_password(password), display_name=email.split("@")[0], role="admin"
     )
     return users_repository.public_user(user)
 
