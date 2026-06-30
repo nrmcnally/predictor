@@ -1,8 +1,16 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../AppContext.js";
-import { getLeaderboardOptions, getLeaderboards } from "../api/client.js";
+import {
+  getLeaderboardOptions,
+  getLeaderboards,
+  getPredictorLeaderboard,
+} from "../api/client.js";
 import { FighterName } from "../components/FighterDisplay.jsx";
 import { EmptyState, ErrorNote, Spinner, Tag } from "../components/ui.jsx";
+
+function accuracyText(value) {
+  return value === null || value === undefined ? "—" : `${Math.round(value * 100)}%`;
+}
 import {
   formatLeaderboardStatValue,
   formatNumber,
@@ -38,6 +46,30 @@ export default function Leaderboards() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [board, setBoard] = useState("predictors");
+  const [predictors, setPredictors] = useState(null);
+  const [predictorsLoading, setPredictorsLoading] = useState(false);
+  const [predictorsError, setPredictorsError] = useState("");
+
+  async function loadPredictors() {
+    setPredictorsLoading(true);
+    setPredictorsError("");
+    try {
+      setPredictors(await getPredictorLeaderboard());
+    } catch (requestError) {
+      setPredictorsError(requestError.message);
+    } finally {
+      setPredictorsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (board === "predictors" && predictors === null) {
+      loadPredictors();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board]);
 
   async function loadData() {
     setLoading(true);
@@ -86,11 +118,78 @@ export default function Leaderboards() {
     <div className="view leaderboards">
       <header className="view-head">
         <div>
-          <p className="eyebrow">Fighter rankings</p>
+          <p className="eyebrow">
+            {board === "predictors" ? "Beat the engine" : "Fighter rankings"}
+          </p>
           <h1 className="view-title">Leaderboards</h1>
+        </div>
+        <div className="segmented">
+          <button
+            type="button"
+            className={board === "predictors" ? "active" : ""}
+            onClick={() => setBoard("predictors")}
+          >
+            Predictors
+          </button>
+          <button
+            type="button"
+            className={board === "fighters" ? "active" : ""}
+            onClick={() => setBoard("fighters")}
+          >
+            Fighters
+          </button>
         </div>
       </header>
 
+      {board === "predictors" && (
+        <>
+          <ErrorNote message={predictorsError} />
+          {predictorsLoading && <Spinner label="Ranking predictors…" />}
+          {!predictorsLoading && predictors && predictors.length === 0 && (
+            <EmptyState
+              title="No public predictors yet"
+              message="Make your profile public and start picking to appear here."
+            />
+          )}
+          {!predictorsLoading && predictors && predictors.length > 0 && (
+            <div className="leaderboard-list">
+              {predictors.map((row) => (
+                <div
+                  className={`leaderboard-row ${row.rank <= 3 ? `podium-${row.rank}` : ""} ${
+                    row.is_me ? "is-me" : ""
+                  }`}
+                  key={`${row.rank}-${row.name}`}
+                >
+                  <span className="rank-medal">#{row.rank}</span>
+
+                  <div className="leaderboard-fighter">
+                    <span className="fighter-name-text">
+                      {row.name}
+                      {row.is_me && <Tag tone="gold" className="lb-you">You</Tag>}
+                      {row.provisional && <Tag>Provisional</Tag>}
+                    </span>
+                    <span className="muted">
+                      {row.wins}–{row.losses} · {row.graded} graded
+                    </span>
+                  </div>
+
+                  <div className="leaderboard-score">
+                    <span className="stat-label">FIGHT IQ</span>
+                    <strong className="mono">{row.rating}</strong>
+                  </div>
+
+                  <div className="leaderboard-stats">
+                    <Tag>Accuracy: {accuracyText(row.accuracy)}</Tag>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {board === "fighters" && (
+        <>
       <div className="card controls-card">
         <div className="controls-row">
           <div className="control">
@@ -264,6 +363,8 @@ export default function Leaderboards() {
             </div>
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   );

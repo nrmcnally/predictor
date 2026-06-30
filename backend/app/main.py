@@ -356,6 +356,16 @@ def score_predictions() -> dict[str, Any]:
     return predictions_scoring_service.score_all_pending()
 
 
+@app.get("/leaderboard/predictors")
+def predictor_leaderboard(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Public predictors ranked by FIGHT IQ rating (opt-in via profile visibility)."""
+    return {
+        "leaderboard": predictions_stats_service.build_leaderboard(current_user["id"])
+    }
+
+
 @app.get("/admin/users", dependencies=[Depends(require_admin)])
 def admin_list_users() -> dict[str, Any]:
     return {"users": users_repository.list_users()}

@@ -103,6 +103,17 @@ def list_users() -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+def list_public_users() -> list[dict[str, Any]]:
+    """Users who opted into public profiles/leaderboards (is_public = 1)."""
+    with connection.transaction() as conn:
+        schema.init_db(conn)
+        rows = conn.execute(
+            "SELECT id, email, display_name, role, created_at FROM users "
+            "WHERE is_public = 1 ORDER BY id"
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def count() -> int:
     with connection.transaction() as conn:
         schema.init_db(conn)

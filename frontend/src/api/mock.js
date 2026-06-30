@@ -655,6 +655,18 @@ export function getMyStats() {
   );
 }
 
+export function getPredictorLeaderboard() {
+  return delay(
+    [
+      { rank: 1, name: "slipznslams", rating: 1112, wins: 14, losses: 6, graded: 20, accuracy: 14 / 20, provisional: false, is_me: false },
+      { rank: 2, name: "demo", rating: 1063, wins: 7, losses: 4, graded: 11, accuracy: 7 / 11, provisional: false, is_me: true },
+      { rank: 3, name: "KO_Karen", rating: 1041, wins: 9, losses: 7, graded: 16, accuracy: 9 / 16, provisional: false, is_me: false },
+      { rank: 4, name: "ju***@g***", rating: 1000, wins: 2, losses: 1, graded: 3, accuracy: 2 / 3, provisional: true, is_me: false },
+    ],
+    150
+  );
+}
+
 export async function updateFutureFightScheduledRounds(eventId, fightId, scheduledRounds) {
   const card = FUTURE_CARDS.find((row) => row.event_id === eventId);
 

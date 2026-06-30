@@ -431,6 +431,17 @@ export async function getLeaderboards({ top, minFights, maxInactiveDays }) {
   });
 }
 
+export async function getPredictorLeaderboard() {
+  if (USE_MOCK) {
+    return mock.getPredictorLeaderboard();
+  }
+
+  const data = await request("/leaderboard/predictors", {
+    fallbackError: "Failed to load the predictor leaderboard.",
+  });
+  return data.leaderboard ?? [];
+}
+
 export async function getModelEvaluation({ recentLimit = 25 } = {}) {
   if (USE_MOCK) {
     return mock.getModelEvaluation();

@@ -7,13 +7,19 @@ from app.repositories import (
     event_fights_repository,
     saved_predictions_repository,
     user_predictions_repository,
+    users_repository,
 )
 from app.services.predictions_scoring_service import (
     _fight_key,
     _norm,
+    score_all_pending,
     score_user_pending,
 )
 from app.services.predictions_service import _parse_event_date
+
+# A predictor needs at least this many graded picks before their rating is "established"
+# (it stays provisional until then, and provisional rows sort below established ones).
+PROVISIONAL_THRESHOLD = 10
 
 # Per-account prediction stats for the Profile "Your record" tiles + the leaderboard.
 # Raw accuracy is the headline; record/streak/method come straight from scored picks; a
@@ -167,6 +173,61 @@ def build_user_stats(user_id: Any) -> dict[str, Any]:
         "pending": sum(1 for p in picks if p.get("status") == "open"),
         "voided": sum(1 for p in picks if p.get("status") == "void"),
     }
+
+
+def _mask_email(email: str | None) -> str:
+    """Privacy: never expose another user's full email on a shared board. nate@x.com
+    -> na***@x***. (Used only as a fallback when a user has no display name.)"""
+    local, sep, domain = (email or "").partition("@")
+    masked_local = (local[:2] + "***") if local else "***"
+    if not sep:
+        return masked_local
+    return f"{masked_local}@{domain[0]}***"
+
+
+def _public_name(user: dict[str, Any]) -> str:
+    return (user.get("display_name") or "").strip() or _mask_email(user.get("email"))
+
+
+def build_leaderboard(current_user_id: Any = None, limit: int = 100) -> list[dict[str, Any]]:
+    """Public predictors ranked by FIGHT IQ rating. Established (>= PROVISIONAL_THRESHOLD
+    graded picks) outrank provisional ones; ties break on accuracy then volume. Only
+    display names (or masked emails) are exposed."""
+    score_all_pending()  # grade everyone's now-completed picks before ranking
+    snapshots = _snapshot_lookup()
+
+    rows: list[dict[str, Any]] = []
+    for user in users_repository.list_public_users():
+        picks = user_predictions_repository.list_for_user(user["id"])
+        scored = [p for p in picks if p.get("status") == "scored"]
+        wins = sum(1 for p in scored if p.get("result_correct") == 1)
+        losses = sum(1 for p in scored if p.get("result_correct") == 0)
+        graded = wins + losses
+        rows.append(
+            {
+                "name": _public_name(user),
+                "rating": _rating(scored, snapshots),
+                "wins": wins,
+                "losses": losses,
+                "graded": graded,
+                "accuracy": (wins / graded) if graded else None,
+                "provisional": graded < PROVISIONAL_THRESHOLD,
+                "is_me": current_user_id is not None and user["id"] == current_user_id,
+            }
+        )
+
+    # Established first, then rating, then accuracy, then more picks.
+    rows.sort(
+        key=lambda r: (
+            r["provisional"],
+            -r["rating"],
+            -(r["accuracy"] or 0),
+            -r["graded"],
+        )
+    )
+    for index, row in enumerate(rows[:limit]):
+        row["rank"] = index + 1
+    return rows[:limit]
 
 
 def _current_streak(scored: list[dict[str, Any]]) -> dict[str, Any] | None:
