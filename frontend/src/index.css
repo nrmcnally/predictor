@@ -4041,13 +4041,15 @@ p {
   gap: 10px;
 }
 
-.pick-option-name {
+.pick-option-name,
+.pick-option .fighter-name-text {
   font-family: var(--font-display);
   font-size: 15px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   line-height: 1.05;
+  text-align: left;
 }
 
 .pick-option-odds {
@@ -4057,7 +4059,7 @@ p {
   font-size: 12px;
   font-weight: 600;
 }
-.pick-option:hover:not(:disabled) {
+.pick-option:hover:not(.disabled) {
   border-color: var(--red);
 }
 .pick-option.active {
@@ -4070,7 +4072,8 @@ p {
   border-color: rgba(47, 213, 139, 0.55);
   box-shadow: inset 0 0 0 1px rgba(47, 213, 139, 0.32);
 }
-.pick-option.active.result-win .pick-option-name {
+.pick-option.active.result-win .pick-option-name,
+.pick-option.active.result-win .fighter-name-text {
   color: var(--green);
 }
 .pick-option.active.result-loss {
@@ -4082,21 +4085,25 @@ p {
   background: rgba(148, 163, 184, 0.08);
   border-color: rgba(148, 163, 184, 0.28);
 }
-.pick-option.active .pick-option-name {
+.pick-option.active .pick-option-name,
+.pick-option.active .fighter-name-text {
   color: #ff8aa0;
 }
-.pick-option.active.result-win .pick-option-name {
+.pick-option.active.result-win .pick-option-name,
+.pick-option.active.result-win .fighter-name-text {
   color: var(--green);
 }
 .pick-option.active.result-void .pick-option-name,
-.pick-option.active.result-locked .pick-option-name {
+.pick-option.active.result-void .fighter-name-text,
+.pick-option.active.result-locked .pick-option-name,
+.pick-option.active.result-locked .fighter-name-text {
   color: var(--dim);
 }
-.pick-option:disabled {
+.pick-option.disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.pick-option.active:disabled {
+.pick-option.active.disabled {
   opacity: 1;
 }
 

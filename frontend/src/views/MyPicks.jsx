@@ -11,7 +11,7 @@ import {
   deletePrediction,
 } from "../api/client.js";
 import { EmptyState, ErrorNote, SectionCard, Spinner, StatTile, Tag } from "../components/ui.jsx";
-import { FighterAvatar } from "../components/FighterDisplay.jsx";
+import { FighterName } from "../components/FighterDisplay.jsx";
 
 const METHODS = [
   { value: "ko_tko", label: "KO/TKO" },
@@ -198,7 +198,7 @@ function marketProb(odds, name) {
 }
 
 export default function MyPicks() {
-  const { imageLookup } = useContext(AppContext);
+  const { imageLookup, openProfile } = useContext(AppContext);
 
   const [cards, setCards] = useState([]);
   const [selectedId, setSelectedId] = useState("");
@@ -538,29 +538,42 @@ export default function MyPicks() {
                           {[fight.fighter_1, fight.fighter_2].map((fighter, index) => {
                             const active = pick?.picked_fighter === fighter;
                             return (
-                              <button
+                              <div
                                 key={fighter}
-                                type="button"
+                                role="button"
+                                tabIndex={pickDisabled ? -1 : 0}
+                                aria-pressed={active}
+                                aria-disabled={pickDisabled}
                                 className={`pick-option ${active ? "active" : ""} ${
                                   active ? status.className : ""
-                                }`}
-                                onClick={() => onPickFighter(fight, fighter)}
-                                disabled={pickDisabled}
+                                } ${pickDisabled ? "disabled" : ""}`}
+                                onClick={() => {
+                                  if (!pickDisabled) onPickFighter(fight, fighter);
+                                }}
+                                onKeyDown={(event) => {
+                                  if (pickDisabled) return;
+                                  if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault();
+                                    onPickFighter(fight, fighter);
+                                  }
+                                }}
                               >
                                 <span className="pick-option-head">
-                                  <FighterAvatar
+                                  {/* Clickable name/avatar opens the fighter profile
+                                      (stops propagation, so it never makes a pick). */}
+                                  <FighterName
                                     name={fighter}
                                     imageLookup={imageLookup}
                                     size="sm"
                                     corner={index === 0 ? "red" : "blue"}
+                                    onClick={openProfile}
                                   />
-                                  <span className="pick-option-name">{fighter}</span>
                                 </span>
                                 <span className="pick-option-odds">
                                   <span>Model {pct(modelProb(fight.prediction, fighter))}</span>
                                   <span className="muted">Mkt {pct(marketProb(odds, fighter))}</span>
                                 </span>
-                              </button>
+                              </div>
                             );
                           })}
                         </div>
