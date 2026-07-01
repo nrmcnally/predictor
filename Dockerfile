@@ -24,7 +24,7 @@ RUN grep -viE '^playwright' requirements.txt > /tmp/requirements-serve.txt \
 
 COPY backend/app ./app
 COPY --from=frontend /build/dist /app/frontend_dist
-COPY deploy/start.sh /app/start.sh
+COPY deploy/start.sh deploy/update_from_bundle.sh /app/deploy/
 
 # Hosted defaults: strict auth wall + fail-fast without AUTH_SECRET, proxy-aware
 # rate limiting. AUTH_SECRET / ADMIN_EMAIL / ADMIN_PASSWORD come from the host's
@@ -35,4 +35,4 @@ ENV FRONTEND_DIST=/app/frontend_dist \
     PYTHONUNBUFFERED=1
 
 EXPOSE 8000
-CMD ["sh", "/app/start.sh"]
+CMD ["sh", "/app/deploy/start.sh"]

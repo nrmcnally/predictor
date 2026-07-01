@@ -40,29 +40,30 @@ Re-run and re-push after every local Data Ops update.
 
 ## 2a. Fly.io
 
-```bash
-fly launch --no-deploy               # answer prompts; keep the generated app name
+A ready-made `fly.toml` is in the repo root (1GB VM, `/data` volume, auto-sleep when
+idle so you mostly pay only while someone's using it). One-time setup:
+
+```powershell
+# 1. Install the CLI + sign up (fly.io — requires a card; a small app like this
+#    runs a few dollars/month, and the machine sleeps when idle)
+iwr https://fly.io/install.ps1 -useb | iex
+fly auth signup        # or: fly auth login
+
+# 2. Create the app from the repo root (keeps the committed fly.toml; rename if taken)
+fly launch --no-deploy --copy-config
+
+# 3. Persistent storage + secrets
 fly volumes create fightiq_data --size 3
-fly secrets set AUTH_SECRET=<generated> ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=<strong>
-fly deploy                           # builds the Docker image remotely
-```
+python -c "import secrets; print(secrets.token_urlsafe(48))"   # -> AUTH_SECRET below
+fly secrets set AUTH_SECRET=<paste> ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=<strong>
 
-Add to the generated `fly.toml` if `fly launch` didn't:
+# 4. Build + deploy (image builds on Fly's servers — no local Docker needed)
+fly deploy --remote-only
 
-```toml
-[mounts]
-  source = "fightiq_data"
-  destination = "/data"
-
-[http_service]
-  internal_port = 8000
-```
-
-Push the bundle:
-
-```bash
+# 5. Push the data/model bundle and install it
+python deploy/make_bundle.py
 fly ssh sftp put deploy/deploy_bundle.tar.gz /data/bundle.tar.gz
-fly ssh console -C "tar -xzf /data/bundle.tar.gz -C /data && rm /data/bundle.tar.gz"
+fly ssh console -C "sh /app/deploy/update_from_bundle.sh"
 ```
 
 Then open `https://<app>.fly.dev` — log in with the admin account.
@@ -80,9 +81,9 @@ Then open `https://<app>.fly.dev` — log in with the admin account.
 ```bash
 cp deploy/.env.example deploy/.env       # fill in AUTH_SECRET etc.
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
-# push the bundle into the volume:
-docker cp deploy/deploy_bundle.tar.gz $(docker compose -f deploy/docker-compose.yml ps -q fightiq):/data/
-docker compose -f deploy/docker-compose.yml exec fightiq sh -c "tar -xzf /data/deploy_bundle.tar.gz -C /data && rm /data/deploy_bundle.tar.gz"
+# push the bundle into the volume and install it:
+docker cp deploy/deploy_bundle.tar.gz $(docker compose -f deploy/docker-compose.yml ps -q fightiq):/data/bundle.tar.gz
+docker compose -f deploy/docker-compose.yml exec fightiq sh /app/deploy/update_from_bundle.sh
 ```
 
 Put Caddy/nginx in front for TLS (`reverse_proxy localhost:8000` is all Caddy needs).
@@ -95,10 +96,25 @@ Put Caddy/nginx in front for TLS (`reverse_proxy localhost:8000` is all Caddy ne
 - [ ] Friends register (or you register for them), then set `ALLOW_REGISTRATION=0`
 - [ ] Lost password? Admin → Users → **Reset password** hands out a one-time temp
 
-## Updating data/models later
+## Updating later — two separate flows
 
-1. Run Data Ops locally (or the incremental pipeline).
-2. `python deploy/make_bundle.py`
-3. Push + extract the bundle (same command as step 2 for your host).
-4. Done — the server's `file_aware_cache` reloads changed model/data files
-   automatically. Restart the app only if something looks stale.
+**Code changes** (new features, fixes):
+
+```bash
+fly deploy --remote-only        # rebuilds the image from your working tree and rolls it out
+```
+
+The volume (DB + models) is untouched — friends' accounts and picks survive deploys.
+
+**Data/model refreshes** (after running Data Ops locally):
+
+```bash
+python deploy/make_bundle.py
+fly ssh sftp put deploy/deploy_bundle.tar.gz /data/bundle.tar.gz
+fly ssh console -C "sh /app/deploy/update_from_bundle.sh"
+```
+
+The update script is **merge-aware**: it replaces the shared data (results, upcoming
+cards, odds, saved model predictions) and overwrites the model files, but **never
+touches accounts, picks, or friendships created on the server**. The app hot-reloads
+changed model/data files automatically — no restart needed.
