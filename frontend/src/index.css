@@ -4171,3 +4171,124 @@ p {
   margin-top: 12px;
   flex-wrap: wrap;
 }
+
+/* ---------- friends + head-to-head compare ---------- */
+
+.friend-add {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.friend-add input {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+}
+.friend-add input:focus {
+  border-color: var(--red);
+}
+.friend-add-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
+.friend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.friend-row:last-child {
+  border-bottom: none;
+}
+.friend-row.pending {
+  opacity: 0.75;
+}
+.friend-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.friend-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compare-cards {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.compare-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.compare-card-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(19, 23, 38, 0.5);
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+.compare-card-head:hover {
+  background: rgba(19, 23, 38, 0.8);
+}
+.compare-card-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+.compare-card-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.compare-fights {
+  padding: 4px 14px 12px;
+}
+.compare-fight {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.compare-fight-bout {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.compare-fight-picks {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.compare-pick {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.compare-pick.hit {
+  color: var(--green);
+}
+.compare-pick.miss {
+  color: var(--faint);
+}

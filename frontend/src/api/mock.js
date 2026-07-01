@@ -667,6 +667,65 @@ export function getUserLeaderboard() {
   );
 }
 
+// --- friends (Phase 6) — canned demo data ---
+
+export function getFriends() {
+  return delay(
+    {
+      friends: [
+        { user_id: 3, display_name: "KO_Karen", friendship_id: 30 },
+        { user_id: 5, display_name: "slipznslams", friendship_id: 31 },
+      ],
+      incoming: [{ user_id: 7, display_name: "NorthStar", friendship_id: 40 }],
+      outgoing: [{ user_id: 9, display_name: "GrappleGus", friendship_id: 41 }],
+    },
+    150
+  );
+}
+
+export function sendFriendRequest(email) {
+  return delay({ status: "pending", friend: { user_id: 99, display_name: email.split("@")[0], friendship_id: 99 } }, 150);
+}
+
+export function respondFriendRequest(friendshipId, accept) {
+  return delay({ status: accept ? "accepted" : "declined" }, 120);
+}
+
+export function removeFriend() {
+  return delay({ removed: true }, 120);
+}
+
+export function getFriendCompare(userId) {
+  const name = userId === 5 ? "slipznslams" : "KO_Karen";
+  return delay(
+    {
+      friend: { user_id: userId, display_name: name },
+      shared: 12,
+      you: { correct: 8, accuracy: 8 / 12, rating: 1063 },
+      them: { correct: 7, accuracy: 7 / 12, rating: 1041 },
+      card_record: { you: 2, them: 1, tied: 0 },
+      cards: [
+        {
+          event_id: "e1", event_name: "UFC 322: Chimaev vs. Du Plessis 2", event_date: "June 27, 2026",
+          total: 5, you_correct: 4, them_correct: 2, winner: "you",
+          fights: [
+            { fighter_1: "Khamzat Chimaev", fighter_2: "Dricus Du Plessis", actual_winner: "Khamzat Chimaev", your_pick: "Khamzat Chimaev", your_correct: true, their_pick: "Dricus Du Plessis", their_correct: false },
+            { fighter_1: "Islam Makhachev", fighter_2: "Shavkat Rakhmonov", actual_winner: "Islam Makhachev", your_pick: "Islam Makhachev", your_correct: true, their_pick: "Islam Makhachev", their_correct: true },
+          ],
+        },
+        {
+          event_id: "e2", event_name: "UFC Fight Night: Aspinall vs. Gane", event_date: "July 11, 2026",
+          total: 4, you_correct: 2, them_correct: 3, winner: "them",
+          fights: [
+            { fighter_1: "Tom Aspinall", fighter_2: "Ciryl Gane", actual_winner: "Tom Aspinall", your_pick: "Ciryl Gane", your_correct: false, their_pick: "Tom Aspinall", their_correct: true },
+          ],
+        },
+      ],
+    },
+    200
+  );
+}
+
 export async function updateFutureFightScheduledRounds(eventId, fightId, scheduledRounds) {
   const card = FUTURE_CARDS.find((row) => row.event_id === eventId);
 

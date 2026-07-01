@@ -431,6 +431,56 @@ export async function getLeaderboards({ top, minFights, maxInactiveDays }) {
   });
 }
 
+// --- friends (Phase 6) ---
+
+export async function getFriends() {
+  if (USE_MOCK) {
+    return mock.getFriends();
+  }
+  return request("/friends", { fallbackError: "Failed to load friends." });
+}
+
+export async function sendFriendRequest(email) {
+  if (USE_MOCK) {
+    return mock.sendFriendRequest(email);
+  }
+  return request("/friends/requests", {
+    method: "POST",
+    body: { email },
+    fallbackError: "Failed to send friend request.",
+  });
+}
+
+export async function respondFriendRequest(friendshipId, accept) {
+  if (USE_MOCK) {
+    return mock.respondFriendRequest(friendshipId, accept);
+  }
+  return request(`/friends/requests/${friendshipId}/respond`, {
+    method: "POST",
+    body: { accept },
+    fallbackError: "Failed to respond to request.",
+  });
+}
+
+export async function removeFriend(userId) {
+  if (USE_MOCK) {
+    return mock.removeFriend(userId);
+  }
+  return request(`/friends/${userId}`, {
+    method: "DELETE",
+    fallbackError: "Failed to remove friend.",
+  });
+}
+
+export async function getFriendCompare(userId) {
+  if (USE_MOCK) {
+    return mock.getFriendCompare(userId);
+  }
+  return request(`/friends/${userId}/compare`, {
+    fallbackError: "Failed to load the comparison.",
+  });
+}
+
 export async function getUserLeaderboard() {
   if (USE_MOCK) {
     return mock.getUserLeaderboard();

@@ -20,6 +20,7 @@ import UsersAdmin from "./views/UsersAdmin.jsx";
 import Login from "./views/Login.jsx";
 import Profile from "./views/Profile.jsx";
 import MyPicks from "./views/MyPicks.jsx";
+import Friends from "./views/Friends.jsx";
 import { AuthProvider } from "./auth/AuthProvider.jsx";
 import { useAuth } from "./auth/authContext.js";
 
@@ -55,6 +56,7 @@ const NAV_GROUPS = [
     items: [
       { value: "leaderboards", label: "Leaderboards", icon: "♛" },
       { value: "user-leaderboard", label: "User Leaderboard", icon: "◉" },
+      { value: "friends", label: "Friends", icon: "◈" },
       { value: "evaluation", label: "Evaluation", icon: "◫" },
     ],
   },
@@ -79,6 +81,7 @@ const VIEWS = {
   recent: RecentCards,
   leaderboards: Leaderboards,
   "user-leaderboard": UserLeaderboard,
+  friends: Friends,
   evaluation: Evaluation,
   update: UpdateData,
   users: UsersAdmin,
