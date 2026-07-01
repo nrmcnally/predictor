@@ -297,6 +297,23 @@ SCHEMA_STATEMENTS: list[str] = [
     "ON user_predictions(user_id, fight_url)",
     "CREATE INDEX IF NOT EXISTS idx_user_predictions_user ON user_predictions(user_id)",
     "CREATE INDEX IF NOT EXISTS idx_user_predictions_event ON user_predictions(event_id)",
+    # friendships: mutual-accept connections. One directed row (requester -> addressee)
+    # per pair; status pending -> accepted. Friendship exists if an accepted row joins
+    # the two in either direction.
+    """
+    CREATE TABLE IF NOT EXISTS friendships (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        requester_id INTEGER NOT NULL,
+        addressee_id INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT,
+        updated_at TEXT
+    )
+    """,
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_friendships_pair "
+    "ON friendships(requester_id, addressee_id)",
+    "CREATE INDEX IF NOT EXISTS idx_friendships_addressee ON friendships(addressee_id)",
+    "CREATE INDEX IF NOT EXISTS idx_friendships_requester ON friendships(requester_id)",
 ]
 
 

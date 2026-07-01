@@ -89,6 +89,8 @@ from app.services.auth_service import (
 from app.repositories import users_repository
 from app.db import connection
 from app.services import (
+    friends_compare_service,
+    friends_service,
     predictions_service,
     predictions_scoring_service,
     predictions_stats_service,
@@ -224,6 +226,14 @@ class UserPredictionRequest(BaseModel):
     fight_url: str = Field(min_length=1, max_length=500)
     picked_fighter: str = Field(min_length=1, max_length=200)
     picked_method: str | None = Field(default=None, max_length=20)
+
+
+class FriendRequestRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=200)
+
+
+class FriendResponseRequest(BaseModel):
+    accept: bool
 
 
 @app.get("/")
@@ -365,6 +375,59 @@ def user_leaderboard(
     return {
         "leaderboard": predictions_stats_service.build_leaderboard(current_user["id"])
     }
+
+
+# --- friends (mutual-accept connections) --------------------------------------
+
+@app.get("/friends")
+def list_friends(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    return friends_service.get_overview(current_user["id"])
+
+
+@app.post("/friends/requests")
+def send_friend_request(
+    request: FriendRequestRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    try:
+        return friends_service.send_friend_request(current_user["id"], request.email)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+
+
+@app.post("/friends/requests/{friendship_id}/respond")
+def respond_friend_request(
+    friendship_id: int,
+    request: FriendResponseRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    try:
+        return friends_service.respond_to_request(
+            current_user["id"], friendship_id, request.accept
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+
+
+@app.delete("/friends/{user_id}")
+def remove_friend(
+    user_id: int,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    return {"removed": friends_service.remove_friend(current_user["id"], user_id)}
+
+
+@app.get("/friends/{user_id}/compare")
+def compare_with_friend(
+    user_id: int,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    try:
+        return friends_compare_service.build_compare(current_user["id"], user_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
 
 
 @app.get("/admin/users", dependencies=[Depends(require_admin)])
