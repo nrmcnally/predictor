@@ -83,6 +83,21 @@ def authenticate(email: str, password: str) -> dict[str, Any]:
     return {"token": token, "user": users_repository.public_user(user)}
 
 
+def admin_reset_password(target_user_id: Any) -> str:
+    """Set a fresh random temporary password on an account and return it ONCE.
+    There is no email infrastructure, so lost passwords are recovered by an admin
+    handing the temp password to the friend out-of-band. Caller must be admin-gated."""
+    import secrets as _secrets
+
+    user = users_repository.get_by_id(target_user_id)
+    if user is None:
+        raise ValueError("Account not found.")
+
+    temp_password = _secrets.token_urlsafe(9)  # ~12 chars, > MIN_PASSWORD_LENGTH
+    users_repository.update_password(target_user_id, security.hash_password(temp_password))
+    return temp_password
+
+
 def change_password(user_id: Any, current_password: str, new_password: str) -> None:
     """Change a user's password after verifying the current one."""
     user = users_repository.get_by_id(user_id)

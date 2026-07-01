@@ -4,14 +4,17 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.api_hardening import (
     RateLimitMiddleware,
+    RequireAuthMiddleware,
     SecurityHeadersMiddleware,
     cors_origins,
 )
+from app import runtime_config
 
 import json
 import logging
@@ -79,6 +82,7 @@ from app.services.data_quality_service import build_data_quality_summary
 
 from app.auth.dependencies import get_current_user, require_admin
 from app.services.auth_service import (
+    admin_reset_password,
     authenticate,
     change_password,
     ensure_seed_admin,
@@ -97,6 +101,10 @@ from app.services import (
     predictions_stats_service,
 )
 
+# Fail fast before serving anything if a hosted instance is misconfigured
+# (e.g. FIGHTIQ_HOSTED=1 without a real AUTH_SECRET — tokens would be forgeable).
+runtime_config.assert_hosted_config()
+
 app = FastAPI(
     title="UFC Fight Predictor API",
     description="Predicts UFC fight winner probabilities using historical fight data.",
@@ -105,8 +113,9 @@ app = FastAPI(
 
 
 # Middleware order: the LAST added is the OUTERMOST. CORS must be outermost so even
-# rate-limited / errored responses carry CORS headers; rate limiting and security
-# headers sit inside it.
+# rate-limited / errored responses carry CORS headers; the hosted-mode auth wall is
+# innermost so its 401s still get security headers + CORS.
+app.add_middleware(RequireAuthMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
@@ -243,8 +252,18 @@ class FriendResponseRequest(BaseModel):
     accept: bool
 
 
+# Single-container serving: when a built frontend exists (FRONTEND_DIST, or the
+# repo-relative frontend/dist), the API serves it — same origin, no CORS needed.
+FRONTEND_DIST = Path(
+    os.environ.get("FRONTEND_DIST", "") or (PROJECT_ROOT.parent / "frontend" / "dist")
+)
+
+
 @app.get("/")
-def root() -> dict[str, str]:
+def root() -> Any:
+    index = FRONTEND_DIST / "index.html"
+    if index.is_file():
+        return FileResponse(index)
     return {
         "message": "UFC Fight Predictor API is running.",
     }
@@ -265,6 +284,11 @@ def health_check() -> dict[str, Any]:
 
 @app.post("/auth/register")
 def auth_register(request: RegisterRequest) -> dict[str, Any]:
+    if not runtime_config.registration_enabled():
+        raise HTTPException(
+            status_code=403,
+            detail={"message": "Registration is closed. Ask the admin for an account."},
+        )
     try:
         user = register_user(request.email, request.password, request.display_name)
     except ValueError as error:
@@ -482,6 +506,17 @@ def admin_set_user_role(user_id: int, request: RoleUpdateRequest) -> dict[str, A
     if not users_repository.set_role(user_id, request.role):
         raise HTTPException(status_code=404, detail={"message": "User not found."})
     return {"user_id": user_id, "role": request.role}
+
+
+@app.post("/admin/users/{user_id}/reset-password", dependencies=[Depends(require_admin)])
+def admin_reset_user_password(user_id: int) -> dict[str, Any]:
+    """Set a random temporary password and return it once (no email infra — the admin
+    hands it to the user out-of-band; they change it from their profile)."""
+    try:
+        temp_password = admin_reset_password(user_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail={"message": str(error)})
+    return {"user_id": user_id, "temp_password": temp_password}
 
 
 @app.get("/fighters/search")
@@ -738,3 +773,9 @@ def clv_evaluation() -> dict[str, Any]:
 @app.get("/data-quality")
 def data_quality() -> dict[str, Any]:
     return build_data_quality_summary()
+
+
+# Registered last so every API route above takes precedence; this only catches the
+# frontend's static assets (/assets/*.js, images, etc.).
+if FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

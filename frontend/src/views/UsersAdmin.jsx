@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getUsers, setUserRole } from "../api/client.js";
+import { getUsers, resetUserPassword, setUserRole } from "../api/client.js";
 import { useAuth } from "../auth/authContext.js";
 import { ErrorNote, SectionCard, Spinner, Tag } from "../components/ui.jsx";
 
@@ -8,6 +8,7 @@ export default function UsersAdmin() {
   const [users, setUsers] = useState(null);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
+  const [tempReset, setTempReset] = useState(null); // { email, password } shown once
 
   useEffect(() => {
     getUsers()
@@ -31,6 +32,20 @@ export default function UsersAdmin() {
     }
   };
 
+  const resetPassword = async (target) => {
+    setBusyId(target.id);
+    setError("");
+    setTempReset(null);
+    try {
+      const result = await resetUserPassword(target.id);
+      setTempReset({ email: target.email, password: result.temp_password });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="view">
       <header>
@@ -39,6 +54,21 @@ export default function UsersAdmin() {
       </header>
 
       <ErrorNote message={error} />
+
+      {tempReset && (
+        <SectionCard eyebrow="One-time reveal" title={`Temp password for ${tempReset.email}`}>
+          <p>
+            <code className="mono">{tempReset.password}</code>
+          </p>
+          <p className="muted">
+            Send this to them out-of-band — it won't be shown again. They should change it
+            from their profile after logging in.
+          </p>
+          <button type="button" className="chip" onClick={() => setTempReset(null)}>
+            Dismiss
+          </button>
+        </SectionCard>
+      )}
 
       <SectionCard
         eyebrow="Accounts"
@@ -80,6 +110,15 @@ export default function UsersAdmin() {
                         title={isAdmin && isMe ? "You can't demote yourself" : undefined}
                       >
                         {busyId === u.id ? "…" : isAdmin ? "Make user" : "Make admin"}
+                      </button>{" "}
+                      <button
+                        type="button"
+                        className="chip"
+                        disabled={busyId === u.id}
+                        onClick={() => resetPassword(u)}
+                        title="Set a one-time temporary password"
+                      >
+                        Reset password
                       </button>
                     </td>
                   </tr>

@@ -1,7 +1,10 @@
 import * as mock from "./mock.js";
 
+// Dev talks to the local uvicorn; production builds are served BY the backend
+// (same origin), so the base is empty unless explicitly overridden.
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? "" : "http://127.0.0.1:8000");
 
 export const USE_MOCK =
   import.meta.env.MODE === "mock" || import.meta.env.VITE_USE_MOCK === "1";
@@ -154,8 +157,8 @@ export async function getUsers() {
   if (USE_MOCK) {
     return {
       users: [
-        { id: 1, username: "admin", role: "admin", created_at: "2026-06-28" },
-        { id: 2, username: "demo", role: "user", created_at: "2026-06-28" },
+        { id: 1, email: "admin@fightiq.local", display_name: "admin", role: "admin", created_at: "2026-06-28" },
+        { id: 2, email: "demo@fightiq.local", display_name: "demo", role: "user", created_at: "2026-06-28" },
       ],
     };
   }
@@ -172,6 +175,17 @@ export async function setUserRole(userId, role) {
     method: "POST",
     body: { role },
     fallbackError: "Failed to update role.",
+  });
+}
+
+export async function resetUserPassword(userId) {
+  if (USE_MOCK) {
+    return { user_id: userId, temp_password: "temp-Pass123" };
+  }
+
+  return request(`/admin/users/${userId}/reset-password`, {
+    method: "POST",
+    fallbackError: "Failed to reset the password.",
   });
 }
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { USE_MOCK } from "../api/client.js";
 import { useAuth } from "../auth/authContext.js";
 import OctagonScene from "../three/OctagonScene.jsx";
 
@@ -77,9 +78,11 @@ export default function Login() {
           {busy ? "…" : "Enter ▸"}
         </button>
 
-        <p className="login-demo">
-          Demo · <code>demo@fightiq.local / demo12345</code>
-        </p>
+        {USE_MOCK && (
+          <p className="login-demo">
+            Demo · <code>demo@fightiq.local / demo12345</code>
+          </p>
+        )}
       </form>
     </div>
   );

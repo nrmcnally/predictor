@@ -38,12 +38,38 @@ def is_demo() -> bool:
     return _db_path == DEMO_DB_PATH
 
 
+# Tables holding real people's data — never carried into the demo sandbox. The copy
+# keeps the fight/model data; accounts, picks, and friendships start empty (register a
+# fresh throwaway account, or let ADMIN_EMAIL/ADMIN_PASSWORD seed one).
+_PERSONAL_TABLES = ("user_predictions", "friendships", "event_controls", "users")
+
+
+def _strip_personal_data(db_path: Path) -> None:
+    conn = sqlite3.connect(db_path)
+    try:
+        existing = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
+        for table in _PERSONAL_TABLES:
+            if table in existing:
+                conn.execute(f"DELETE FROM {table}")
+        conn.commit()
+        conn.execute("VACUUM")  # actually drop the deleted rows (incl. password hashes)
+    finally:
+        conn.close()
+
+
 def ensure_demo_db() -> None:
     """Seed the demo sandbox from prod on first run so it has the real fight/model data
-    while keeping accounts + picks isolated from production. No-op outside demo mode."""
+    while keeping accounts + picks isolated from production. Real users' credentials,
+    picks, and friendships are stripped from the copy. No-op outside demo mode."""
     if _db_path == DEMO_DB_PATH and not DEMO_DB_PATH.exists() and PROD_DB_PATH.exists():
         DEMO_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(PROD_DB_PATH, DEMO_DB_PATH)
+        _strip_personal_data(DEMO_DB_PATH)
 
 
 def get_db_path() -> Path:

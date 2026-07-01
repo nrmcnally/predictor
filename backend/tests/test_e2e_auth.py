@@ -173,6 +173,34 @@ def test_event_control_endpoint_is_admin_only(tmp_path=None):
     assert ok.json()["card"]["locked"] is True
 
 
+def test_admin_password_reset(tmp_path=None):
+    client = _client(tmp_path or tempfile.mkdtemp())
+
+    users_repository.create_user("boss@example.com", security.hash_password("adminpass123"), role="admin")
+    client.post("/auth/register", json={"email": "lost@example.com", "password": "password123", "display_name": "Lost"})
+
+    admin_token = client.post("/auth/login", json={"email": "boss@example.com", "password": "adminpass123"}).json()["token"]
+    user_token = client.post("/auth/login", json={"email": "lost@example.com", "password": "password123"}).json()["token"]
+
+    listing = client.get("/admin/users", headers=_bearer(admin_token)).json()["users"]
+    lost_id = next(u["id"] for u in listing if u["email"] == "lost@example.com")
+
+    # Non-admins can't reset anyone's password.
+    assert client.post(f"/admin/users/{lost_id}/reset-password", headers=_bearer(user_token)).status_code == 403
+
+    reset = client.post(f"/admin/users/{lost_id}/reset-password", headers=_bearer(admin_token))
+    assert reset.status_code == 200
+    temp_password = reset.json()["temp_password"]
+    assert len(temp_password) >= 8
+
+    # Old password dead, temp password works.
+    assert client.post("/auth/login", json={"email": "lost@example.com", "password": "password123"}).status_code == 401
+    assert client.post("/auth/login", json={"email": "lost@example.com", "password": temp_password}).status_code == 200
+
+    # Unknown user -> 404.
+    assert client.post("/admin/users/99999/reset-password", headers=_bearer(admin_token)).status_code == 404
+
+
 def test_change_password_endpoint(tmp_path=None):
     client = _client(tmp_path or tempfile.mkdtemp())
 
