@@ -53,29 +53,36 @@ def collect(patterns: list[str]) -> list[Path]:
     ]
 
 
+def build_bundle(out: Path = DEFAULT_OUT, full: bool = False) -> Path:
+    """Build the bundle tar.gz and return its path. Raises if there's no DB."""
+    if not (BACKEND / "data/app.db").is_file():
+        raise FileNotFoundError("backend/data/app.db not found — nothing to deploy.")
+
+    files = collect(CORE_PATTERNS + (FULL_PATTERNS if full else []))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    total = 0
+    with tarfile.open(out, "w:gz") as tar:
+        for path in files:
+            tar.add(path, arcname=path.relative_to(BACKEND).as_posix())
+            total += path.stat().st_size
+
+    print(f"{len(files)} files, {total / 1048576:.0f} MB uncompressed")
+    print(f"bundle: {out} ({out.stat().st_size / 1048576:.0f} MB)")
+    return out
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--full", action="store_true", help="include winner_models + training matchups")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     args = parser.parse_args()
 
-    patterns = CORE_PATTERNS + (FULL_PATTERNS if args.full else [])
-    files = collect(patterns)
-    if not (BACKEND / "data/app.db").is_file():
-        print("ERROR: backend/data/app.db not found — nothing to deploy.")
+    try:
+        build_bundle(args.out, full=args.full)
+    except FileNotFoundError as error:
+        print(f"ERROR: {error}")
         return 1
-
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    total = 0
-    with tarfile.open(args.out, "w:gz") as tar:
-        for path in files:
-            arcname = path.relative_to(BACKEND).as_posix()
-            tar.add(path, arcname=arcname)
-            total += path.stat().st_size
-
-    print(f"\n{len(files)} files, {total / 1048576:.0f} MB uncompressed")
-    print(f"bundle: {args.out} ({args.out.stat().st_size / 1048576:.0f} MB)")
-    print("Push it to the host and extract into the volume root (see DEPLOY.md).")
+    print("Push it to the host (deploy/push_update.py does this in one step).")
     return 0
 
 

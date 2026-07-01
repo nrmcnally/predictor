@@ -106,15 +106,25 @@ fly deploy --remote-only        # rebuilds the image from your working tree and 
 
 The volume (DB + models) is untouched — friends' accounts and picks survive deploys.
 
-**Data/model refreshes** (after running Data Ops locally):
+**Data/model refreshes** (after running Data Ops locally) — one command:
 
 ```bash
-python deploy/make_bundle.py
+python deploy/push_update.py https://yourapp.fly.dev
+```
+
+It builds the bundle, logs in with your admin account (password prompted), and
+uploads it over HTTPS to `POST /admin/data/upload-bundle`. No SSH/CLI tooling needed
+— works from any machine. The server side is **merge-aware**: it replaces the shared
+data (results, upcoming cards, odds, saved model predictions) and overwrites the
+model files, but **never touches accounts, picks, or friendships created on the
+server**. Changed files hot-reload automatically — no restart.
+
+<details>
+<summary>Fallback: SSH route (first boot, or the ~450MB <code>--full</code> bundle)</summary>
+
+```bash
+python deploy/make_bundle.py            # add --full for the Evaluation deep-dives
 fly ssh sftp put deploy/deploy_bundle.tar.gz /data/bundle.tar.gz
 fly ssh console -C "sh /app/deploy/update_from_bundle.sh"
 ```
-
-The update script is **merge-aware**: it replaces the shared data (results, upcoming
-cards, odds, saved model predictions) and overwrites the model files, but **never
-touches accounts, picks, or friendships created on the server**. The app hot-reloads
-changed model/data files automatically — no restart needed.
+</details>

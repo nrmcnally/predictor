@@ -93,6 +93,7 @@ from app.services.auth_service import (
 from app.repositories import users_repository
 from app.db import connection
 from app.services import (
+    data_bundle_service,
     event_lock_service,
     friends_compare_service,
     friends_service,
@@ -517,6 +518,43 @@ def admin_reset_user_password(user_id: int) -> dict[str, Any]:
     except ValueError as error:
         raise HTTPException(status_code=404, detail={"message": str(error)})
     return {"user_id": user_id, "temp_password": temp_password}
+
+
+# Generous but bounded: the core bundle is ~44MB; --full belongs on the sftp path.
+MAX_BUNDLE_UPLOAD_BYTES = 500 * 1024 * 1024
+
+
+@app.post("/admin/data/upload-bundle", dependencies=[Depends(require_admin)])
+async def admin_upload_data_bundle(request: Request) -> dict[str, Any]:
+    """Apply a deploy bundle (deploy/make_bundle.py output) uploaded over HTTPS.
+    Merges shared data tables + overwrites model artifacts; never touches accounts,
+    picks, or friendships. The remote-update path for deploy/push_update.py."""
+    import tarfile
+    import tempfile
+
+    fd, name = tempfile.mkstemp(suffix=".tar.gz")
+    temp_path = Path(name)
+    try:
+        total = 0
+        with os.fdopen(fd, "wb") as handle:
+            async for chunk in request.stream():
+                total += len(chunk)
+                if total > MAX_BUNDLE_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail={"message": "Bundle too large for HTTP upload — use the sftp path."},
+                    )
+                handle.write(chunk)
+        if total == 0:
+            raise HTTPException(status_code=400, detail={"message": "Empty upload."})
+
+        try:
+            summary = data_bundle_service.apply_bundle(temp_path)
+        except (ValueError, tarfile.TarError) as error:
+            raise HTTPException(status_code=400, detail={"message": str(error)})
+        return {"message": "Bundle applied.", "bytes_received": total, **summary}
+    finally:
+        temp_path.unlink(missing_ok=True)
 
 
 @app.get("/fighters/search")
