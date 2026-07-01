@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from app.repositories import friends_repository, users_repository
-from app.services.auth_service import is_valid_email
 
-# Mutual-accept friends. You add someone by an email you already know (we never hand an
-# email back out); everything returned is display-name only, matching the leaderboard.
+# Mutual-accept friends. You add someone by their username (unique display name); we
+# never take or hand back an email. Everything returned is display-name only.
 
 
 def _display_name(user: dict[str, Any] | None) -> str:
@@ -24,14 +23,14 @@ def _friend_view(user_id: Any, friendship_id: Any) -> dict[str, Any]:
     }
 
 
-def send_friend_request(me_id: Any, target_email: str) -> dict[str, Any]:
-    email = (target_email or "").strip().lower()
-    if not is_valid_email(email):
-        raise ValueError("Enter a valid email address.")
+def send_friend_request(me_id: Any, target_username: str) -> dict[str, Any]:
+    username = (target_username or "").strip()
+    if not username:
+        raise ValueError("Enter a username.")
 
-    target = users_repository.get_by_email(email)
+    target = users_repository.get_by_display_name(username)
     if target is None:
-        raise ValueError("No account uses that email.")
+        raise ValueError("No user with that username.")
     if target["id"] == me_id:
         raise ValueError("You can't add yourself.")
 

@@ -175,13 +175,20 @@ export default function Profile() {
         )}
       </SectionCard>
 
-      <SectionCard eyebrow="Account" title="Email & display name">
+      <SectionCard eyebrow="Account" title="Username & email">
         <ErrorNote message={accountErr} />
         {accountMsg && <p className="form-ok">{accountMsg}</p>}
         <form className="profile-form" onSubmit={saveAccount}>
           <label className="profile-field">
-            <span>Display name</span>
-            <input value={displayName} maxLength={60} onChange={(e) => setDisplayName(e.target.value)} />
+            <span>Username</span>
+            <input
+              value={displayName}
+              maxLength={60}
+              autoCapitalize="off"
+              autoCorrect="off"
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+            <span className="muted profile-field-note">Unique — this is how friends add you.</span>
           </label>
           <label className="profile-field">
             <span>Email</span>

@@ -41,7 +41,7 @@ def _fight(fight_url, f1, f2):
 
 
 def _befriend(a, b):
-    friends_service.send_friend_request(a["id"], "boz@example.com")
+    friends_service.send_friend_request(a["id"], "Boz")
     fid = friends_service.get_overview(b["id"])["incoming"][0]["friendship_id"]
     friends_service.respond_to_request(b["id"], fid, True)
 

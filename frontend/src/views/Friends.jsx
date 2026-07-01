@@ -25,7 +25,7 @@ export default function Friends() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [addMsg, setAddMsg] = useState("");
   const [addErr, setAddErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -60,13 +60,13 @@ export default function Friends() {
     setAddMsg("");
     setBusy(true);
     try {
-      const result = await sendFriendRequest(email.trim());
+      const result = await sendFriendRequest(username.trim());
       setAddMsg(
         result.status === "accepted"
           ? `You're now friends with ${result.friend.display_name}.`
           : `Request sent to ${result.friend.display_name}.`
       );
-      setEmail("");
+      setUsername("");
       await load();
     } catch (err) {
       setAddErr(err.message);
@@ -131,18 +131,20 @@ export default function Friends() {
         {addMsg && <p className="form-ok">{addMsg}</p>}
         <form className="friend-add" onSubmit={submitAdd}>
           <input
-            type="email"
-            value={email}
+            type="text"
+            value={username}
             required
-            placeholder="their account email"
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder="their username"
+            autoCapitalize="off"
+            autoCorrect="off"
+            onChange={(e) => setUsername(e.target.value)}
           />
           <button type="submit" className="btn btn-primary" disabled={busy}>
             Send request
           </button>
         </form>
         <p className="muted friend-add-note">
-          You add friends by an email you already know — we never show anyone else's email.
+          Add friends by their username — no emails involved.
         </p>
       </SectionCard>
 

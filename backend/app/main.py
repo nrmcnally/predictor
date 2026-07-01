@@ -229,7 +229,7 @@ class UserPredictionRequest(BaseModel):
 
 
 class FriendRequestRequest(BaseModel):
-    email: str = Field(min_length=3, max_length=200)
+    username: str = Field(min_length=1, max_length=60)
 
 
 class FriendResponseRequest(BaseModel):
@@ -392,7 +392,7 @@ def send_friend_request(
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
     try:
-        return friends_service.send_friend_request(current_user["id"], request.email)
+        return friends_service.send_friend_request(current_user["id"], request.username)
     except ValueError as error:
         raise HTTPException(status_code=400, detail={"message": str(error)})
 

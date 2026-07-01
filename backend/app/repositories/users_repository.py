@@ -55,6 +55,17 @@ def get_by_id(user_id: Any) -> dict[str, Any] | None:
     return dict(row) if row is not None else None
 
 
+def get_by_display_name(display_name: str) -> dict[str, Any] | None:
+    """Case-insensitive lookup by the unique display name / username."""
+    with connection.transaction() as conn:
+        schema.init_db(conn)
+        row = conn.execute(
+            f"SELECT {_FULL_COLUMNS} FROM users WHERE display_name = ? COLLATE NOCASE",
+            (display_name,),
+        ).fetchone()
+    return dict(row) if row is not None else None
+
+
 def set_role(user_id: Any, role: str) -> bool:
     with connection.transaction() as conn:
         schema.init_db(conn)

@@ -1,6 +1,7 @@
 """
-Tests for the mutual-accept friends system: request/accept/decline, reverse-request
-auto-accept, validation, unfriend, and that friend lists never expose emails.
+Tests for the mutual-accept friends system: request/accept/decline by username,
+reverse-request auto-accept, validation, unfriend, and that friend lists never expose
+emails.
 """
 
 from __future__ import annotations
@@ -38,7 +39,7 @@ def _two_users(tmp):
 def test_request_accept_overview_no_email_leak(tmp_path=None):
     a, b = _two_users(tmp_path or tempfile.mkdtemp())
 
-    res = friends_service.send_friend_request(a["id"], "boz@example.com")
+    res = friends_service.send_friend_request(a["id"], "Boz")
     assert res["status"] == "pending"
 
     ov_b = friends_service.get_overview(b["id"])
@@ -50,46 +51,50 @@ def test_request_accept_overview_no_email_leak(tmp_path=None):
     assert [f["display_name"] for f in ov_a["friends"]] == ["Boz"]
     assert friends_repository.list_friend_ids(a["id"]) == [b["id"]]
 
-    # No email ever appears in the friend payloads.
     assert "@" not in str(ov_a) and "@" not in str(ov_b)
+
+
+def test_add_by_username_is_case_insensitive(tmp_path=None):
+    a, b = _two_users(tmp_path or tempfile.mkdtemp())
+    # "boz" resolves to the "Boz" account.
+    res = friends_service.send_friend_request(a["id"], "boz")
+    assert res["status"] == "pending"
 
 
 def test_reverse_request_auto_accepts(tmp_path=None):
     a, b = _two_users(tmp_path or tempfile.mkdtemp())
 
-    friends_service.send_friend_request(a["id"], "boz@example.com")   # a -> b pending
-    res = friends_service.send_friend_request(b["id"], "ada@example.com")  # b -> a
-    assert res["status"] == "accepted"  # sending back accepts the pending request
+    friends_service.send_friend_request(a["id"], "Boz")   # a -> b pending
+    res = friends_service.send_friend_request(b["id"], "Ada")  # b -> a
+    assert res["status"] == "accepted"
     assert friends_repository.list_friend_ids(a["id"]) == [b["id"]]
 
 
 def test_validation(tmp_path=None):
     a, b = _two_users(tmp_path or tempfile.mkdtemp())
 
-    assert _raises_value_error(friends_service.send_friend_request, a["id"], "ada@example.com")  # self
-    assert _raises_value_error(friends_service.send_friend_request, a["id"], "not-an-email")
-    assert _raises_value_error(friends_service.send_friend_request, a["id"], "ghost@example.com")  # no account
+    assert _raises_value_error(friends_service.send_friend_request, a["id"], "Ada")  # self
+    assert _raises_value_error(friends_service.send_friend_request, a["id"], "")  # empty
+    assert _raises_value_error(friends_service.send_friend_request, a["id"], "Ghost")  # no user
 
-    friends_service.send_friend_request(a["id"], "boz@example.com")
-    assert _raises_value_error(friends_service.send_friend_request, a["id"], "boz@example.com")  # already sent
+    friends_service.send_friend_request(a["id"], "Boz")
+    assert _raises_value_error(friends_service.send_friend_request, a["id"], "Boz")  # already sent
 
 
 def test_decline_and_unfriend(tmp_path=None):
     a, b = _two_users(tmp_path or tempfile.mkdtemp())
 
-    friends_service.send_friend_request(a["id"], "boz@example.com")
+    friends_service.send_friend_request(a["id"], "Boz")
     fid = friends_service.get_overview(b["id"])["incoming"][0]["friendship_id"]
     friends_service.respond_to_request(b["id"], fid, False)  # decline
     assert friends_service.get_overview(a["id"])["outgoing"] == []
     assert friends_service.get_overview(b["id"])["incoming"] == []
 
-    # Re-request, accept, then unfriend.
-    friends_service.send_friend_request(a["id"], "boz@example.com")
+    friends_service.send_friend_request(a["id"], "Boz")
     fid2 = friends_service.get_overview(b["id"])["incoming"][0]["friendship_id"]
     friends_service.respond_to_request(b["id"], fid2, True)
     assert friends_service.remove_friend(a["id"], b["id"]) is True
     assert friends_repository.list_friend_ids(a["id"]) == []
-    # Unfriending a non-friend is a no-op, not an error.
     assert friends_service.remove_friend(a["id"], b["id"]) is False
 
 

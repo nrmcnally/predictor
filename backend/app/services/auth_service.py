@@ -22,10 +22,20 @@ def is_valid_email(email: str) -> bool:
 def _clean_display_name(email: str, display_name: str | None) -> str:
     display = (display_name or "").strip()
     if "@" in display:
-        raise ValueError("Display name cannot be an email address.")
+        raise ValueError("Username cannot be an email address.")
     if len(display) > 60:
-        raise ValueError("Display name must be 60 characters or fewer.")
+        raise ValueError("Username must be 60 characters or fewer.")
     return display or email.split("@")[0]
+
+
+def _next_available_username(base: str) -> str:
+    """A free username derived from `base`, de-duped with a numeric suffix."""
+    candidate = base
+    suffix = 1
+    while users_repository.get_by_display_name(candidate) is not None:
+        suffix += 1
+        candidate = f"{base}{suffix}"
+    return candidate
 
 
 def register_user(
@@ -42,6 +52,14 @@ def register_user(
         raise ValueError("An account with that email already exists.")
 
     display = _clean_display_name(email, display_name)
+    if (display_name or "").strip():
+        # An explicitly chosen username must be free (case-insensitive).
+        if users_repository.get_by_display_name(display) is not None:
+            raise ValueError("That username is taken.")
+    else:
+        # Derived from the email — silently de-dupe so registration still succeeds.
+        display = _next_available_username(display)
+
     user = users_repository.create_user(
         email, security.hash_password(password), display_name=display, role=role
     )
@@ -95,6 +113,10 @@ def update_profile(user_id: Any, email: str, display_name: str | None) -> dict[s
         raise ValueError("That email is already in use.")
 
     display = _clean_display_name(email, display_name)
+    taken = users_repository.get_by_display_name(display)
+    if taken is not None and taken["id"] != user_id:
+        raise ValueError("That username is taken.")
+
     users_repository.update_profile(user_id, email, display)
     return users_repository.public_user(users_repository.get_by_id(user_id))
 
@@ -114,7 +136,10 @@ def ensure_seed_admin() -> dict[str, Any] | None:
         return users_repository.public_user(existing)
 
     user = users_repository.create_user(
-        email, security.hash_password(password), display_name=email.split("@")[0], role="admin"
+        email,
+        security.hash_password(password),
+        display_name=_next_available_username(email.split("@")[0]),
+        role="admin",
     )
     return users_repository.public_user(user)
 

@@ -492,3 +492,8 @@ button.user-name.active {
   margin: 14px 0 0;
   font-size: 12.5px;
 }
+
+.profile-field-note {
+  font-size: 11px;
+  margin-top: 2px;
+}

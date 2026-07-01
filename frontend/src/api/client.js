@@ -440,13 +440,13 @@ export async function getFriends() {
   return request("/friends", { fallbackError: "Failed to load friends." });
 }
 
-export async function sendFriendRequest(email) {
+export async function sendFriendRequest(username) {
   if (USE_MOCK) {
-    return mock.sendFriendRequest(email);
+    return mock.sendFriendRequest(username);
   }
   return request("/friends/requests", {
     method: "POST",
-    body: { email },
+    body: { username },
     fallbackError: "Failed to send friend request.",
   });
 }

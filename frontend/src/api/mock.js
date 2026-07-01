@@ -683,8 +683,8 @@ export function getFriends() {
   );
 }
 
-export function sendFriendRequest(email) {
-  return delay({ status: "pending", friend: { user_id: 99, display_name: email.split("@")[0], friendship_id: 99 } }, 150);
+export function sendFriendRequest(username) {
+  return delay({ status: "pending", friend: { user_id: 99, display_name: username, friendship_id: 99 } }, 150);
 }
 
 export function respondFriendRequest(friendshipId, accept) {

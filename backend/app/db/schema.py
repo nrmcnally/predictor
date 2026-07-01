@@ -357,6 +357,30 @@ def _migrate_users_to_email(conn: sqlite3.Connection) -> None:
     conn.execute("ALTER TABLE users_new RENAME TO users")
 
 
+def _ensure_unique_display_names(conn: sqlite3.Connection) -> None:
+    """Back-fill existing accounts to unique display names (usernames) before the
+    unique index is created. Derives from the current name (or email local-part) and
+    de-dupes with a numeric suffix. Skipped once the unique index exists."""
+    indexes = {row[1] for row in conn.execute("PRAGMA index_list(users)").fetchall()}
+    if "idx_users_display_name_nocase" in indexes:
+        return
+
+    seen: dict[str, int] = {}
+    for row in conn.execute("SELECT id, display_name, email FROM users ORDER BY id").fetchall():
+        uid, name, email = row[0], (row[1] or "").strip(), row[2] or ""
+        base = name or email.split("@")[0] or f"user{uid}"
+        candidate = base
+        suffix = 1
+        while candidate.lower() in seen:
+            suffix += 1
+            candidate = f"{base}{suffix}"
+        if candidate != (row[1] or ""):
+            conn.execute(
+                "UPDATE users SET display_name = ? WHERE id = ?", (candidate, uid)
+            )
+        seen[candidate.lower()] = uid
+
+
 # Spec-driven tables that get automatic column forward-migration: adding a column to
 # any of these specs above backfills existing DBs on the next open (no manual migration).
 _SPEC_TABLES: list[tuple[str, list[tuple[str, str]]]] = [
@@ -381,3 +405,13 @@ def init_db(conn: sqlite3.Connection) -> None:
     _ensure_columns(conn, "users", {"is_public": "INTEGER NOT NULL DEFAULT 0"})
     for table, columns in _SPEC_TABLES:
         _ensure_columns(conn, table, {name: sql_type for name, sql_type in columns})
+
+    # Display name is the unique username (case-insensitive): de-dupe then enforce.
+    _ensure_unique_display_names(conn)
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_display_name_nocase "
+            "ON users(display_name COLLATE NOCASE)"
+        )
+    except sqlite3.OperationalError:
+        pass  # residual dupes; service-level checks still enforce uniqueness
