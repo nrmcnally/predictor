@@ -360,6 +360,18 @@ export async function updateFutureFightScheduledRounds(eventId, fightId, schedul
   );
 }
 
+export async function updateFutureEventControl(eventId, payload) {
+  if (USE_MOCK) {
+    return mock.updateFutureEventControl(eventId, payload);
+  }
+
+  return request(`/future-cards/${encodeURIComponent(eventId)}/event-control`, {
+    method: "POST",
+    body: payload,
+    fallbackError: "Failed to save event lock controls.",
+  });
+}
+
 export async function refreshFutureCards() {
   if (USE_MOCK) {
     return { message: "Future cards refreshed." };

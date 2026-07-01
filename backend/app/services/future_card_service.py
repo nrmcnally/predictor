@@ -12,6 +12,7 @@ from app.services.fight_context_override_service import (
     find_scheduled_rounds_override,
     upsert_scheduled_rounds_override,
 )
+from app.services.event_lock_service import build_event_lock_state
 from app.services.prediction_service import FighterNotFoundError, predict_fight_data
 from app.repositories import future_cards_repository
 
@@ -72,15 +73,24 @@ def get_future_cards() -> list[dict[str, Any]]:
     for _, event in events_df.iterrows():
         event_id = clean_text(event["event_id"])
         event_fights_df = fights_df[fights_df["event_id"].astype(str) == event_id]
+        event_row = {
+            "event_id": event_id,
+            "event_name": clean_text(event["event_name"]),
+            "event_date": clean_text(event["event_date"]),
+            "event_location": clean_text(event["event_location"]),
+            "event_url": clean_text(event["event_url"]),
+        }
+        lock_state = build_event_lock_state(
+            event_row,
+            fight_urls=[clean_text(value) for value in event_fights_df.get("fight_url", [])],
+        )
 
         cards.append(
             {
-                "event_id": event_id,
-                "event_name": clean_text(event["event_name"]),
-                "event_date": clean_text(event["event_date"]),
-                "event_location": clean_text(event["event_location"]),
-                "event_url": clean_text(event["event_url"]),
+                **event_row,
                 "fight_count": int(len(event_fights_df)),
+                "lock_state": lock_state,
+                "locked": lock_state["locked"],
             }
         )
 
@@ -151,13 +161,22 @@ def get_future_card(event_id: str) -> dict[str, Any]:
             }
         )
 
-    return {
+    card = {
         "event_id": clean_text(event["event_id"]),
         "event_name": event_name,
         "event_date": clean_text(event["event_date"]),
         "event_location": clean_text(event["event_location"]),
         "event_url": clean_text(event["event_url"]),
         "fights": fights,
+    }
+    lock_state = build_event_lock_state(
+        card,
+        fight_urls=[fight["fight_url"] for fight in fights],
+    )
+    return {
+        **card,
+        "lock_state": lock_state,
+        "locked": lock_state["locked"],
     }
 
 
@@ -235,6 +254,8 @@ def set_future_fight_scheduled_rounds(
         raise ValueError(f"Future card not found: {event_id}")
 
     event = event_matches.iloc[0]
+    event_name = clean_text(event.get("event_name", ""))
+    is_fight_night = event_name.casefold().startswith("ufc fight night")
     event_fights_df = fights_df[fights_df["event_id"].astype(str) == str(event_id)]
 
     for fight_index, (_, fight) in enumerate(event_fights_df.iterrows()):
@@ -242,6 +263,9 @@ def set_future_fight_scheduled_rounds(
 
         if current_fight_id != str(fight_id):
             continue
+
+        if fight_index not in {1, 2} or is_fight_night:
+            raise ValueError("Scheduled-rounds override is not allowed for this fight.")
 
         override = upsert_scheduled_rounds_override(
             event_id=event_id,

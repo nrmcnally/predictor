@@ -6,6 +6,7 @@ import {
   getFutureCards,
   getFutureFightOdds,
   refreshFutureCards,
+  updateFutureEventControl,
   updateFutureFightScheduledRounds,
 } from "../api/client.js";
 import { FighterMatchup } from "../components/FighterDisplay.jsx";
@@ -98,6 +99,51 @@ function formatProbabilityPointDelta(delta) {
 
   const points = delta * 100;
   return `${points >= 0 ? "+" : ""}${points.toFixed(1)} pts`;
+}
+
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+
+function toLocalDateTimeInput(isoValue) {
+  if (!isoValue) {
+    return "";
+  }
+  const date = new Date(isoValue);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(
+    date.getDate()
+  )}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+
+function fromLocalDateTimeInput(value) {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function formatEventStart(isoValue) {
+  if (!isoValue) {
+    return "Not set";
+  }
+  const date = new Date(isoValue);
+  if (Number.isNaN(date.getTime())) {
+    return "Not set";
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function isCardLocked(card) {
+  return Boolean(card?.lock_state?.locked ?? card?.locked);
 }
 
 function getMarketEdge(prediction, odds) {
@@ -226,6 +272,98 @@ function RoundOverrideControl({ fight, disabled, onChange, isAdmin }) {
   );
 }
 
+function EventControlPanel({ card, disabled, onSave }) {
+  const lockState = card?.lock_state || {};
+  const [lockMode, setLockMode] = useState(lockState.lock_mode || "auto");
+  const [startInput, setStartInput] = useState(() =>
+    toLocalDateTimeInput(lockState.event_start_at_utc)
+  );
+
+  if (!card) {
+    return null;
+  }
+
+  const suggestedInput = toLocalDateTimeInput(lockState.suggested_start_at_utc);
+  const statusTone = lockState.locked ? "neutral" : "gold";
+
+  return (
+    <SectionCard
+      eyebrow="Admin"
+      title="Event Lock"
+      className="event-control-card"
+      actions={<Tag tone={statusTone}>{lockState.locked ? "Locked" : "Open"}</Tag>}
+    >
+      <div className="event-control-grid">
+        <div>
+          <span>Effective</span>
+          <strong>{formatEventStart(lockState.effective_start_at_utc)}</strong>
+        </div>
+        <div>
+          <span>Source</span>
+          <strong>{lockState.effective_source || "date_fallback"}</strong>
+        </div>
+        <div>
+          <span>Odds suggestion</span>
+          <strong>{formatEventStart(lockState.suggested_start_at_utc)}</strong>
+        </div>
+      </div>
+
+      <div className="event-control-form">
+        <label className="event-time-input">
+          <span>Manual start</span>
+          <input
+            type="datetime-local"
+            value={startInput}
+            onChange={(event) => setStartInput(event.target.value)}
+          />
+        </label>
+
+        <div className="segmented lock-mode-control" aria-label="Event lock mode">
+          {[
+            ["auto", "Auto"],
+            ["force_open", "Open"],
+            ["force_locked", "Locked"],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={lockMode === value ? "active" : ""}
+              onClick={() => setLockMode(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {suggestedInput && (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setStartInput(suggestedInput)}
+            disabled={disabled}
+          >
+            Use odds time
+          </button>
+        )}
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() =>
+            onSave({
+              lock_mode: lockMode,
+              event_start_at_utc: fromLocalDateTimeInput(startInput),
+            })
+          }
+          disabled={disabled}
+        >
+          Save
+        </button>
+      </div>
+    </SectionCard>
+  );
+}
+
 export default function FutureCards() {
   const { imageLookup, openProfile } = useContext(AppContext);
   const { user } = useAuth();
@@ -240,6 +378,7 @@ export default function FutureCards() {
   const [cardsLoading, setCardsLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [savingRoundFightId, setSavingRoundFightId] = useState("");
+  const [savingEventControl, setSavingEventControl] = useState(false);
   const [error, setError] = useState("");
 
   async function loadCards() {
@@ -337,6 +476,36 @@ export default function FutureCards() {
     }
   }
 
+  async function handleEventControl(payload) {
+    setSavingEventControl(true);
+    setError("");
+
+    try {
+      const result = await updateFutureEventControl(selectedCardId, payload);
+      if (result?.card) {
+        setSelectedCard(result.card);
+        setCards((current) =>
+          current.map((card) =>
+            card.event_id === selectedCardId
+              ? {
+                  ...card,
+                  lock_state: result.card.lock_state,
+                  locked: result.card.locked,
+                }
+              : card
+          )
+        );
+      } else {
+        const data = await getFutureCardPredictions(selectedCardId);
+        setSelectedCard(data);
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSavingEventControl(false);
+    }
+  }
+
   async function handleRefresh() {
     setCardsLoading(true);
     setError("");
@@ -392,7 +561,12 @@ export default function FutureCards() {
               <strong>{card.event_name}</strong>
               <span>{card.event_date}</span>
               <span className="muted">{card.event_location}</span>
-              <Tag tone="neutral">{card.fight_count} fights</Tag>
+              <div className="tag-row">
+                <Tag tone="neutral">{card.fight_count} fights</Tag>
+                <Tag tone={isCardLocked(card) ? "neutral" : "gold"}>
+                  {isCardLocked(card) ? "Locked" : "Open"}
+                </Tag>
+              </div>
             </button>
           ))}
         </aside>
@@ -402,6 +576,17 @@ export default function FutureCards() {
 
           {!detailLoading && selectedCard && (
             <>
+              {isAdmin && (
+                <EventControlPanel
+                  key={`${selectedCard.event_id}-${selectedCard.lock_state?.updated_at || ""}-${
+                    selectedCard.lock_state?.lock_mode || ""
+                  }-${selectedCard.lock_state?.event_start_at_utc || ""}`}
+                  card={selectedCard}
+                  disabled={savingEventControl}
+                  onSave={handleEventControl}
+                />
+              )}
+
               <div className="tile-row five">
                 <StatTile label="Fights" value={summary.total} />
                 <StatTile label="Predictions" value={summary.available} />

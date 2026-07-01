@@ -224,6 +224,19 @@ USER_PREDICTIONS_COLUMNS: list[tuple[str, str]] = [
     ("updated_at", "TEXT"),
 ]
 
+# event_controls - admin overrides for prediction-game lock windows. The card
+# scrape owns event metadata; this table stores only persistent control state.
+EVENT_CONTROLS_COLUMNS: list[tuple[str, str]] = [
+    ("event_id", "TEXT"),
+    ("event_name", "TEXT"),
+    ("event_date", "TEXT"),
+    ("event_url", "TEXT"),
+    ("event_start_at_utc", "TEXT"),
+    ("lock_mode", "TEXT"),  # auto | force_open | force_locked
+    ("updated_by", "INTEGER"),
+    ("updated_at", "TEXT"),
+]
+
 
 def create_table_sql(
     name: str,
@@ -297,6 +310,7 @@ SCHEMA_STATEMENTS: list[str] = [
     "ON user_predictions(user_id, fight_url)",
     "CREATE INDEX IF NOT EXISTS idx_user_predictions_user ON user_predictions(user_id)",
     "CREATE INDEX IF NOT EXISTS idx_user_predictions_event ON user_predictions(event_id)",
+    create_table_sql("event_controls", EVENT_CONTROLS_COLUMNS, primary_key="event_id"),
     # friendships: mutual-accept connections. One directed row (requester -> addressee)
     # per pair; status pending -> accepted. Friendship exists if an accepted row joins
     # the two in either direction.
@@ -392,6 +406,7 @@ _SPEC_TABLES: list[tuple[str, list[tuple[str, str]]]] = [
     ("model_runs", MODEL_RUNS_COLUMNS),
     ("future_fight_odds", FUTURE_FIGHT_ODDS_COLUMNS),
     ("user_predictions", USER_PREDICTIONS_COLUMNS),
+    ("event_controls", EVENT_CONTROLS_COLUMNS),
 ]
 
 

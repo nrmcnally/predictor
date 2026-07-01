@@ -20,7 +20,7 @@ import app.api_hardening as hardening  # noqa: E402
 import app.db.connection as db_connection  # noqa: E402
 from app.auth import security  # noqa: E402
 from app.main import app  # noqa: E402
-from app.repositories import users_repository  # noqa: E402
+from app.repositories import future_cards_repository, users_repository  # noqa: E402
 
 
 def _client(tmp) -> TestClient:
@@ -120,6 +120,57 @@ def test_user_leaderboard_does_not_expose_emails_to_regular_users(tmp_path=None)
     legacy = client.get("/leaderboard/predictors", headers=_bearer(token))
     assert legacy.status_code == 200
     assert "example.com" not in json.dumps(legacy.json())
+
+
+def test_event_control_endpoint_is_admin_only(tmp_path=None):
+    client = _client(tmp_path or tempfile.mkdtemp())
+
+    event = {
+        "event_id": "evt1",
+        "event_name": "UFC 999",
+        "event_date": "December 31, 2099",
+        "event_location": "Las Vegas",
+        "event_url": "http://ufcstats.com/event-details/evt1",
+    }
+    future_cards_repository.replace_upcoming_events([event])
+    future_cards_repository.replace_upcoming_fights(
+        [
+            {
+                **event,
+                "fight_url": "http://ufcstats.com/fight-details/abc123",
+                "fighter_1": "Conor McGregor",
+                "fighter_2": "Max Holloway",
+                "weight_class": "Welterweight",
+            }
+        ]
+    )
+
+    users_repository.create_user(
+        "boss@example.com", security.hash_password("adminpass123"), role="admin"
+    )
+    client.post("/auth/register", json={"email": "user@example.com", "password": "password123"})
+    admin_token = client.post(
+        "/auth/login", json={"email": "boss@example.com", "password": "adminpass123"}
+    ).json()["token"]
+    user_token = client.post(
+        "/auth/login", json={"email": "user@example.com", "password": "password123"}
+    ).json()["token"]
+
+    payload = {"lock_mode": "force_locked", "event_start_at_utc": None}
+    assert (
+        client.post("/future-cards/evt1/event-control", json=payload, headers=_bearer(user_token))
+        .status_code
+        == 403
+    )
+
+    ok = client.post(
+        "/future-cards/evt1/event-control",
+        json=payload,
+        headers=_bearer(admin_token),
+    )
+    assert ok.status_code == 200
+    assert ok.json()["lock_state"]["locked"] is True
+    assert ok.json()["card"]["locked"] is True
 
 
 def test_change_password_endpoint(tmp_path=None):

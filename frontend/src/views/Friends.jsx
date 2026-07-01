@@ -174,7 +174,7 @@ export default function Friends() {
             description={overview?.outgoing?.length ? `${overview.outgoing.length} request(s) still pending.` : undefined}
           >
             {(!overview?.friends || overview.friends.length === 0) && (
-              <EmptyState title="No friends yet" message="Add someone by their email to compare picks." />
+              <EmptyState title="No friends yet" message="Add someone by their username to compare picks." />
             )}
             {overview?.friends?.map((f) => (
               <div className="friend-row" key={f.friendship_id}>

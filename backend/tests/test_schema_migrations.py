@@ -43,7 +43,7 @@ def test_init_db_is_idempotent():
     conn = sqlite3.connect(Path(tempfile.mkdtemp()) / "fresh.db")
     schema.init_db(conn)
     schema.init_db(conn)  # second call must not error or duplicate columns
-    for table in ("saved_model_predictions", "user_predictions", "event_fights"):
+    for table in ("saved_model_predictions", "user_predictions", "event_fights", "event_controls"):
         cols = [r[1] for r in conn.execute(f"PRAGMA table_info({table})")]
         assert len(cols) == len(set(cols)), table
     conn.close()

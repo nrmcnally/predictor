@@ -312,37 +312,36 @@ feature pipeline reads results from the DB and writes those artifacts to CSV._
       git lineage + metrics), and the hash is stamped into the model's provenance.
 
 ### Audit follow-up - conversion/product hardening _(2026-06-30)_
-- [ ] **Fix the duplicated FastAPI request schemas**: split Fight Lab prediction requests from
+- [x] **Fix the duplicated FastAPI request schemas**: split Fight Lab prediction requests from
       account-pick requests and add TestClient smoke coverage for `/predict` + `/predict-method`.
-      Current bug: the account-pick schema shadows the fight-prediction schema and real Fight Lab
-      requests return 422.
-- [ ] **Centralize SQLite-safe boolean parsing**: one helper should correctly parse `True/False`,
+      Done with separate fight/user request models and HTTP smoke coverage.
+- [x] **Centralize SQLite-safe boolean parsing**: one helper should correctly parse `True/False`,
       `1/0`, `1.0/0.0`, strings, blanks, and nulls. Wire it through Recent Cards,
       Model-vs-Market, Data Quality, CLV, model snapshot evaluation, market shadow training, and
       prediction-service market-shadow input. Add regression tests with SQLite/pandas `1.0`
       values.
-- [ ] **Make full rebuild match incremental odds behavior**: add `Refresh future fight odds`
+- [x] **Make full rebuild match incremental odds behavior**: add `Refresh future fight odds`
       before market shadow training and future-card prediction snapshots in `update_all_data.py`,
       so full rebuilds do not save stale/no-odds snapshots.
-- [ ] **Lock down scheduled-round overrides**: admin-gate the mutation endpoint and consider
-      moving `fight_context_overrides.csv` into SQLite so overrides follow the rest of
-      transactional app state.
-- [ ] **Add forward migrations for all SQLite tables**: current `init_db` only ensures the
+- [x] **Lock down scheduled-round overrides**: admin-gate the mutation endpoint and enforce
+      co-main / third-from-top eligibility server-side, with Fight Night cards excluded.
+- [x] **Add forward migrations for all SQLite tables**: current `init_db` only ensures the
       `users` table has new columns; add table-specific column migrations for saved predictions,
       saved model predictions, future odds, future cards, and user predictions.
-- [ ] **Stamp provenance on all-model snapshots**: add model version, recipe hash, trained-at, and
+- [x] **Stamp provenance on all-model snapshots**: add model version, recipe hash, trained-at, and
       git lineage to `saved_model_predictions` so prospective model rows are not blended across
       recipe generations.
-- [ ] **Clean up update-job drift**: fix the initial `total_stages` count, remove the stale
+- [x] **Clean up update-job drift**: fix the initial `total_stages` count, remove the stale
       `update_job_services.py` duplicate, and make stage totals derive from the pipeline list.
-- [ ] **Frontend quality pass**: clear current ESLint failures (`AuthProvider`, `Leaderboards`,
-      `MyPicks`) and consider route-level code splitting for the large production JS bundle.
+- [x] **Frontend quality pass**: clear current ESLint failures (`AuthProvider`, `Leaderboards`,
+      `MyPicks`). Route-level code splitting remains a performance follow-up for the large bundle.
 - [ ] **Deployment/auth hardening**: require a real `AUTH_SECRET` outside local/demo, avoid open
       admin endpoints in hosted mode, hide demo credentials unless demo/mock mode is active, and
       keep `start_app.local.bat` private/ignored.
-- [ ] **Add HTTP/regression smoke tests**: cover `/predict`, `/predict-method`, Recent Cards
+- [~] **Add HTTP/regression smoke tests**: cover `/predict`, `/predict-method`, Recent Cards
       market scoring, Model-vs-Market, Data Quality, market shadow training rows, and full rebuild
-      stage ordering.
+      stage ordering. Core HTTP/auth/prediction/event-control smoke coverage exists; market/data
+      quality endpoint smoke coverage is still open.
 - [ ] **Data-quality follow-up**: keep surfacing inactive, low-sample, and missing-reach caveats;
       latest audit saw 66.9% inactive-over-3-years, 53.3% under five UFC fights, 642 missing reach
       values, and 25.5% future-odds coverage.
@@ -380,33 +379,37 @@ _Direction (2026-06-29): turn FIGHT IQ from a model viewer into a prediction gam
 users make their own picks, build a track record, and compare against friends and
 the model. The ML model stays shared/global; predictions/stats are per-account._
 
-- [~] **Make the admin role functional** _(started 2026-06-29)_. Backend roles exist
-      but the UI ignores them. Gate admin-only surfaces (Data Ops, user management) to
-      admins; add a Users admin view over `/admin/users` (+ role promote/demote).
-- [ ] **Account profile page** — view your account (username, role, joined), your
+- [x] **Make the admin role functional** _(started 2026-06-29)_. Backend roles gate
+      admin-only endpoints/surfaces; Users admin view supports role promote/demote.
+- [x] **Account profile page** — view your account (username, role, joined), your
       prediction stats, and a place for future settings. Foundation for the social bits.
-- [ ] **Account-based card predictions** — let a logged-in user pick winners on upcoming
-      cards; store per-user picks (new `user_predictions` table); lock at event start;
-      score against actual results once events complete. Distinct from the model's own
-      predictions (which stay the shared baseline to beat).
-- [ ] **User prediction stats** — per-account accuracy, record, streaks, and "vs the
-      model" / "vs the market" deltas, using the same proper-scoring tooling as the
-      model evaluation (Brier/log-loss + calibration).
-- [ ] **Public leaderboards** — rank users by prediction performance (overall +
-      per-time-window). Opt-in public profiles.
-- [ ] **Friend vs friend comparisons** — direct head-to-head: same cards, whose picks
-      did better. Needs a lightweight friend/connection concept.
+- [x] **Account-based card predictions** — let a logged-in user pick winners on upcoming
+      cards; store per-user picks (`user_predictions`); lock at event start via admin
+      event controls; score against actual results once events complete. Distinct from the
+      model's own predictions (which stay the shared baseline to beat).
+- [~] **User prediction stats** — per-account accuracy, record, streaks, and "vs the
+      model" / "vs the market" deltas. Keep user scoring intuitive: winner/method only,
+      no confidence slider; Brier/log-loss stay model-evaluation metrics.
+- [~] **Public leaderboards** — rank users by prediction performance. Overall opt-in
+      leaderboard exists; per-window / friends-only variants remain open.
+- [x] **Friend vs friend comparisons** — mutual-accept friends by username plus direct
+      head-to-head comparisons on shared graded picks.
 
 _Open design decisions (resolve before building the prediction game):_
-  - Friend model: follow / mutual-accept / shareable compare links?
-  - Public vs private profiles + opt-in to leaderboards.
-  - Primary ranking metric: raw accuracy vs Brier vs beat-the-model rate.
-  - Pick window: lock at event start; how to handle prelims / late additions.
+  - Friend model: resolved as mutual-accept by username.
+  - Public vs private profiles: opt-in public leaderboard visibility.
+  - Primary ranking metric: current FIGHT IQ rating + accuracy context; per-window views still open.
+  - Pick window: backend-owned event lock state with odds-time suggestions and admin overrides.
 
 ---
 
 ## 9. Status log
 
+- 2026-07-01 — Added backend-owned event lock controls for the prediction game:
+  `event_controls` in SQLite, odds-derived start-time suggestions, admin manual start
+  overrides, force-open / force-locked modes, and Future Cards admin UI. My Picks now
+  consumes backend `lock_state` instead of local event-date math. No user confidence
+  slider; user picks stay winner/method only.
 - 2026-06-26 — Roadmap created. Confirmed design decision: production model stays market-free;
   market models remain backend-only benchmarks.
 - 2026-06-26 — Built the walk-forward backtest harness (service + endpoint + Evaluation card +

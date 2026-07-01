@@ -469,10 +469,76 @@ const FUTURE_CARDS = [
 ];
 
 const FUTURE_ROUND_OVERRIDES = new Map();
+const FUTURE_EVENT_CONTROLS = new Map();
+
+function mockSuggestedStart(card) {
+  const start = new Date(`${card.event_date} 18:00`);
+  return Number.isNaN(start.getTime()) ? null : start.toISOString();
+}
+
+function mockDateLocked(eventDate) {
+  const eventDay = new Date(eventDate);
+  if (Number.isNaN(eventDay.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  eventDay.setHours(0, 0, 0, 0);
+  return today >= eventDay;
+}
+
+function mockLockState(card) {
+  const control = FUTURE_EVENT_CONTROLS.get(card.event_id) || {};
+  const lockMode = control.lock_mode || "auto";
+  const manualStart = control.event_start_at_utc || null;
+  const suggestedStart = mockSuggestedStart(card);
+  const effectiveStart = manualStart || suggestedStart;
+  const parsedStart = effectiveStart ? new Date(effectiveStart) : null;
+  let locked =
+    parsedStart && !Number.isNaN(parsedStart.getTime())
+      ? new Date() >= parsedStart
+      : mockDateLocked(card.event_date);
+  let reason =
+    parsedStart && !Number.isNaN(parsedStart.getTime())
+      ? "event_start_at_utc"
+      : "date_fallback";
+
+  if (lockMode === "force_open") {
+    locked = false;
+    reason = "force_open";
+  } else if (lockMode === "force_locked") {
+    locked = true;
+    reason = "force_locked";
+  }
+
+  return {
+    event_id: card.event_id,
+    locked: Boolean(locked),
+    lock_mode: lockMode,
+    lock_reason: reason,
+    effective_start_at_utc: effectiveStart,
+    effective_source: manualStart ? "manual" : "odds",
+    event_start_at_utc: manualStart,
+    suggested_start_at_utc: suggestedStart,
+    suggested_source: "odds_commence_time",
+    suggested_confidence: "high",
+    suggested_match_count: card.fights.length,
+    suggested_low_confidence_count: 0,
+    date_fallback_locked: mockDateLocked(card.event_date),
+    updated_at: control.updated_at || "",
+  };
+}
 
 export function getFutureCards() {
   return delay(
-    FUTURE_CARDS.map(({ fights, ...card }) => ({ ...card, fight_count: fights.length }))
+    FUTURE_CARDS.map(({ fights, ...card }) => {
+      const source = FUTURE_CARDS.find((row) => row.event_id === card.event_id);
+      const lockState = mockLockState(source);
+      return {
+        ...card,
+        fight_count: fights.length,
+        lock_state: lockState,
+        locked: lockState.locked,
+      };
+    })
   );
 }
 
@@ -525,7 +591,8 @@ export async function getFutureCardPredictions(eventId) {
     })
   );
 
-  return delay({ ...card, fights }, 350);
+  const lockState = mockLockState(card);
+  return delay({ ...card, lock_state: lockState, locked: lockState.locked, fights }, 350);
 }
 
 // Model-free card detail for the picks tab (no predictions).
@@ -550,6 +617,8 @@ export function getFutureCardDetail(eventId) {
       event_name: card.event_name,
       event_date: card.event_date,
       event_location: card.event_location,
+      lock_state: mockLockState(card),
+      locked: mockLockState(card).locked,
       fights,
     },
     200
@@ -559,15 +628,6 @@ export function getFutureCardDetail(eventId) {
 // --- account picks (Phase 6) — in-memory so the picks tab works under mock ---
 
 const MOCK_PICKS = new Map(); // fight_url -> pick
-
-function mockLocked(eventDate) {
-  const eventDay = new Date(eventDate);
-  if (Number.isNaN(eventDay.getTime())) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  eventDay.setHours(0, 0, 0, 0);
-  return today >= eventDay;
-}
 
 function mockFindFight(fightUrl) {
   for (const card of FUTURE_CARDS) {
@@ -585,7 +645,11 @@ function mockFindFight(fightUrl) {
 export function listPredictions(eventId) {
   const picks = [...MOCK_PICKS.values()].filter(
     (pick) => !eventId || pick.event_id === eventId
-  ).map((pick) => ({ ...pick, locked: mockLocked(pick.event_date) }));
+  ).map((pick) => {
+    const card = FUTURE_CARDS.find((row) => row.event_id === pick.event_id);
+    const lockState = card ? mockLockState(card) : { locked: mockDateLocked(pick.event_date) };
+    return { ...pick, locked: lockState.locked, lock_state: lockState };
+  });
   return delay(picks, 120);
 }
 
@@ -598,7 +662,7 @@ export function savePrediction(fightUrl, pickedFighter, pickedMethod = null) {
   if (![fighter_1, fighter_2].includes(pickedFighter)) {
     throw new Error("Pick one of the two fighters in this bout.");
   }
-  if (mockLocked(card.event_date)) {
+  if (mockLockState(card).locked) {
     throw new Error("Picks for this event are locked.");
   }
 
@@ -615,7 +679,8 @@ export function savePrediction(fightUrl, pickedFighter, pickedMethod = null) {
     status: "open",
     result_correct: null,
     method_correct: null,
-    locked: false,
+    locked: mockLockState(card).locked,
+    lock_state: mockLockState(card),
   };
   MOCK_PICKS.set(fightUrl, pick);
   return delay(pick, 120);
@@ -623,7 +688,8 @@ export function savePrediction(fightUrl, pickedFighter, pickedMethod = null) {
 
 export function deletePrediction(fightUrl) {
   const existing = MOCK_PICKS.get(fightUrl);
-  if (existing && mockLocked(existing.event_date)) {
+  const card = existing ? FUTURE_CARDS.find((row) => row.event_id === existing.event_id) : null;
+  if (existing && card && mockLockState(card).locked) {
     throw new Error("Picks for this event are locked.");
   }
   const removed = MOCK_PICKS.delete(fightUrl);
@@ -754,6 +820,39 @@ export async function updateFutureFightScheduledRounds(eventId, fightId, schedul
   );
 }
 
+export async function updateFutureEventControl(eventId, payload = {}) {
+  const card = FUTURE_CARDS.find((row) => row.event_id === eventId);
+
+  if (!card) {
+    throw new Error("Unknown future card.");
+  }
+
+  const mode = payload.lock_mode || "auto";
+  if (!["auto", "force_open", "force_locked"].includes(mode)) {
+    throw new Error("Lock mode must be auto, force_open, or force_locked.");
+  }
+
+  const control = {
+    event_id: eventId,
+    event_name: card.event_name,
+    event_date: card.event_date,
+    event_start_at_utc: payload.event_start_at_utc || null,
+    lock_mode: mode,
+    updated_at: new Date().toISOString().slice(0, 19),
+  };
+  FUTURE_EVENT_CONTROLS.set(eventId, control);
+
+  return delay(
+    {
+      message: "Event lock controls saved.",
+      event_control: control,
+      lock_state: mockLockState(card),
+      card: await getFutureCardPredictions(eventId),
+    },
+    180
+  );
+}
+
 export function getFutureFightOdds() {
   const rows = [];
 
@@ -768,6 +867,7 @@ export function getFutureFightOdds() {
       rows.push({
         fight_url: `mock://future/${card.event_id}/${index}`,
         odds_available: true,
+        odds_commence_time: mockSuggestedStart(card),
         fighter_1: fighter1,
         fighter_2: fighter2,
         market_favorite: favorite1 ? fighter1 : fighter2,

@@ -18,13 +18,23 @@ const METHODS = [
   { value: "decision", label: "Dec" },
 ];
 
-function isLocked(eventDate) {
+function fallbackDateLocked(eventDate) {
   const eventDay = new Date(eventDate);
   if (Number.isNaN(eventDay.getTime())) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   eventDay.setHours(0, 0, 0, 0);
   return today >= eventDay;
+}
+
+function isCardLocked(card) {
+  if (card?.lock_state) {
+    return Boolean(card.lock_state.locked);
+  }
+  if (card && Object.prototype.hasOwnProperty.call(card, "locked")) {
+    return Boolean(card.locked);
+  }
+  return fallbackDateLocked(card?.event_date);
 }
 
 function pct(value) {
@@ -89,7 +99,7 @@ function pickStatusInfo(pick, cardLocked = false, stale = false) {
       label: "Open",
       tone: "gold",
       className: "result-open",
-      note: "Editable until event day.",
+      note: "Editable until event start.",
     };
   }
 
@@ -156,7 +166,7 @@ export default function MyPicks() {
         if (!active) return;
         setCards(rows);
         setAllPicks(myPicks);
-        const firstOpen = rows.find((card) => !isLocked(card.event_date));
+        const firstOpen = rows.find((card) => !isCardLocked(card));
         setSelectedId((current) => current || firstOpen?.event_id || rows[0]?.event_id || "");
       })
       .catch((err) => active && setError(err.message))
@@ -204,7 +214,7 @@ export default function MyPicks() {
     };
   }, [selectedId]);
 
-  const locked = detail ? isLocked(detail.event_date) : false;
+  const locked = detail ? isCardLocked(detail) : false;
 
   const pickedCount = useMemo(
     () => (detail?.fights || []).filter((f) => picks[f.fight_url]).length,
@@ -299,8 +309,8 @@ export default function MyPicks() {
                 <strong>{card.event_name}</strong>
                 <span>{card.event_date}</span>
                 <span className="muted">{card.event_location}</span>
-                <Tag tone={isLocked(card.event_date) ? "neutral" : "gold"}>
-                  {isLocked(card.event_date) ? "Locked" : `${card.fight_count} fights`}
+                <Tag tone={isCardLocked(card) ? "neutral" : "gold"}>
+                  {isCardLocked(card) ? "Locked" : `${card.fight_count} fights`}
                 </Tag>
               </button>
             ))}

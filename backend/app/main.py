@@ -89,6 +89,7 @@ from app.services.auth_service import (
 from app.repositories import users_repository
 from app.db import connection
 from app.services import (
+    event_lock_service,
     friends_compare_service,
     friends_service,
     predictions_service,
@@ -191,6 +192,11 @@ class FightPredictionRequest(BaseModel):
 
 class ScheduledRoundsOverrideRequest(BaseModel):
     scheduled_rounds: int
+
+
+class EventControlRequest(BaseModel):
+    lock_mode: str = Field(default="auto", max_length=20)
+    event_start_at_utc: str | None = Field(default=None, max_length=40)
 
 
 class RegisterRequest(BaseModel):
@@ -496,6 +502,33 @@ def future_card_detail(event_id: str) -> dict[str, Any]:
 @app.get("/future-cards/{event_id}/predictions")
 def future_card_predictions(event_id: str) -> dict[str, Any]:
     return get_future_card_predictions(event_id)
+
+
+@app.get("/future-cards/{event_id}/event-control")
+def future_event_control(event_id: str) -> dict[str, Any]:
+    return event_lock_service.get_event_control_payload(event_id)
+
+
+@app.post("/future-cards/{event_id}/event-control")
+def update_future_event_control(
+    event_id: str,
+    request: EventControlRequest,
+    current_admin: dict[str, Any] | None = Depends(require_admin),
+) -> dict[str, Any]:
+    try:
+        result = event_lock_service.set_event_control(
+            event_id,
+            lock_mode=request.lock_mode,
+            event_start_at_utc=request.event_start_at_utc,
+            updated_by=current_admin.get("id") if current_admin else None,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+    return {
+        "message": "Event lock controls saved.",
+        **result,
+        "card": get_future_card_predictions(event_id),
+    }
 
 
 @app.post(

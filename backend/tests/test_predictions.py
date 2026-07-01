@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import app.db.connection as db_connection  # noqa: E402
 from app.repositories import event_fights_repository, future_cards_repository  # noqa: E402
-from app.services import auth_service, predictions_service  # noqa: E402
+from app.services import auth_service, event_lock_service, predictions_service  # noqa: E402
 
 
 def _use_temp_db(tmp):
@@ -33,14 +33,18 @@ def _raises_value_error(fn, *args, **kwargs) -> bool:
 
 
 def _seed_fight(fight_url="http://ufcstats.com/fight-details/abc123", event_date="December 31, 2099"):
+    event = {
+        "event_id": "evt1",
+        "event_name": "UFC 999",
+        "event_date": event_date,
+        "event_location": "Las Vegas",
+        "event_url": "http://ufcstats.com/event-details/evt1",
+    }
+    future_cards_repository.replace_upcoming_events([event])
     future_cards_repository.replace_upcoming_fights(
         [
             {
-                "event_id": "evt1",
-                "event_name": "UFC 999",
-                "event_date": event_date,
-                "event_location": "Las Vegas",
-                "event_url": "http://ufcstats.com/event-details/evt1",
+                **event,
                 "fight_url": fight_url,
                 "fighter_1": "Conor McGregor",
                 "fighter_2": "Max Holloway",
@@ -128,6 +132,25 @@ def test_locked_event_blocks_pick_and_delete(tmp_path=None):
     # On the event day itself it's locked.
     assert predictions_service.is_locked("July 11, 2026", today=date(2026, 7, 11)) is True
     assert predictions_service.is_locked("July 11, 2026", today=date(2026, 7, 10)) is False
+
+
+def test_event_controls_override_pick_lock(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+    user = auth_service.register_user("control@example.com", "password123")
+    fight_url = _seed_fight(event_date="January 1, 2020")
+
+    event_lock_service.set_event_control(
+        "evt1", lock_mode="force_open", event_start_at_utc=None, updated_by=user["id"]
+    )
+    pred = predictions_service.make_prediction(user["id"], fight_url, "Conor McGregor")
+    assert pred["locked"] is False
+
+    event_lock_service.set_event_control(
+        "evt1", lock_mode="force_locked", event_start_at_utc=None, updated_by=user["id"]
+    )
+    assert predictions_service.list_predictions(user["id"])[0]["locked"] is True
+    assert _raises_value_error(predictions_service.remove_prediction, user["id"], fight_url)
 
 
 # --- delete + isolation -------------------------------------------------------

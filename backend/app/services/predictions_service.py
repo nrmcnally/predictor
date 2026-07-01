@@ -1,36 +1,27 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from typing import Any
 
 from app.repositories import future_cards_repository, user_predictions_repository
+from app.services import event_lock_service
 
 # Optional method-of-victory pick. Kept as coarse buckets that map onto the
 # method-model targets; scoring maps a result's method string onto the same set.
 VALID_METHODS = {"ko_tko", "submission", "decision"}
 
-# Date formats seen on upcoming cards (e.g. "July 11, 2026").
-_DATE_FORMATS = ("%B %d, %Y", "%b %d, %Y", "%Y-%m-%d")
+def is_locked(event_date: str | None, today: date | None = None) -> bool:
+    """Legacy date-only fallback kept for tests and old callers."""
+    return event_lock_service.date_fallback_locked(event_date, today=today)
 
 
 def _parse_event_date(event_date: str | None) -> date | None:
-    if not event_date:
-        return None
-    for fmt in _DATE_FORMATS:
-        try:
-            return datetime.strptime(event_date.strip(), fmt).date()
-        except ValueError:
-            continue
-    return None
+    """Compatibility wrapper for existing social comparison sorting."""
+    return event_lock_service.parse_event_date(event_date)
 
 
-def is_locked(event_date: str | None, today: date | None = None) -> bool:
-    """Picks lock once the event day arrives. Editable strictly before then.
-    Unparseable dates are treated as NOT locked so a pick is never silently blocked."""
-    parsed = _parse_event_date(event_date)
-    if parsed is None:
-        return False
-    return (today or date.today()) >= parsed
+def _lock_state(row: dict[str, Any]) -> dict[str, Any]:
+    return event_lock_service.build_event_lock_state(row)
 
 
 def _normalize_method(picked_method: str | None) -> str | None:
@@ -46,6 +37,7 @@ def _normalize_method(picked_method: str | None) -> str | None:
 
 def _public(prediction: dict[str, Any]) -> dict[str, Any]:
     """Client-facing shape: the stored pick plus a computed ``locked`` flag."""
+    lock_state = _lock_state(prediction)
     return {
         "fight_url": prediction["fight_url"],
         "event_id": prediction.get("event_id"),
@@ -60,7 +52,8 @@ def _public(prediction: dict[str, Any]) -> dict[str, Any]:
         "result_correct": prediction.get("result_correct"),
         "method_correct": prediction.get("method_correct"),
         "scored_at": prediction.get("scored_at"),
-        "locked": is_locked(prediction.get("event_date")),
+        "locked": lock_state["locked"],
+        "lock_state": lock_state,
         "created_at": prediction.get("created_at"),
         "updated_at": prediction.get("updated_at"),
     }
@@ -85,7 +78,7 @@ def make_prediction(
 
     method = _normalize_method(picked_method)
 
-    if is_locked(fight.get("event_date")):
+    if _lock_state(fight)["locked"]:
         raise ValueError("Picks for this event are locked.")
 
     saved = user_predictions_repository.upsert(user_id, fight, picked_fighter, method)
@@ -107,6 +100,6 @@ def remove_prediction(user_id: Any, fight_url: str) -> bool:
     existing = user_predictions_repository.get(user_id, fight_url)
     if existing is None:
         return False
-    if is_locked(existing.get("event_date")):
+    if _lock_state(existing)["locked"]:
         raise ValueError("Picks for this event are locked.")
     return user_predictions_repository.delete(user_id, fight_url)
