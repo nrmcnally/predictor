@@ -16,7 +16,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import app.db.connection as db_connection  # noqa: E402
-from app.repositories import event_fights_repository, future_cards_repository  # noqa: E402
+from app.repositories import (  # noqa: E402
+    event_fights_repository,
+    future_cards_repository,
+    saved_predictions_repository,
+)
 from app.services import auth_service, event_lock_service, predictions_service  # noqa: E402
 
 
@@ -200,6 +204,46 @@ def test_list_predictions_lazily_scores_completed_picks(tmp_path=None):
     assert listed[0]["result_correct"] == 1
     assert listed[0]["method_correct"] == 1
     assert listed[0]["scored_at"]
+
+
+def test_list_predictions_includes_result_model_and_market_context(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+    user = auth_service.register_user("context@example.com", "password123")
+    fight_url = _seed_fight()
+
+    predictions_service.make_prediction(user["id"], fight_url, "Conor McGregor")
+    event_fights_repository.replace_all([
+        _result(
+            "http://www.ufcstats.com/fight-details/abc123",
+            "Conor McGregor",
+            "Max Holloway",
+            "Conor McGregor",
+            "KO/TKO",
+        )
+    ])
+    saved_predictions_repository.import_rows([
+        {
+            "event_id": "evt1",
+            "fight_url": "http://www.ufcstats.com/fight-details/abc123",
+            "fighter_1": "Conor McGregor",
+            "fighter_2": "Max Holloway",
+            "predicted_winner": "Max Holloway",
+            "confidence": 0.58,
+            "confidence_percentage": "58.0%",
+            "model_name": "calibrated_xgboost",
+            "market_favorite": "Conor McGregor",
+            "market_favorite_probability": 0.61,
+            "market_favorite_percentage": "61.0%",
+        }
+    ])
+
+    listed = predictions_service.list_predictions(user["id"])
+
+    assert listed[0]["actual_winner"] == "Conor McGregor"
+    assert listed[0]["actual_method"] == "KO/TKO"
+    assert listed[0]["model_predicted_winner"] == "Max Holloway"
+    assert listed[0]["market_favorite"] == "Conor McGregor"
 
 
 if __name__ == "__main__":

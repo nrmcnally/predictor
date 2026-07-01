@@ -6,16 +6,23 @@ import {
   getFutureCardPredictions,
   getFutureFightOdds,
   getMyPredictions,
+  getUserCardLeaderboard,
   savePrediction,
   deletePrediction,
 } from "../api/client.js";
-import { EmptyState, ErrorNote, SectionCard, Spinner, Tag } from "../components/ui.jsx";
+import { EmptyState, ErrorNote, SectionCard, Spinner, StatTile, Tag } from "../components/ui.jsx";
 import { FighterAvatar } from "../components/FighterDisplay.jsx";
 
 const METHODS = [
   { value: "ko_tko", label: "KO/TKO" },
   { value: "submission", label: "Sub" },
   { value: "decision", label: "Dec" },
+];
+
+const CARD_LEADERBOARD_SCOPES = [
+  { value: "friends", label: "Friends" },
+  { value: "overall", label: "Overall" },
+  { value: "me", label: "Me" },
 ];
 
 function fallbackDateLocked(eventDate) {
@@ -42,6 +49,19 @@ function pct(value) {
   return value === null || value === undefined || !Number.isFinite(n)
     ? "—"
     : `${Math.round(n * 100)}%`;
+}
+
+function accuracyText(value) {
+  return value === null || value === undefined ? "-" : `${Math.round(value * 100)}%`;
+}
+
+function publicDisplayName(row) {
+  const displayName = String(row.display_name || row.name || "").trim();
+  return displayName && !displayName.includes("@") ? displayName : "Unnamed User";
+}
+
+function recordText(row) {
+  return row && row.graded > 0 ? `${row.wins}-${row.losses}` : "-";
 }
 
 function boolValue(value) {
@@ -117,6 +137,38 @@ function sortPickDateDesc(a, b) {
   return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
 }
 
+function eventProgress(card, allPicks) {
+  const total = Number(card?.fight_count ?? card?.fights?.length ?? 0) || 0;
+  const pickedUrls = new Set(
+    allPicks
+      .filter((pick) => pick.event_id === card?.event_id && pick.status !== "void")
+      .map((pick) => pick.fight_url)
+  );
+  const picked = Math.min(total, pickedUrls.size);
+  const missing = Math.max(0, total - picked);
+  return { total, picked, missing, complete: total > 0 && missing === 0 };
+}
+
+function progressTone(progress, locked) {
+  if (locked) return "neutral";
+  if (progress.complete) return "win";
+  if (progress.picked > 0) return "gold";
+  return "warn";
+}
+
+function lockLabel(card) {
+  const state = card?.lock_state;
+  if (!state) {
+    return isCardLocked(card) ? "Locked" : "Open";
+  }
+  if (!state.locked) {
+    return state.effective_start_at_utc ? "Open until start" : "Open";
+  }
+  if (state.lock_reason === "force_locked") return "Locked by admin";
+  if (state.lock_reason === "event_start_at_utc") return "Event started";
+  return "Locked";
+}
+
 function fightKey(url) {
   return String(url || "").replace(/\/+$/, "").split("/").pop();
 }
@@ -156,6 +208,9 @@ export default function MyPicks() {
   const [allPicks, setAllPicks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [cardLeaderboard, setCardLeaderboard] = useState([]);
+  const [leaderboardScope, setLeaderboardScope] = useState("friends");
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [error, setError] = useState("");
   const [busyFight, setBusyFight] = useState("");
 
@@ -214,11 +269,80 @@ export default function MyPicks() {
     };
   }, [selectedId]);
 
+  useEffect(() => {
+    if (!selectedId) return undefined;
+    let active = true;
+
+    Promise.resolve()
+      .then(() => {
+        if (!active) return null;
+        setLeaderboardLoading(true);
+        setCardLeaderboard([]);
+        return getUserCardLeaderboard(selectedId, { scope: leaderboardScope });
+      })
+      .then((rows) => {
+        if (active && rows) {
+          setCardLeaderboard(rows);
+        }
+      })
+      .catch((err) => active && setError(err.message))
+      .finally(() => active && setLeaderboardLoading(false));
+
+    return () => {
+      active = false;
+    };
+  }, [selectedId, leaderboardScope]);
+
   const locked = detail ? isCardLocked(detail) : false;
 
   const pickedCount = useMemo(
     () => (detail?.fights || []).filter((f) => picks[f.fight_url]).length,
     [detail, picks]
+  );
+
+  const progressByEvent = useMemo(() => {
+    const byEvent = {};
+    for (const card of cards) {
+      byEvent[card.event_id] = eventProgress(card, allPicks);
+    }
+    return byEvent;
+  }, [cards, allPicks]);
+
+  const selectedCard = useMemo(
+    () => cards.find((card) => card.event_id === selectedId) || detail,
+    [cards, detail, selectedId]
+  );
+
+  const selectedProgress = detail
+    ? {
+        total: detail.fights.length,
+        picked: pickedCount,
+        missing: Math.max(0, detail.fights.length - pickedCount),
+        complete: detail.fights.length > 0 && pickedCount >= detail.fights.length,
+      }
+    : progressByEvent[selectedId] || { total: 0, picked: 0, missing: 0, complete: false };
+
+  const openCards = useMemo(
+    () => cards.filter((card) => !isCardLocked(card)),
+    [cards]
+  );
+
+  const missingOpenPicks = useMemo(
+    () =>
+      cards.reduce((sum, card) => {
+        if (isCardLocked(card)) return sum;
+        return sum + (progressByEvent[card.event_id]?.missing ?? 0);
+      }, 0),
+    [cards, progressByEvent]
+  );
+
+  const nextNeedsPick = useMemo(
+    () =>
+      cards.find((card) => {
+        const progress = progressByEvent[card.event_id];
+        return !isCardLocked(card) && progress && progress.missing > 0;
+      }) || openCards[0] || null,
+    [cards, openCards, progressByEvent]
   );
 
   async function applyPick(fightUrl, fighter, method) {
@@ -297,23 +421,71 @@ export default function MyPicks() {
       )}
 
       {cards.length > 0 && (
+        <SectionCard
+          eyebrow="Pick queue"
+          title="Upcoming cards"
+          description={
+            nextNeedsPick
+              ? `${nextNeedsPick.event_name} is the next card in your queue.`
+              : "No open cards need attention right now."
+          }
+          className="pick-dashboard-card"
+        >
+          <div className="tile-row four">
+            <StatTile
+              label="Selected"
+              value={`${selectedProgress.picked}/${selectedProgress.total}`}
+              hint={locked ? "locked" : selectedProgress.complete ? "ready" : "picked"}
+              tone={progressTone(selectedProgress, locked)}
+            />
+            <StatTile
+              label="Need picks"
+              value={missingOpenPicks}
+              hint="open fights"
+              tone={missingOpenPicks > 0 ? "warn" : "win"}
+            />
+            <StatTile label="Open cards" value={openCards.length} hint="editable" />
+            <StatTile
+              label="Lock state"
+              value={lockLabel(selectedCard)}
+              hint={selectedCard?.event_date}
+              tone={locked ? "neutral" : "gold"}
+            />
+          </div>
+        </SectionCard>
+      )}
+
+      {cards.length > 0 && (
         <div className="cards-layout">
           <aside className="event-list">
-            {cards.map((card) => (
-              <button
-                key={card.event_id}
-                type="button"
-                className={`event-item ${selectedId === card.event_id ? "active" : ""}`}
-                onClick={() => setSelectedId(card.event_id)}
-              >
-                <strong>{card.event_name}</strong>
-                <span>{card.event_date}</span>
-                <span className="muted">{card.event_location}</span>
-                <Tag tone={isCardLocked(card) ? "neutral" : "gold"}>
-                  {isCardLocked(card) ? "Locked" : `${card.fight_count} fights`}
-                </Tag>
-              </button>
-            ))}
+            {cards.map((card) => {
+              const progress = progressByEvent[card.event_id] || eventProgress(card, allPicks);
+              const cardLocked = isCardLocked(card);
+              return (
+                <button
+                  key={card.event_id}
+                  type="button"
+                  className={`event-item ${selectedId === card.event_id ? "active" : ""}`}
+                  onClick={() => setSelectedId(card.event_id)}
+                >
+                  <strong>{card.event_name}</strong>
+                  <span>{card.event_date}</span>
+                  <span className="muted">{card.event_location}</span>
+                  <span className="tag-row">
+                    <Tag tone={progressTone(progress, cardLocked)}>
+                      {progress.picked}/{progress.total} picked
+                    </Tag>
+                    <Tag tone={cardLocked ? "neutral" : progress.complete ? "win" : "warn"}>
+                      {cardLocked
+                        ? "Locked"
+                        : progress.complete
+                          ? "Ready"
+                          : `${progress.missing} left`}
+                    </Tag>
+                  </span>
+                </button>
+              );
+            })}
           </aside>
 
           <section className="event-detail">
@@ -329,6 +501,16 @@ export default function MyPicks() {
                     : `Tap a fighter to pick the winner. ${pickedCount}/${detail.fights.length} picked.`
                 }
               >
+                <div className="pick-card-status">
+                  <Tag tone={progressTone(selectedProgress, locked)}>
+                    {selectedProgress.picked}/{selectedProgress.total} picked
+                  </Tag>
+                  <Tag tone={locked ? "neutral" : "gold"}>{lockLabel(detail)}</Tag>
+                  {!locked && selectedProgress.missing > 0 && (
+                    <Tag tone="warn">{selectedProgress.missing} still open</Tag>
+                  )}
+                  {!locked && selectedProgress.complete && <Tag tone="win">Card ready</Tag>}
+                </div>
                 <div className="fight-list">
                   {detail.fights.map((fight) => {
                     const pick = picks[fight.fight_url];
@@ -433,6 +615,82 @@ export default function MyPicks() {
                 </div>
               </SectionCard>
             )}
+
+            {!detailLoading && detail && (
+              <SectionCard
+                eyebrow="Card standings"
+                title="Per-card leaderboard"
+                description="Ranks scored winner picks for this event. Friends scope includes accepted friends plus you."
+                actions={
+                  <div className="segmented card-lb-tabs" aria-label="Card leaderboard scope">
+                    {CARD_LEADERBOARD_SCOPES.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={leaderboardScope === option.value ? "active" : ""}
+                        onClick={() => setLeaderboardScope(option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                }
+                className="card-leaderboard-card"
+              >
+                {leaderboardLoading && <Spinner label="Loading card standings..." />}
+
+                {!leaderboardLoading && cardLeaderboard.length === 0 && (
+                  <EmptyState
+                    title="No scored picks yet"
+                    message={
+                      locked
+                        ? "This will populate once user picks are scored against official results."
+                        : "This card is still open, so standings will appear after results are scored."
+                    }
+                  />
+                )}
+
+                {!leaderboardLoading && cardLeaderboard.length > 0 && (
+                  <div className="leaderboard-list card-leaderboard-list">
+                    {cardLeaderboard.map((row) => {
+                      const displayName = publicDisplayName(row);
+                      return (
+                        <div
+                          className={`leaderboard-row card-leaderboard-row ${
+                            row.rank <= 3 ? `podium-${row.rank}` : ""
+                          } ${row.is_me ? "is-me" : ""}`}
+                          key={`${row.rank}-${displayName}`}
+                        >
+                          <span className="rank-medal">#{row.rank}</span>
+
+                          <div className="leaderboard-fighter">
+                            <span className="fighter-name-text">
+                              {displayName}
+                              {row.is_me && <Tag tone="gold" className="lb-you">You</Tag>}
+                            </span>
+                            <span className="muted">{recordText(row)} - {row.graded} graded</span>
+                          </div>
+
+                          <div className="leaderboard-score">
+                            <span className="stat-label">Card IQ</span>
+                            <strong className="mono">{row.rating}</strong>
+                          </div>
+
+                          <div className="leaderboard-stats">
+                            <Tag>Accuracy: {accuracyText(row.accuracy)}</Tag>
+                            {row.method_picks > 0 && (
+                              <Tag>
+                                Methods: {row.method_hits}/{row.method_picks}
+                              </Tag>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </SectionCard>
+            )}
           </section>
         </div>
       )}
@@ -460,6 +718,24 @@ export default function MyPicks() {
                     <span className="muted">
                       {pick.event_name} - {pick.event_date}
                     </span>
+                    {(pick.actual_winner ||
+                      pick.model_predicted_winner ||
+                      pick.market_favorite) && (
+                      <div className="pick-history-context">
+                        {pick.actual_winner && (
+                          <Tag tone={boolValue(pick.result_correct) ? "win" : "loss"}>
+                            Winner: {pick.actual_winner}
+                          </Tag>
+                        )}
+                        {pick.actual_method && <Tag>Result: {pick.actual_method}</Tag>}
+                        {pick.model_predicted_winner && (
+                          <Tag>Model: {pick.model_predicted_winner}</Tag>
+                        )}
+                        {pick.market_favorite && (
+                          <Tag>Market: {pick.market_favorite}</Tag>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="pick-history-meta">

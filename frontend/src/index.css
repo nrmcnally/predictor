@@ -3986,6 +3986,17 @@ p {
 
 /* ---------- my picks (account-based predictions) ---------- */
 
+.pick-dashboard-card {
+  padding-bottom: 18px;
+}
+
+.pick-card-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -2px 0 12px;
+}
+
 .pick-fight {
   padding: 14px 0;
   border-bottom: 1px solid var(--line);
@@ -4205,11 +4216,37 @@ p {
   overflow-wrap: anywhere;
 }
 
+.pick-history-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
 .pick-history-meta {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+.card-leaderboard-card {
+  margin-top: 2px;
+}
+
+.card-lb-tabs {
+  flex-shrink: 0;
+}
+
+.card-leaderboard-row {
+  grid-template-columns: 54px minmax(0, 1.2fr) auto minmax(190px, 1fr);
+}
+
+.card-leaderboard-row .fighter-name-text {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 @media (max-width: 720px) {
@@ -4219,6 +4256,16 @@ p {
   }
 
   .pick-history-meta {
+    justify-content: flex-start;
+  }
+
+  .card-leaderboard-row {
+    grid-template-columns: 48px 1fr;
+  }
+
+  .card-leaderboard-row .leaderboard-score,
+  .card-leaderboard-row .leaderboard-stats {
+    grid-column: 1 / -1;
     justify-content: flex-start;
   }
 }

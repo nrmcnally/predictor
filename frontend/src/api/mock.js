@@ -774,6 +774,46 @@ export function getUserLeaderboard({ scope = "overall", window = "all_time" } = 
 
 // --- friends (Phase 6) — canned demo data ---
 
+export function getUserCardLeaderboard(eventId, { scope = "friends" } = {}) {
+  const eventSeed = hashString(String(eventId || "mock-card"));
+  let rows = MOCK_LEADERBOARD_ROWS;
+  if (scope === "friends") {
+    rows = rows.filter((row) => row.is_friend);
+  } else if (scope === "me") {
+    rows = rows.filter((row) => row.is_me);
+  }
+
+  const mapped = rows
+    .map((row, index) => {
+      const graded = 4 + ((index + Math.round(eventSeed * 10)) % 4);
+      const wins = Math.max(0, Math.min(graded, row.recent_wins + (index === 0 ? 1 : 0)));
+      const losses = graded - wins;
+      const methodPicks = Math.max(1, Math.floor(graded / 2));
+      const methodHits = Math.min(methodPicks, Math.max(0, wins - (index % 2)));
+      return {
+        display_name: row.display_name,
+        name: row.display_name,
+        event_id: eventId,
+        event_name: "Mock card",
+        event_date: "June 20, 2026",
+        rating: 1000 + wins * 18 - losses * 11 + methodHits * 3,
+        wins,
+        losses,
+        graded,
+        accuracy: graded ? wins / graded : null,
+        method_picks: methodPicks,
+        method_hits: methodHits,
+        method_accuracy: methodHits / methodPicks,
+        is_me: row.is_me,
+        scope,
+      };
+    })
+    .sort((a, b) => b.wins - a.wins || b.method_hits - a.method_hits || b.rating - a.rating)
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+
+  return delay(mapped, 150);
+}
+
 export function getFriends() {
   return delay(
     {

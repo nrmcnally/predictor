@@ -3,7 +3,12 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from app.repositories import future_cards_repository, user_predictions_repository
+from app.repositories import (
+    event_fights_repository,
+    future_cards_repository,
+    saved_predictions_repository,
+    user_predictions_repository,
+)
 from app.services import event_lock_service
 
 # Optional method-of-victory pick. Kept as coarse buckets that map onto the
@@ -24,6 +29,10 @@ def _lock_state(row: dict[str, Any]) -> dict[str, Any]:
     return event_lock_service.build_event_lock_state(row)
 
 
+def _fight_key(url: str | None) -> str:
+    return (url or "").rstrip("/").split("/")[-1]
+
+
 def _normalize_method(picked_method: str | None) -> str | None:
     if picked_method is None:
         return None
@@ -35,10 +44,50 @@ def _normalize_method(picked_method: str | None) -> str | None:
     return value
 
 
-def _public(prediction: dict[str, Any]) -> dict[str, Any]:
+def _result_lookup() -> dict[str, dict[str, Any]]:
+    df = event_fights_repository.read_all_df()
+    lookup: dict[str, dict[str, Any]] = {}
+    for row in df.itertuples(index=False):
+        key = _fight_key(getattr(row, "fight_url", None))
+        if not key:
+            continue
+        lookup[key] = {
+            "actual_winner": getattr(row, "winner", None),
+            "actual_method": getattr(row, "method", None),
+            "actual_round": getattr(row, "round", None),
+            "actual_time": getattr(row, "time", None),
+        }
+    return lookup
+
+
+def _snapshot_lookup() -> dict[str, dict[str, Any]]:
+    df = saved_predictions_repository.read_all_df()
+    lookup: dict[str, dict[str, Any]] = {}
+    for row in df.itertuples(index=False):
+        key = _fight_key(getattr(row, "fight_url", None))
+        if not key:
+            continue
+        lookup[key] = {
+            "model_predicted_winner": getattr(row, "predicted_winner", None),
+            "model_confidence": getattr(row, "confidence", None),
+            "model_confidence_percentage": getattr(row, "confidence_percentage", None),
+            "model_name": getattr(row, "model_name", None),
+            "market_favorite": getattr(row, "market_favorite", None),
+            "market_favorite_probability": getattr(row, "market_favorite_probability", None),
+            "market_favorite_percentage": getattr(row, "market_favorite_percentage", None),
+        }
+    return lookup
+
+
+def _public(
+    prediction: dict[str, Any],
+    *,
+    results: dict[str, dict[str, Any]] | None = None,
+    snapshots: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Client-facing shape: the stored pick plus a computed ``locked`` flag."""
     lock_state = _lock_state(prediction)
-    return {
+    payload = {
         "fight_url": prediction["fight_url"],
         "event_id": prediction.get("event_id"),
         "event_name": prediction.get("event_name"),
@@ -57,6 +106,12 @@ def _public(prediction: dict[str, Any]) -> dict[str, Any]:
         "created_at": prediction.get("created_at"),
         "updated_at": prediction.get("updated_at"),
     }
+    key = _fight_key(prediction.get("fight_url"))
+    if results is not None and key in results:
+        payload.update(results[key])
+    if snapshots is not None and key in snapshots:
+        payload.update(snapshots[key])
+    return payload
 
 
 def make_prediction(
@@ -92,7 +147,9 @@ def list_predictions(user_id: Any, event_id: str | None = None) -> list[dict[str
 
     score_user_pending(user_id)
     rows = user_predictions_repository.list_for_user(user_id, event_id)
-    return [_public(row) for row in rows]
+    results = _result_lookup()
+    snapshots = _snapshot_lookup()
+    return [_public(row, results=results, snapshots=snapshots) for row in rows]
 
 
 def remove_prediction(user_id: Any, fight_url: str) -> bool:

@@ -186,6 +186,99 @@ def test_leaderboard_windows_filter_scored_picks(tmp_path=None):
     assert other_month["graded"] == 0
 
 
+def test_event_leaderboard_scores_one_card_without_email_leakage(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+
+    me = auth_service.register_user("me-card@example.com", "password123", "MeCard")
+    friend = auth_service.register_user("friend-card@example.com", "password123", "CardFriend")
+    stranger = auth_service.register_user("stranger-card@example.com", "password123", "CardStranger")
+    auth_service.set_visibility(me["id"], True)
+    auth_service.set_visibility(stranger["id"], True)
+
+    friends_service.send_friend_request(me["id"], "CardFriend")
+    request_id = friends_service.get_overview(friend["id"])["incoming"][0]["friendship_id"]
+    friends_service.respond_to_request(friend["id"], request_id, True)
+
+    event_fights_repository.replace_all([
+        _result(RES + "card1", "A", "B", "A", "KO/TKO"),
+        _result(RES + "card2", "C", "D", "D", "SUB"),
+        _result(RES + "other", "X", "Y", "X", "U-DEC"),
+    ])
+    saved_predictions_repository.import_rows([
+        {
+            "event_id": "evt-card",
+            "fight_url": RES + "card1",
+            "fighter_1": "A",
+            "fighter_2": "B",
+            "fighter_1_market_probability": 0.65,
+            "fighter_2_market_probability": 0.35,
+            "predicted_winner": "A",
+        },
+        {
+            "event_id": "evt-card",
+            "fight_url": RES + "card2",
+            "fighter_1": "C",
+            "fighter_2": "D",
+            "fighter_1_market_probability": 0.4,
+            "fighter_2_market_probability": 0.6,
+            "predicted_winner": "D",
+        },
+    ])
+
+    user_predictions_repository.upsert(
+        me["id"],
+        _fight(UP + "card1", "A", "B", event_id="evt-card"),
+        "A",
+        "ko_tko",
+    )
+    user_predictions_repository.upsert(
+        me["id"],
+        _fight(UP + "card2", "C", "D", event_id="evt-card"),
+        "C",
+        None,
+    )
+    user_predictions_repository.upsert(
+        friend["id"],
+        _fight(UP + "card1", "A", "B", event_id="evt-card"),
+        "B",
+        None,
+    )
+    user_predictions_repository.upsert(
+        stranger["id"],
+        _fight(UP + "card1", "A", "B", event_id="evt-card"),
+        "A",
+        None,
+    )
+    user_predictions_repository.upsert(
+        stranger["id"],
+        _fight(UP + "other", "X", "Y", event_id="evt-other"),
+        "X",
+        None,
+    )
+
+    friends_board = predictions_stats_service.build_event_leaderboard(
+        "evt-card",
+        current_user_id=me["id"],
+        scope="friends",
+    )
+    overall_board = predictions_stats_service.build_event_leaderboard(
+        "evt-card",
+        current_user_id=me["id"],
+        scope="overall",
+    )
+
+    assert [row["display_name"] for row in friends_board] == ["MeCard", "CardFriend"]
+    assert friends_board[0]["wins"] == 1
+    assert friends_board[0]["losses"] == 1
+    assert friends_board[0]["method_hits"] == 1
+    assert any(row["is_me"] for row in friends_board)
+    assert "CardStranger" not in {row["display_name"] for row in friends_board}
+    assert "CardFriend" not in {row["display_name"] for row in overall_board}
+    assert all("email" not in row for row in friends_board + overall_board)
+    assert "example.com" not in str(friends_board + overall_board)
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

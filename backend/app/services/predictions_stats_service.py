@@ -335,6 +335,84 @@ def build_leaderboard(
     return rows[:limit]
 
 
+def build_event_leaderboard(
+    event_id: str,
+    current_user_id: Any = None,
+    limit: int = 100,
+    *,
+    scope: str = "friends",
+) -> list[dict[str, Any]]:
+    """Rank users for one completed card.
+
+    Overall scope stays public opt-in only. Friends/me scopes can include private
+    accounts, but still expose display names only.
+    """
+    event_id = (event_id or "").strip()
+    if not event_id:
+        raise ValueError("Event id is required.")
+
+    scope = (scope or "friends").strip().lower()
+    if scope not in VALID_LEADERBOARD_SCOPES:
+        raise ValueError("Leaderboard scope must be overall, friends, or me.")
+
+    score_all_pending()
+    snapshots = _snapshot_lookup()
+    candidate_users = _users_for_scope(scope, current_user_id)
+
+    rows: list[dict[str, Any]] = []
+    for user in candidate_users:
+        scored = [
+            pick
+            for pick in user_predictions_repository.list_for_user(user["id"], event_id)
+            if pick.get("status") == "scored"
+        ]
+        if not scored:
+            continue
+
+        wins = sum(1 for pick in scored if pick.get("result_correct") == 1)
+        losses = sum(1 for pick in scored if pick.get("result_correct") == 0)
+        graded = wins + losses
+        method_picks = [pick for pick in scored if pick.get("picked_method")]
+        method_hits = sum(1 for pick in method_picks if pick.get("method_correct") == 1)
+        display_name = _public_name(user)
+        event_name = next((pick.get("event_name") for pick in scored if pick.get("event_name")), "")
+        event_date = next((pick.get("event_date") for pick in scored if pick.get("event_date")), "")
+
+        rows.append(
+            {
+                "display_name": display_name,
+                "name": display_name,
+                "event_id": event_id,
+                "event_name": event_name,
+                "event_date": event_date,
+                "rating": _rating(scored, snapshots),
+                "wins": wins,
+                "losses": losses,
+                "graded": graded,
+                "accuracy": (wins / graded) if graded else None,
+                "method_picks": len(method_picks),
+                "method_hits": method_hits,
+                "method_accuracy": (method_hits / len(method_picks)) if method_picks else None,
+                "is_me": current_user_id is not None and user["id"] == current_user_id,
+                "scope": scope,
+            }
+        )
+
+    rows.sort(
+        key=lambda row: (
+            -row["wins"],
+            -row["method_hits"],
+            -row["rating"],
+            -(row["accuracy"] or 0),
+            -row["graded"],
+            row["display_name"].casefold(),
+        )
+    )
+    for index, row in enumerate(rows[:limit]):
+        row["rank"] = index + 1
+    return rows[:limit]
+
+
 def _current_streak(scored: list[dict[str, Any]]) -> dict[str, Any] | None:
     """The run of consecutive same outcomes ending at the most recent scored pick."""
     ordered = sorted(scored, key=_chrono_key)

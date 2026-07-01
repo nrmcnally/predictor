@@ -391,6 +391,24 @@ def user_leaderboard(
     return {"leaderboard": leaderboard, "scope": scope, "window": window}
 
 
+@app.get("/leaderboard/users/cards/{event_id}")
+def user_card_leaderboard(
+    event_id: str,
+    scope: str = "friends",
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Users ranked by scored picks for a single event/card."""
+    try:
+        leaderboard = predictions_stats_service.build_event_leaderboard(
+            event_id,
+            current_user["id"],
+            scope=scope,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+    return {"leaderboard": leaderboard, "event_id": event_id, "scope": scope}
+
+
 # --- friends (mutual-accept connections) --------------------------------------
 
 @app.get("/friends")

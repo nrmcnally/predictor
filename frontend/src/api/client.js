@@ -505,6 +505,21 @@ export async function getUserLeaderboard({ scope = "overall", window = "all_time
   return data.leaderboard ?? [];
 }
 
+export async function getUserCardLeaderboard(eventId, { scope = "friends" } = {}) {
+  if (USE_MOCK) {
+    return mock.getUserCardLeaderboard(eventId, { scope });
+  }
+
+  const params = new URLSearchParams({ scope });
+  const data = await request(
+    `/leaderboard/users/cards/${encodeURIComponent(eventId)}?${params}`,
+    {
+      fallbackError: "Failed to load the card leaderboard.",
+    }
+  );
+  return data.leaderboard ?? [];
+}
+
 export async function getModelEvaluation({ recentLimit = 25 } = {}) {
   if (USE_MOCK) {
     return mock.getModelEvaluation();
