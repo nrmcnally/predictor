@@ -59,6 +59,7 @@ def _public(prediction: dict[str, Any]) -> dict[str, Any]:
         "status": prediction.get("status"),
         "result_correct": prediction.get("result_correct"),
         "method_correct": prediction.get("method_correct"),
+        "scored_at": prediction.get("scored_at"),
         "locked": is_locked(prediction.get("event_date")),
         "created_at": prediction.get("created_at"),
         "updated_at": prediction.get("updated_at"),
@@ -92,6 +93,11 @@ def make_prediction(
 
 
 def list_predictions(user_id: Any, event_id: str | None = None) -> list[dict[str, Any]]:
+    # Resolve newly-completed picks before returning them, so My Picks/Profile do not
+    # depend on a manual admin scoring action after fresh results arrive.
+    from app.services.predictions_scoring_service import score_user_pending
+
+    score_user_pending(user_id)
     rows = user_predictions_repository.list_for_user(user_id, event_id)
     return [_public(row) for row in rows]
 

@@ -99,14 +99,7 @@ def normalize_name(value: Any) -> str:
     return clean_text(value).lower()
 
 
-def parse_bool(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-
-    if value is None or pd.isna(value):
-        return False
-
-    return clean_text(value).lower() in {"true", "1", "yes", "y"}
+from app.utils.bool_parsing import parse_bool  # noqa: E402
 
 
 def optional_probability(value: Any) -> float | None:

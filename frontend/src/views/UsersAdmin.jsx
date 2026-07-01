@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getUsers, setUserRole } from "../api/client.js";
-import { useAuth } from "../auth/AuthProvider.jsx";
+import { useAuth } from "../auth/authContext.js";
 import { ErrorNote, SectionCard, Spinner, Tag } from "../components/ui.jsx";
 
 export default function UsersAdmin() {

@@ -19,6 +19,15 @@ def is_valid_email(email: str) -> bool:
     return bool(_EMAIL_RE.match(email or ""))
 
 
+def _clean_display_name(email: str, display_name: str | None) -> str:
+    display = (display_name or "").strip()
+    if "@" in display:
+        raise ValueError("Display name cannot be an email address.")
+    if len(display) > 60:
+        raise ValueError("Display name must be 60 characters or fewer.")
+    return display or email.split("@")[0]
+
+
 def register_user(
     email: str, password: str, display_name: str | None = None, role: str = "user"
 ) -> dict[str, Any]:
@@ -32,7 +41,7 @@ def register_user(
     if users_repository.get_by_email(email):
         raise ValueError("An account with that email already exists.")
 
-    display = (display_name or "").strip() or email.split("@")[0]
+    display = _clean_display_name(email, display_name)
     user = users_repository.create_user(
         email, security.hash_password(password), display_name=display, role=role
     )
@@ -85,7 +94,7 @@ def update_profile(user_id: Any, email: str, display_name: str | None) -> dict[s
     if existing is not None and existing["id"] != user_id:
         raise ValueError("That email is already in use.")
 
-    display = (display_name or "").strip() or email.split("@")[0]
+    display = _clean_display_name(email, display_name)
     users_repository.update_profile(user_id, email, display)
     return users_repository.public_user(users_repository.get_by_id(user_id))
 

@@ -53,10 +53,7 @@ def norm_url(value: Any) -> str:
     return text.rstrip("/")
 
 
-def parse_bool(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    return clean_text(value).lower() in {"true", "1", "yes", "y"}
+from app.utils.bool_parsing import parse_bool  # noqa: E402
 
 
 def read_csv_or_empty(path: Path) -> pd.DataFrame:

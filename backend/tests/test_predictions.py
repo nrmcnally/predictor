@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import app.db.connection as db_connection  # noqa: E402
-from app.repositories import future_cards_repository  # noqa: E402
+from app.repositories import event_fights_repository, future_cards_repository  # noqa: E402
 from app.services import auth_service, predictions_service  # noqa: E402
 
 
@@ -49,6 +49,21 @@ def _seed_fight(fight_url="http://ufcstats.com/fight-details/abc123", event_date
         ]
     )
     return fight_url
+
+
+def _result(fight_url, fighter_1, fighter_2, winner, method="U-DEC"):
+    return {
+        "event_name": "UFC 999",
+        "event_date": "January 1, 2026",
+        "event_url": "http://www.ufcstats.com/event-details/evt1",
+        "fight_url": fight_url,
+        "fighter_1": fighter_1,
+        "fighter_2": fighter_2,
+        "winner": winner,
+        "loser": fighter_2 if winner == fighter_1 else fighter_1,
+        "weight_class": "Welterweight",
+        "method": method,
+    }
 
 
 # --- making picks -------------------------------------------------------------
@@ -137,6 +152,31 @@ def test_delete_and_user_isolation(tmp_path=None):
     assert len(predictions_service.list_predictions(b["id"])) == 1
     # Deleting a pick that isn't there is a no-op, not an error.
     assert predictions_service.remove_prediction(a["id"], fight_url) is False
+
+
+def test_list_predictions_lazily_scores_completed_picks(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+    user = auth_service.register_user("score-on-read@example.com", "password123")
+    fight_url = _seed_fight()
+
+    predictions_service.make_prediction(user["id"], fight_url, "Conor McGregor", "decision")
+    event_fights_repository.replace_all([
+        _result(
+            "http://www.ufcstats.com/fight-details/abc123",
+            "Conor McGregor",
+            "Max Holloway",
+            "Conor McGregor",
+            "U-DEC",
+        )
+    ])
+
+    listed = predictions_service.list_predictions(user["id"])
+
+    assert listed[0]["status"] == "scored"
+    assert listed[0]["result_correct"] == 1
+    assert listed[0]["method_correct"] == 1
+    assert listed[0]["scored_at"]
 
 
 if __name__ == "__main__":

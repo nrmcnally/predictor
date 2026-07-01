@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from app.pipeline.update_incremental_data import (
+    INCREMENTAL_STAGE_COUNT,
     LATEST_INCREMENTAL_REPORT_PATH,
     run_incremental_update,
 )
@@ -28,7 +29,7 @@ _update_status: dict[str, Any] = {
     "finished_at": None,
     "current_stage": None,
     "current_stage_index": 0,
-    "total_stages": 22,
+    "total_stages": INCREMENTAL_STAGE_COUNT,
     "progress_percent": 0,
     "message": "No update has been started.",
     "success": None,
@@ -123,7 +124,7 @@ def start_incremental_update_job() -> dict[str, Any]:
                 "finished_at": None,
                 "current_stage": None,
                 "current_stage_index": 0,
-                "total_stages": 22,
+                "total_stages": INCREMENTAL_STAGE_COUNT,
                 "progress_percent": 0,
                 "message": "Incremental update is starting.",
                 "success": None,

@@ -1,5 +1,6 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { AppContext } from "../AppContext.js";
+import { useAuth } from "../auth/authContext.js";
 import {
   getFutureCardPredictions,
   getFutureCards,
@@ -198,8 +199,9 @@ function OddsLine({ fight, odds }) {
   );
 }
 
-function RoundOverrideControl({ fight, disabled, onChange }) {
-  if (!fight?.round_override_eligible) {
+function RoundOverrideControl({ fight, disabled, onChange, isAdmin }) {
+  // Scheduled-rounds override is an admin-only mutation (backend require_admin).
+  if (!fight?.round_override_eligible || !isAdmin) {
     return null;
   }
 
@@ -226,6 +228,8 @@ function RoundOverrideControl({ fight, disabled, onChange }) {
 
 export default function FutureCards() {
   const { imageLookup, openProfile } = useContext(AppContext);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const [cards, setCards] = useState([]);
   const [selectedCardId, setSelectedCardId] = useState("");
@@ -463,6 +467,7 @@ export default function FutureCards() {
                               fight={fight}
                               disabled={savingRoundFightId === fight.fight_id}
                               onChange={handleRoundOverride}
+                              isAdmin={isAdmin}
                             />
                             {prediction?.confidence_label && (
                               <Tag

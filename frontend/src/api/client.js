@@ -431,13 +431,13 @@ export async function getLeaderboards({ top, minFights, maxInactiveDays }) {
   });
 }
 
-export async function getPredictorLeaderboard() {
+export async function getUserLeaderboard() {
   if (USE_MOCK) {
-    return mock.getPredictorLeaderboard();
+    return mock.getUserLeaderboard();
   }
 
-  const data = await request("/leaderboard/predictors", {
-    fallbackError: "Failed to load the predictor leaderboard.",
+  const data = await request("/leaderboard/users", {
+    fallbackError: "Failed to load the user leaderboard.",
   });
   return data.leaderboard ?? [];
 }

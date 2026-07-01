@@ -371,6 +371,10 @@ def save_predictions_for_card(event_id: str) -> dict[str, Any]:
     )
 
     prediction_available_count = int(new_df["prediction_available"].sum()) if not new_df.empty else 0
+    model_predictions_storage = model_prediction_result.get(
+        "storage",
+        model_prediction_result.get("output_file", ""),
+    )
 
     return {
         "event_id": event_id,
@@ -381,7 +385,11 @@ def save_predictions_for_card(event_id: str) -> dict[str, Any]:
         "saved_model_rows": model_prediction_result["saved_model_rows"],
         "model_prediction_available_count": model_prediction_result["model_prediction_available_count"],
         "model_prediction_unavailable_count": model_prediction_result["model_prediction_unavailable_count"],
-        "model_predictions_output_file": model_prediction_result["output_file"],
+        "model_predictions_storage": model_predictions_storage,
+        "model_predictions_output_file": model_prediction_result.get(
+            "output_file",
+            model_predictions_storage,
+        ),
     }
 
 
@@ -419,6 +427,7 @@ def save_predictions_for_all_future_cards() -> dict[str, Any]:
         "total_model_prediction_unavailable": total_model_unavailable,
         "cards": saved_cards,
         "storage": "sqlite:saved_card_predictions",
+        "model_predictions_storage": "sqlite:saved_model_predictions",
         "model_predictions_output_file": str(SAVED_MODEL_PREDICTIONS_CSV),
     }
 

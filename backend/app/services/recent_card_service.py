@@ -46,13 +46,7 @@ def normalize_fight_url(value: Any) -> str:
 
     return normalized.rstrip("/")
 
-def parse_bool(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-
-    value_text = clean_text(value).lower()
-
-    return value_text in {"true", "1", "yes"}
+from app.utils.bool_parsing import parse_bool  # noqa: E402
 
 
 def classify_actual_outcome(row: pd.Series) -> str:

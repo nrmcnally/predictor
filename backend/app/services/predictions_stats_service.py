@@ -17,14 +17,14 @@ from app.services.predictions_scoring_service import (
 )
 from app.services.predictions_service import _parse_event_date
 
-# A predictor needs at least this many graded picks before their rating is "established"
+# A user needs at least this many graded picks before their rating is "established"
 # (it stays provisional until then, and provisional rows sort below established ones).
 PROVISIONAL_THRESHOLD = 10
 
 # Per-account prediction stats for the Profile "Your record" tiles + the leaderboard.
 # Raw accuracy is the headline; record/streak/method come straight from scored picks; a
 # best-effort "vs model" compares the user to the engine on shared fights; and a
-# skill-vs-expectation **FIGHT IQ rating** (Elo-style, start 1000) ranks predictors.
+# skill-vs-expectation **FIGHT IQ rating** (Elo-style, start 1000) ranks users.
 
 START_RATING = 1000.0
 PROVISIONAL_PICKS = 10  # higher K while the rating is still finding its level
@@ -175,24 +175,18 @@ def build_user_stats(user_id: Any) -> dict[str, Any]:
     }
 
 
-def _mask_email(email: str | None) -> str:
-    """Privacy: never expose another user's full email on a shared board. nate@x.com
-    -> na***@x***. (Used only as a fallback when a user has no display name.)"""
-    local, sep, domain = (email or "").partition("@")
-    masked_local = (local[:2] + "***") if local else "***"
-    if not sep:
-        return masked_local
-    return f"{masked_local}@{domain[0]}***"
-
-
 def _public_name(user: dict[str, Any]) -> str:
-    return (user.get("display_name") or "").strip() or _mask_email(user.get("email"))
+    """Return the only public identity allowed on shared user leaderboards."""
+    display_name = (user.get("display_name") or "").strip()
+    if not display_name or "@" in display_name:
+        return "Unnamed User"
+    return display_name
 
 
 def build_leaderboard(current_user_id: Any = None, limit: int = 100) -> list[dict[str, Any]]:
-    """Public predictors ranked by FIGHT IQ rating. Established (>= PROVISIONAL_THRESHOLD
+    """Public users ranked by FIGHT IQ rating. Established (>= PROVISIONAL_THRESHOLD
     graded picks) outrank provisional ones; ties break on accuracy then volume. Only
-    display names (or masked emails) are exposed."""
+    display names are exposed."""
     score_all_pending()  # grade everyone's now-completed picks before ranking
     snapshots = _snapshot_lookup()
 
@@ -203,15 +197,20 @@ def build_leaderboard(current_user_id: Any = None, limit: int = 100) -> list[dic
         wins = sum(1 for p in scored if p.get("result_correct") == 1)
         losses = sum(1 for p in scored if p.get("result_correct") == 0)
         graded = wins + losses
+        display_name = _public_name(user)
+        picks_until_established = max(0, PROVISIONAL_THRESHOLD - graded)
         rows.append(
             {
-                "name": _public_name(user),
+                "display_name": display_name,
+                "name": display_name,
                 "rating": _rating(scored, snapshots),
                 "wins": wins,
                 "losses": losses,
                 "graded": graded,
                 "accuracy": (wins / graded) if graded else None,
                 "provisional": graded < PROVISIONAL_THRESHOLD,
+                "provisional_threshold": PROVISIONAL_THRESHOLD,
+                "picks_until_established": picks_until_established,
                 "is_me": current_user_id is not None and user["id"] == current_user_id,
             }
         )

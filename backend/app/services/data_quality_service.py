@@ -45,11 +45,7 @@ def read_csv_or_empty(path: Path) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def parse_bool(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-
-    return clean_text(value).lower() in {"true", "1", "yes", "y"}
+from app.utils.bool_parsing import count_bool_column, parse_bool  # noqa: E402
 
 
 def numeric_column(df: pd.DataFrame, column: str) -> pd.Series:
@@ -81,13 +77,6 @@ def percentage(value: float | None) -> str:
         return "N/A"
 
     return f"{value * 100.0:.1f}%"
-
-
-def count_bool_column(df: pd.DataFrame, column: str, expected: bool) -> int:
-    if df.empty or column not in df.columns:
-        return 0
-
-    return int((df[column].apply(parse_bool) == expected).sum())
 
 
 def extract_missing_fighter(row: pd.Series) -> str:

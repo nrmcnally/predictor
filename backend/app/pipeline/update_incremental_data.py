@@ -22,6 +22,8 @@ from app.services.odds_service import refresh_future_fight_odds
 
 from app.services.prediction_service import clear_prediction_cache
 
+from app.services.predictions_scoring_service import score_all_pending
+
 from app.services.saved_prediction_service import (
     save_predictions_for_all_future_cards,
     SAVED_CARD_PREDICTIONS_CSV,
@@ -777,6 +779,10 @@ def refresh_future_cards_stage() -> dict[str, Any]:
     }
 
 
+def score_user_predictions_stage() -> dict[str, Any]:
+    return score_all_pending()
+
+
 def build_summary(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
     failed_stages = [
         stage["name"]
@@ -826,32 +832,7 @@ def run_incremental_update(
     pipeline_start = time.perf_counter()
     started_at = datetime.now().isoformat(timespec="seconds")
 
-    stages: list[tuple[str, Callable[[], dict[str, Any]]]] = [
-        ("Refresh completed events", refresh_completed_events_stage),
-        ("Update completed fight list incrementally", update_event_fights_incrementally_stage),
-        ("Update fight stats incrementally", update_fight_stats_incrementally_stage),
-        ("Update fight round stats incrementally", update_round_stats_incrementally_stage),
-        ("Refresh fighter profiles", refresh_fighter_profiles_stage),
-        ("Restore fighter DOBs", restore_fighter_dobs_stage),
-        ("Build fighter snapshots", build_fighter_snapshots_stage),
-        ("Add Elo features", add_elo_features_stage),
-        ("Add physical features", add_physical_features_stage),
-        ("Add weight/size features", add_weight_size_features_stage),
-        ("Add age features", add_age_features_stage),
-        ("Add cardio features", add_cardio_features_stage),
-        ("Build matchup training rows", build_matchups_stage),
-        ("Build method labels", build_method_labels_stage),
-        ("Build method training data", build_method_training_data_stage),
-        ("Train method models", train_method_models_stage),
-        ("Train calibrated model", train_model_stage),
-        ("Build current fighter features", build_current_fighter_features_stage),
-        ("Add current age features", add_age_features_stage),
-        ("Refresh future cards", refresh_future_cards_stage),
-        ("Refresh fighter images", refresh_fighter_images_stage),
-        ("Refresh future fight odds", refresh_future_fight_odds_stage),
-        ("Train market shadow models", train_market_shadow_models_stage),
-        ("Save future-card predictions", save_future_card_predictions_stage),
-]
+    stages = INCREMENTAL_STAGES
 
     total_stages = len(stages)
     stage_reports = []
@@ -957,6 +938,39 @@ def save_future_card_predictions_stage() -> dict[str, Any]:
         "saved_predictions_file": str(SAVED_CARD_PREDICTIONS_CSV),
         "saved_model_predictions_file": str(SAVED_MODEL_PREDICTIONS_CSV),
     }
+
+
+# The canonical incremental pipeline order. Defined after every stage function so the
+# list (and its derived count, used for the update-job progress readout) stays a single
+# source of truth. run_incremental_update() reads this at call time.
+INCREMENTAL_STAGES: list[tuple[str, Callable[[], dict[str, Any]]]] = [
+    ("Refresh completed events", refresh_completed_events_stage),
+    ("Update completed fight list incrementally", update_event_fights_incrementally_stage),
+    ("Score user predictions", score_user_predictions_stage),
+    ("Update fight stats incrementally", update_fight_stats_incrementally_stage),
+    ("Update fight round stats incrementally", update_round_stats_incrementally_stage),
+    ("Refresh fighter profiles", refresh_fighter_profiles_stage),
+    ("Restore fighter DOBs", restore_fighter_dobs_stage),
+    ("Build fighter snapshots", build_fighter_snapshots_stage),
+    ("Add Elo features", add_elo_features_stage),
+    ("Add physical features", add_physical_features_stage),
+    ("Add weight/size features", add_weight_size_features_stage),
+    ("Add age features", add_age_features_stage),
+    ("Add cardio features", add_cardio_features_stage),
+    ("Build matchup training rows", build_matchups_stage),
+    ("Build method labels", build_method_labels_stage),
+    ("Build method training data", build_method_training_data_stage),
+    ("Train method models", train_method_models_stage),
+    ("Train calibrated model", train_model_stage),
+    ("Build current fighter features", build_current_fighter_features_stage),
+    ("Add current age features", add_age_features_stage),
+    ("Refresh future cards", refresh_future_cards_stage),
+    ("Refresh fighter images", refresh_fighter_images_stage),
+    ("Refresh future fight odds", refresh_future_fight_odds_stage),
+    ("Train market shadow models", train_market_shadow_models_stage),
+    ("Save future-card predictions", save_future_card_predictions_stage),
+]
+INCREMENTAL_STAGE_COUNT = len(INCREMENTAL_STAGES)
 
 
 if __name__ == "__main__":

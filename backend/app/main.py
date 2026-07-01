@@ -181,7 +181,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 METHOD_MODEL_METRICS_PATH = PROJECT_ROOT / "models" / "method_model_metrics.json"
 
 
-class PredictionRequest(BaseModel):
+class FightPredictionRequest(BaseModel):
     fighter_a: str = Field(min_length=1, max_length=120)
     fighter_b: str = Field(min_length=1, max_length=120)
     weight_class: str = Field(min_length=1, max_length=60)
@@ -220,7 +220,7 @@ class ProfileUpdateRequest(BaseModel):
     display_name: str | None = Field(default=None, max_length=60)
 
 
-class PredictionRequest(BaseModel):
+class UserPredictionRequest(BaseModel):
     fight_url: str = Field(min_length=1, max_length=500)
     picked_fighter: str = Field(min_length=1, max_length=200)
     picked_method: str | None = Field(default=None, max_length=20)
@@ -305,7 +305,7 @@ def auth_update_profile(
 
 @app.post("/predictions")
 def create_prediction(
-    request: PredictionRequest,
+    request: UserPredictionRequest,
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
     try:
@@ -356,11 +356,12 @@ def score_predictions() -> dict[str, Any]:
     return predictions_scoring_service.score_all_pending()
 
 
-@app.get("/leaderboard/predictors")
-def predictor_leaderboard(
+@app.get("/leaderboard/users")
+@app.get("/leaderboard/predictors", include_in_schema=False)
+def user_leaderboard(
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
-    """Public predictors ranked by FIGHT IQ rating (opt-in via profile visibility)."""
+    """Public users ranked by FIGHT IQ rating (opt-in via profile visibility)."""
     return {
         "leaderboard": predictions_stats_service.build_leaderboard(current_user["id"])
     }
@@ -401,7 +402,7 @@ def weight_classes() -> dict[str, list[str]]:
 
 
 @app.post("/predict")
-def predict_fight(request: PredictionRequest) -> dict[str, Any]:
+def predict_fight(request: FightPredictionRequest) -> dict[str, Any]:
     return predict_fight_data(
         fighter_a=request.fighter_a,
         fighter_b=request.fighter_b,
@@ -434,7 +435,10 @@ def future_card_predictions(event_id: str) -> dict[str, Any]:
     return get_future_card_predictions(event_id)
 
 
-@app.post("/future-cards/{event_id}/fights/{fight_id}/scheduled-rounds")
+@app.post(
+    "/future-cards/{event_id}/fights/{fight_id}/scheduled-rounds",
+    dependencies=[Depends(require_admin)],
+)
 def update_future_fight_scheduled_rounds(
     event_id: str,
     fight_id: str,
@@ -535,7 +539,7 @@ def walk_forward_evaluation(
 
 
 @app.post("/predict-method")
-def predict_method(request: PredictionRequest) -> dict[str, Any]:
+def predict_method(request: FightPredictionRequest) -> dict[str, Any]:
     return predict_method_data(
         fighter_a=request.fighter_a,
         fighter_b=request.fighter_b,

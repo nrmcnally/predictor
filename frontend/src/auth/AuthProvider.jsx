@@ -1,20 +1,15 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getMe, getToken, loginUser, registerUser, setToken } from "../api/client.js";
-
-const AuthContext = createContext(null);
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
+import { AuthContext } from "./authContext.js";
 
 export function AuthProvider({ children }) {
+  const [bootToken] = useState(() => getToken());
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(bootToken));
 
   // On boot: if we have a stored token, validate it; otherwise show the login.
   useEffect(() => {
-    if (!getToken()) {
-      setLoading(false);
+    if (!bootToken) {
       return;
     }
 
@@ -22,7 +17,7 @@ export function AuthProvider({ children }) {
       .then((data) => setUser(data.user))
       .catch(() => setToken(""))
       .finally(() => setLoading(false));
-  }, []);
+  }, [bootToken]);
 
   const login = useCallback(async (email, password) => {
     const data = await loginUser(email, password);

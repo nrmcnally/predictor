@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -75,6 +76,50 @@ def test_admin_access_control_and_promotion(tmp_path=None):
     promote = client.post(f"/admin/users/{carol_id}/role", json={"role": "admin"}, headers=_bearer(admin_token))
     assert promote.status_code == 200
     assert client.get("/admin/users", headers=_bearer(user_token)).status_code == 200
+
+
+def test_user_leaderboard_does_not_expose_emails_to_regular_users(tmp_path=None):
+    client = _client(tmp_path or tempfile.mkdtemp())
+
+    client.post(
+        "/auth/register",
+        json={
+            "email": "alice@example.com",
+            "password": "password123",
+            "display_name": "Alice",
+        },
+    )
+    token = client.post(
+        "/auth/login", json={"email": "alice@example.com", "password": "password123"}
+    ).json()["token"]
+    client.post("/auth/visibility", json={"is_public": True}, headers=_bearer(token))
+
+    client.post(
+        "/auth/register",
+        json={
+            "email": "bob@example.com",
+            "password": "password123",
+            "display_name": "Bob",
+        },
+    )
+    bob_token = client.post(
+        "/auth/login", json={"email": "bob@example.com", "password": "password123"}
+    ).json()["token"]
+    client.post("/auth/visibility", json={"is_public": True}, headers=_bearer(bob_token))
+
+    response = client.get("/leaderboard/users", headers=_bearer(token))
+
+    assert response.status_code == 200
+    rows = response.json()["leaderboard"]
+    payload = json.dumps(response.json())
+    assert "alice@example.com" not in payload
+    assert "bob@example.com" not in payload
+    assert all("email" not in row for row in rows)
+    assert {row["display_name"] for row in rows} >= {"Alice", "Bob"}
+
+    legacy = client.get("/leaderboard/predictors", headers=_bearer(token))
+    assert legacy.status_code == 200
+    assert "example.com" not in json.dumps(legacy.json())
 
 
 def test_change_password_endpoint(tmp_path=None):

@@ -311,6 +311,42 @@ feature pipeline reads results from the DB and writes those artifacts to CSV._
       matrix; every train records a row in the `model_runs` audit table (data hash + recipe +
       git lineage + metrics), and the hash is stamped into the model's provenance.
 
+### Audit follow-up - conversion/product hardening _(2026-06-30)_
+- [ ] **Fix the duplicated FastAPI request schemas**: split Fight Lab prediction requests from
+      account-pick requests and add TestClient smoke coverage for `/predict` + `/predict-method`.
+      Current bug: the account-pick schema shadows the fight-prediction schema and real Fight Lab
+      requests return 422.
+- [ ] **Centralize SQLite-safe boolean parsing**: one helper should correctly parse `True/False`,
+      `1/0`, `1.0/0.0`, strings, blanks, and nulls. Wire it through Recent Cards,
+      Model-vs-Market, Data Quality, CLV, model snapshot evaluation, market shadow training, and
+      prediction-service market-shadow input. Add regression tests with SQLite/pandas `1.0`
+      values.
+- [ ] **Make full rebuild match incremental odds behavior**: add `Refresh future fight odds`
+      before market shadow training and future-card prediction snapshots in `update_all_data.py`,
+      so full rebuilds do not save stale/no-odds snapshots.
+- [ ] **Lock down scheduled-round overrides**: admin-gate the mutation endpoint and consider
+      moving `fight_context_overrides.csv` into SQLite so overrides follow the rest of
+      transactional app state.
+- [ ] **Add forward migrations for all SQLite tables**: current `init_db` only ensures the
+      `users` table has new columns; add table-specific column migrations for saved predictions,
+      saved model predictions, future odds, future cards, and user predictions.
+- [ ] **Stamp provenance on all-model snapshots**: add model version, recipe hash, trained-at, and
+      git lineage to `saved_model_predictions` so prospective model rows are not blended across
+      recipe generations.
+- [ ] **Clean up update-job drift**: fix the initial `total_stages` count, remove the stale
+      `update_job_services.py` duplicate, and make stage totals derive from the pipeline list.
+- [ ] **Frontend quality pass**: clear current ESLint failures (`AuthProvider`, `Leaderboards`,
+      `MyPicks`) and consider route-level code splitting for the large production JS bundle.
+- [ ] **Deployment/auth hardening**: require a real `AUTH_SECRET` outside local/demo, avoid open
+      admin endpoints in hosted mode, hide demo credentials unless demo/mock mode is active, and
+      keep `start_app.local.bat` private/ignored.
+- [ ] **Add HTTP/regression smoke tests**: cover `/predict`, `/predict-method`, Recent Cards
+      market scoring, Model-vs-Market, Data Quality, market shadow training rows, and full rebuild
+      stage ordering.
+- [ ] **Data-quality follow-up**: keep surfacing inactive, low-sample, and missing-reach caveats;
+      latest audit saw 66.9% inactive-over-3-years, 53.3% under five UFC fights, 642 missing reach
+      values, and 25.5% future-odds coverage.
+
 ### Phase 2 — Accounts + API security
 - [ ] User auth (registration/login, hashed passwords, sessions or JWT); per-user data (saved
       cards, favorites, notes) — the ML/predictions stay **shared/global**.

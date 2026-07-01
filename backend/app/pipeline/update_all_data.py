@@ -75,7 +75,9 @@ from app.models.train_market_shadow_models import (
     main as train_market_shadow_models,
 )
 from app.services.future_card_service import refresh_upcoming_cards
+from app.services.odds_service import refresh_future_fight_odds
 from app.services.prediction_service import clear_prediction_cache
+from app.services.predictions_scoring_service import score_all_pending
 from app.services.saved_prediction_service import (
     SAVED_CARD_PREDICTIONS_CSV,
     SAVED_MODEL_PREDICTIONS_CSV,
@@ -518,6 +520,19 @@ def stage_refresh_future_cards() -> dict[str, Any]:
     }
 
 
+def stage_refresh_future_fight_odds() -> dict[str, Any]:
+    # Must run before market-shadow training + future-card snapshots so a full rebuild
+    # doesn't persist stale / no-odds snapshots. Skips cleanly without ODDS_API_KEY.
+    try:
+        return {"available": True, **refresh_future_fight_odds()}
+    except Exception as error:
+        return {
+            "available": False,
+            "message": "Skipped odds refresh. Set ODDS_API_KEY to enable odds.",
+            "error": str(error),
+        }
+
+
 def stage_save_future_card_predictions() -> dict[str, Any]:
     clear_prediction_cache()
 
@@ -528,6 +543,10 @@ def stage_save_future_card_predictions() -> dict[str, Any]:
         "saved_predictions_file": str(SAVED_CARD_PREDICTIONS_CSV),
         "saved_model_predictions_file": str(SAVED_MODEL_PREDICTIONS_CSV),
     }
+
+
+def stage_score_user_predictions() -> dict[str, Any]:
+    return score_all_pending()
 
 
 def build_summary_report(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
@@ -589,6 +608,7 @@ def run_update_all(stop_on_failure: bool = True) -> dict[str, Any]:
     stages: list[tuple[str, Callable[[], dict[str, Any]]]] = [
         ("Refresh completed events", stage_refresh_completed_events),
         ("Refresh completed fight list", stage_refresh_completed_fight_list),
+        ("Score user predictions", stage_score_user_predictions),
         ("Refresh detailed fight stats", stage_refresh_fight_details),
         ("Refresh per-round fight stats", stage_refresh_fight_round_details),
         ("Refresh fighter profiles", stage_refresh_fighter_profiles),
@@ -607,6 +627,7 @@ def run_update_all(stop_on_failure: bool = True) -> dict[str, Any]:
         ("Build current fighter features", stage_build_current_fighter_features),
         ("Add current age features", stage_add_age_features),
         ("Refresh future cards", stage_refresh_future_cards),
+        ("Refresh future fight odds", stage_refresh_future_fight_odds),
         ("Train market shadow models", stage_train_market_shadow_models),
         ("Save future-card predictions", stage_save_future_card_predictions),
         ("Refresh fighter images", stage_refresh_fighter_images),

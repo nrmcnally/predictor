@@ -8,6 +8,8 @@ import joblib
 import pandas as pd
 from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, roc_auc_score
 
+from app.utils.bool_parsing import parse_bool
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -525,7 +527,7 @@ def sample_recent_predictions(
                 "fighter_b": clean_text(row.get("fighter_b", "")),
                 "predicted_winner": clean_text(row.get("predicted_winner", "")),
                 "actual_winner": clean_text(row.get("actual_winner", "")),
-                "prediction_correct": bool(row.get("prediction_correct", False)),
+                "prediction_correct": parse_bool(row.get("prediction_correct", False)),
                 "actual_winner_probability": actual_winner_probability,
                 "actual_winner_percentage": format_percent(actual_winner_probability),
                 "confidence": confidence,
@@ -571,7 +573,7 @@ def sample_confident_predictions(
                 "fighter_b": clean_text(row.get("fighter_b", "")),
                 "predicted_winner": clean_text(row.get("predicted_winner", "")),
                 "actual_winner": clean_text(row.get("actual_winner", "")),
-                "prediction_correct": bool(row.get("prediction_correct", False)),
+                "prediction_correct": parse_bool(row.get("prediction_correct", False)),
                 "actual_winner_probability": actual_winner_probability,
                 "actual_winner_percentage": format_percent(actual_winner_probability),
                 "confidence": confidence,

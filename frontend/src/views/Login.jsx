@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../auth/AuthProvider.jsx";
+import { useAuth } from "../auth/authContext.js";
 import OctagonScene from "../three/OctagonScene.jsx";
 
 export default function Login() {

@@ -1,7 +1,7 @@
 """
-Tests for the predictor leaderboard: only public users appear, ranking is by FIGHT IQ
-rating with provisional predictors sorted below established ones, the current user is
-flagged, and other users' emails are masked (display name preferred).
+Tests for the user leaderboard: only public users appear, ranking is by FIGHT IQ
+rating with provisional users sorted below established ones, the current user is
+flagged, and emails are never exposed.
 
 Runs under pytest, or standalone:  python tests/test_predictions_leaderboard.py
 """
@@ -19,6 +19,7 @@ from app.repositories import (  # noqa: E402
     event_fights_repository,
     saved_predictions_repository,
     user_predictions_repository,
+    users_repository,
 )
 from app.services import auth_service, predictions_stats_service  # noqa: E402
 
@@ -47,23 +48,23 @@ def _fight(fight_url, f1, f2):
     }
 
 
-def test_masking_helper():
-    assert predictions_stats_service._mask_email("nate@fightiq.local").startswith("na***@f")
-    assert "@" in predictions_stats_service._mask_email("nate@fightiq.local")
-    # Display name preferred over the email.
+def test_public_name_never_uses_email():
     assert predictions_stats_service._public_name(
         {"display_name": "Nate", "email": "nate@x.com"}
     ) == "Nate"
-    assert "***" in predictions_stats_service._public_name(
+    assert predictions_stats_service._public_name(
         {"display_name": "", "email": "nate@x.com"}
-    )
+    ) == "Unnamed User"
+    assert predictions_stats_service._public_name(
+        {"display_name": "nate@x.com", "email": "nate@x.com"}
+    ) == "Unnamed User"
 
 
 def test_leaderboard_only_public_ranked_by_rating(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
     _use_temp_db(tmp)
 
-    # Two public predictors + one private; results for two fights.
+    # Two public users + one private; results for two fights.
     pub_a = auth_service.register_user("a@example.com", "password123", "Ada")
     pub_b = auth_service.register_user("b@example.com", "password123", "Boz")
     priv = auth_service.register_user("c@example.com", "password123", "Cyd")
@@ -95,6 +96,26 @@ def test_leaderboard_only_public_ranked_by_rating(tmp_path=None):
     assert board[0]["rank"] == 1 and board[0]["rating"] > board[1]["rating"]
     assert board[0]["is_me"] is True  # current user flagged
     assert board[0]["provisional"] is True  # < 10 graded picks
+    assert board[0]["provisional_threshold"] == predictions_stats_service.PROVISIONAL_THRESHOLD
+    assert board[0]["picks_until_established"] == 9
+    assert all("email" not in row for row in board)
+    assert all("@" not in row["display_name"] for row in board)
+
+
+def test_leaderboard_falls_back_without_exposing_email(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+
+    user = auth_service.register_user("noname@example.com", "password123", "Visible")
+    users_repository.update_profile(user["id"], "noname@example.com", "")
+    auth_service.set_visibility(user["id"], True)
+
+    board = predictions_stats_service.build_leaderboard(current_user_id=user["id"])
+
+    assert board[0]["display_name"] == "Unnamed User"
+    assert board[0]["name"] == "Unnamed User"
+    assert "email" not in board[0]
+    assert "noname@example.com" not in str(board)
 
 
 if __name__ == "__main__":

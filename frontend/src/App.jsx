@@ -13,13 +13,15 @@ import FighterProfile from "./views/FighterProfile.jsx";
 import FutureCards from "./views/FutureCards.jsx";
 import RecentCards from "./views/RecentCards.jsx";
 import Leaderboards from "./views/Leaderboards.jsx";
+import UserLeaderboard from "./views/UserLeaderboard.jsx";
 import Evaluation from "./views/Evaluation.jsx";
 import UpdateData from "./views/UpdateData.jsx";
 import UsersAdmin from "./views/UsersAdmin.jsx";
 import Login from "./views/Login.jsx";
 import Profile from "./views/Profile.jsx";
 import MyPicks from "./views/MyPicks.jsx";
-import { AuthProvider, useAuth } from "./auth/AuthProvider.jsx";
+import { AuthProvider } from "./auth/AuthProvider.jsx";
+import { useAuth } from "./auth/authContext.js";
 
 const FALLBACK_WEIGHT_CLASSES = [
   "Flyweight",
@@ -52,6 +54,7 @@ const NAV_GROUPS = [
     label: "Intel",
     items: [
       { value: "leaderboards", label: "Leaderboards", icon: "♛" },
+      { value: "user-leaderboard", label: "User Leaderboard", icon: "◉" },
       { value: "evaluation", label: "Evaluation", icon: "◫" },
     ],
   },
@@ -61,7 +64,7 @@ const NAV_GROUPS = [
 const ADMIN_NAV_GROUP = {
   label: "Admin",
   items: [
-    { value: "users", label: "Users", icon: "⚇" },
+    { value: "users", label: "User Admin", icon: "⚇" },
     { value: "update", label: "Data Ops", icon: "⟳" },
   ],
 };
@@ -75,6 +78,7 @@ const VIEWS = {
   future: FutureCards,
   recent: RecentCards,
   leaderboards: Leaderboards,
+  "user-leaderboard": UserLeaderboard,
   evaluation: Evaluation,
   update: UpdateData,
   users: UsersAdmin,

@@ -88,6 +88,12 @@ def test_register_validation_and_duplicates(tmp_path=None):
 
     assert _raises_value_error(auth_service.register_user, "not-an-email", "password123")
     assert _raises_value_error(auth_service.register_user, "ok@example.com", "short")
+    assert _raises_value_error(
+        auth_service.register_user,
+        "ok@example.com",
+        "password123",
+        "ok@example.com",
+    )
 
     auth_service.register_user("carol@example.com", "password123")
     assert _raises_value_error(auth_service.register_user, "carol@example.com", "password123")
@@ -147,6 +153,12 @@ def test_update_profile(tmp_path=None):
     # Can't take another account's email; invalid email rejected.
     assert _raises_value_error(auth_service.update_profile, a["id"], "grace@example.com", "x")
     assert _raises_value_error(auth_service.update_profile, a["id"], "not-an-email", "x")
+    assert _raises_value_error(
+        auth_service.update_profile,
+        a["id"],
+        "frank2@example.com",
+        "frank2@example.com",
+    )
 
     # Keeping your own email (just changing the display name) is fine.
     same = auth_service.update_profile(a["id"], "frank2@example.com", "Frank III")

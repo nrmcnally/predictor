@@ -28,22 +28,7 @@ def normalize_name(value: Any) -> str:
     return clean_text(value).lower()
 
 
-def parse_bool(value: Any) -> bool | None:
-    if value is None or pd.isna(value):
-        return None
-
-    if isinstance(value, bool):
-        return value
-
-    text = clean_text(value).lower()
-
-    if text in {"true", "1", "yes", "y"}:
-        return True
-
-    if text in {"false", "0", "no", "n"}:
-        return False
-
-    return None
+from app.utils.bool_parsing import parse_bool  # noqa: E402
 
 
 def parse_probability(value: Any) -> float | None:
@@ -269,9 +254,9 @@ def row_to_fight(row: pd.Series) -> dict[str, Any]:
         "predicted_winner": clean_text(row.get("predicted_winner", "")),
         "actual_winner": clean_text(row.get("actual_winner", "")),
         "market_favorite": clean_text(row.get("market_favorite", "")),
-        "model_correct": parse_bool(row.get("_model_correct")),
-        "market_correct": parse_bool(row.get("_market_correct")),
-        "model_market_agree": bool(row.get("_model_market_agree", False)),
+        "model_correct": parse_bool(row.get("_model_correct"), None),
+        "market_correct": parse_bool(row.get("_market_correct"), None),
+        "model_market_agree": parse_bool(row.get("_model_market_agree")),
         "confidence_label": clean_text(row.get("confidence_label", "")),
         "confidence_percentage": clean_text(row.get("confidence_percentage", "")),
         "model_confidence": model_confidence if pd.notna(model_confidence) else None,

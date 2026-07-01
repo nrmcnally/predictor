@@ -585,7 +585,7 @@ function mockFindFight(fightUrl) {
 export function listPredictions(eventId) {
   const picks = [...MOCK_PICKS.values()].filter(
     (pick) => !eventId || pick.event_id === eventId
-  );
+  ).map((pick) => ({ ...pick, locked: mockLocked(pick.event_date) }));
   return delay(picks, 120);
 }
 
@@ -655,13 +655,13 @@ export function getMyStats() {
   );
 }
 
-export function getPredictorLeaderboard() {
+export function getUserLeaderboard() {
   return delay(
     [
-      { rank: 1, name: "slipznslams", rating: 1112, wins: 14, losses: 6, graded: 20, accuracy: 14 / 20, provisional: false, is_me: false },
-      { rank: 2, name: "demo", rating: 1063, wins: 7, losses: 4, graded: 11, accuracy: 7 / 11, provisional: false, is_me: true },
-      { rank: 3, name: "KO_Karen", rating: 1041, wins: 9, losses: 7, graded: 16, accuracy: 9 / 16, provisional: false, is_me: false },
-      { rank: 4, name: "ju***@g***", rating: 1000, wins: 2, losses: 1, graded: 3, accuracy: 2 / 3, provisional: true, is_me: false },
+      { rank: 1, display_name: "slipznslams", name: "slipznslams", rating: 1112, wins: 14, losses: 6, graded: 20, accuracy: 14 / 20, provisional: false, provisional_threshold: 10, picks_until_established: 0, is_me: false },
+      { rank: 2, display_name: "demo", name: "demo", rating: 1063, wins: 7, losses: 4, graded: 11, accuracy: 7 / 11, provisional: false, provisional_threshold: 10, picks_until_established: 0, is_me: true },
+      { rank: 3, display_name: "KO_Karen", name: "KO_Karen", rating: 1041, wins: 9, losses: 7, graded: 16, accuracy: 9 / 16, provisional: false, provisional_threshold: 10, picks_until_established: 0, is_me: false },
+      { rank: 4, display_name: "NorthStar", name: "NorthStar", rating: 1000, wins: 2, losses: 1, graded: 3, accuracy: 2 / 3, provisional: true, provisional_threshold: 10, picks_until_established: 7, is_me: false },
     ],
     150
   );
@@ -1226,7 +1226,7 @@ let mockUpdateState = {
   finished_at: "2026-06-08T22:41:10",
   current_stage: null,
   current_stage_index: 0,
-  total_stages: 22,
+  total_stages: 18,
   progress_percent: 0,
   message: "No update has been started this session.",
   success: true,
@@ -1236,6 +1236,7 @@ let mockUpdateState = {
 const MOCK_STAGES = [
   "Refresh completed events",
   "Add newly completed fights",
+  "Score user predictions",
   "Scrape missing fight details",
   "Refresh fighter profiles",
   "Rebuild fighter snapshots",
