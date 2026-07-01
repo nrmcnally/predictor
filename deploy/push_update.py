@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import os
 import sys
 from pathlib import Path
 
@@ -31,6 +32,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("server", help="base URL, e.g. https://fightiq.fly.dev")
     parser.add_argument("--email", help="admin email (prompted if omitted)")
+    parser.add_argument(
+        "--password-env",
+        help="read the admin password from this environment variable (for scripting; "
+        "interactive prompt otherwise)",
+    )
     parser.add_argument("--skip-build", action="store_true", help="upload the existing bundle as-is")
     args = parser.parse_args()
     base = args.server.rstrip("/")
@@ -46,7 +52,13 @@ def main() -> int:
 
     # 2. Log in as the admin (password prompted, never a CLI arg / shell history).
     email = args.email or input("Admin email: ").strip()
-    password = getpass.getpass(f"Password for {email}: ")
+    if args.password_env:
+        password = os.environ.get(args.password_env, "")
+        if not password:
+            print(f"ERROR: environment variable {args.password_env} is empty/unset.")
+            return 1
+    else:
+        password = getpass.getpass(f"Password for {email}: ")
     login = requests.post(
         f"{base}/auth/login",
         json={"email": email, "password": password},
