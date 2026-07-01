@@ -354,10 +354,22 @@ feature pipeline reads results from the DB and writes those artifacts to CSV._
 - [ ] #18 Start splitting the 1,909-line `prediction_service` as you touch it.
 
 ### Phase 3 — Deployment + ops
-- [ ] Dockerize backend + frontend; env-based config. Host it (Fly.io / Railway / VPS).
-- [ ] Move the scraper/pipeline to a **scheduled server-side job** (not per-user); consider offline
-      retraining + model upload if the host is small. #20 idempotent/resumable stages.
-- [ ] #19 CI/CD (GitHub Actions: pytest + frontend lint/test on push).
+- [x] **Deploy prep, host-agnostic** _(2026-07-01)_. Single-container Dockerfile
+      (multi-stage: frontend build → python-slim serve, Playwright excluded), FastAPI
+      serves the built frontend same-origin, artifacts (DB + models) live on a volume
+      populated by `deploy/make_bundle.py` (~44MB core bundle; `--full` adds
+      winner_models for Evaluation deep-dives). `DEPLOY.md` covers Fly.io / Railway /
+      VPS (compose file included). Host choice deliberately deferred.
+- [x] **Hosted-mode hardening** _(2026-07-01)_. `FIGHTIQ_HOSTED=1`: boot fails fast
+      without a real AUTH_SECRET; require-auth wall on everything except
+      health/login/register/static; `ALLOW_REGISTRATION` kill-switch; demo seed strips
+      real credentials (+VACUUM); proxy-aware (TRUST_PROXY) + memory-bounded rate
+      limiter; admin one-time password reset (endpoint + Users admin UI).
+- [x] #19 CI/CD _(2026-07-01)_ — GitHub Actions: backend pytest + frontend
+      eslint/build on push; artifact-dependent tests self-skip without local models.
+- [ ] Actually deploy: pick the host (Fly.io / Railway / VPS), follow DEPLOY.md.
+- [ ] _(chosen model: local updates + bundle push, not server-side scraping)_ If that
+      gets tiresome, revisit a scheduled server-side job (#20 idempotent stages).
 
 ### Phase 4 — Full UI redesign _(mobile-first, accessible, restructured)_
 - [ ] #4 Evaluation-tab progressive disclosure (Overview vs Deep Dive). #5 de-clutter tags.

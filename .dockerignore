@@ -1,0 +1,13 @@
+# Keep the build context small — data/models ship via deploy/make_bundle.py, not the image.
+.git
+**/__pycache__
+**/*.pyc
+backend/.venv
+backend/data
+backend/models
+backend/tests
+frontend/node_modules
+frontend/dist
+other stuff
+*.md
+.ui-review*

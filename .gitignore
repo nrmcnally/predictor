@@ -63,3 +63,5 @@ backend/models/*.json
 
 # Generated backend model artifacts
 backend/models/
+/deploy/deploy_bundle.tar.gz
+/deploy/.env

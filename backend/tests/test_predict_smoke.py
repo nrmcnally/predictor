@@ -12,9 +12,18 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+# These tests exercise the REAL trained model, which isn't in git (536MB of local
+# artifacts). Skip cleanly in CI / fresh clones; they run on any machine that has
+# run the training pipeline.
+_MODEL = Path(__file__).resolve().parents[1] / "models" / "best_winner_model.joblib"
+pytestmark = pytest.mark.skipif(
+    not _MODEL.exists(), reason="needs local model artifacts (not in git)"
+)
 
 import app.api_hardening as hardening  # noqa: E402
 import app.db.connection as db_connection  # noqa: E402

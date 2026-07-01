@@ -1,0 +1,21 @@
+# VPS deployment: `docker compose --env-file .env up -d --build` from the repo root
+# (copy deploy/.env.example to deploy/.env first). Put a TLS-terminating reverse
+# proxy (Caddy, nginx, Traefik) in front of port 8000 — TRUST_PROXY is already on.
+services:
+  fightiq:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in deploy/.env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-1}
+    volumes:
+      - fightiq-data:/data
+    restart: unless-stopped
+
+volumes:
+  fightiq-data:
