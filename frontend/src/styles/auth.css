@@ -233,6 +233,23 @@
   text-decoration: underline;
 }
 
+.login-switch {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  border: none;
+  background: none;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--dim);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.login-switch:hover {
+  color: var(--accent-gold);
+}
+
 .login-demo {
   margin: 14px 0 0;
   text-align: center;

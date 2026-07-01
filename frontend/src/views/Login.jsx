@@ -4,18 +4,31 @@ import { useAuth } from "../auth/authContext.js";
 import OctagonScene from "../three/OctagonScene.jsx";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
+  const [mode, setMode] = useState("login"); // "login" | "register"
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const registering = mode === "register";
+
+  const switchMode = () => {
+    setMode(registering ? "login" : "register");
+    setError("");
+  };
 
   const submit = async (event) => {
     event.preventDefault();
     setError("");
     setBusy(true);
     try {
-      await login(email.trim(), password);
+      if (registering) {
+        await register(email.trim(), password, username.trim());
+      } else {
+        await login(email.trim(), password);
+      }
       // On success the auth gate swaps this screen for the app.
     } catch (err) {
       setError(err?.message || "Something went wrong.");
@@ -43,9 +56,30 @@ export default function Login() {
       <form className="login-card" onSubmit={submit}>
         <div className="login-card-head">
           <span className="login-eyebrow">▸ Tale of the Tape</span>
-          <h1 className="login-title">Fighter Access</h1>
-          <p className="login-sub">Sign in to the predictor. Accounts are invite-only.</p>
+          <h1 className="login-title">{registering ? "Join the Card" : "Fighter Access"}</h1>
+          <p className="login-sub">
+            {registering
+              ? "Pick a username — it's how friends find you on the leaderboard."
+              : "Sign in to the predictor."}
+          </p>
         </div>
+
+        {registering && (
+          <label className="login-field">
+            <span>Username</span>
+            <input
+              type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="KO_Karen"
+              maxLength={60}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoFocus
+              required
+            />
+          </label>
+        )}
 
         <label className="login-field">
           <span>Email</span>
@@ -55,7 +89,7 @@ export default function Login() {
             onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
             autoComplete="username"
-            autoFocus
+            autoFocus={!registering}
             required
           />
         </label>
@@ -66,8 +100,9 @@ export default function Login() {
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="••••••••"
-            autoComplete="current-password"
+            placeholder={registering ? "8+ characters" : "••••••••"}
+            autoComplete={registering ? "new-password" : "current-password"}
+            minLength={registering ? 8 : undefined}
             required
           />
         </label>
@@ -75,7 +110,11 @@ export default function Login() {
         {error && <p className="login-error" role="alert">{error}</p>}
 
         <button type="submit" className="login-enter" disabled={busy}>
-          {busy ? "…" : "Enter ▸"}
+          {busy ? "…" : registering ? "Create account ▸" : "Enter ▸"}
+        </button>
+
+        <button type="button" className="login-switch" onClick={switchMode}>
+          {registering ? "Have an account? Sign in" : "New here? Create an account"}
         </button>
 
         {USE_MOCK && (
