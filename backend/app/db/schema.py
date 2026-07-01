@@ -101,6 +101,12 @@ SAVED_MODEL_COLUMNS: list[tuple[str, str]] = [
     ("round_override_saved", "INTEGER"),
     ("round_override_source", "TEXT"),
     ("round_override_updated_at", "TEXT"),
+    # Provenance: which model generation produced this prospective snapshot, so the
+    # Evaluation tab doesn't blend rows across recipe changes.
+    ("model_version", "TEXT"),
+    ("model_recipe_hash", "TEXT"),
+    ("model_trained_at", "TEXT"),
+    ("model_git_commit", "TEXT"),
 ]
 
 
@@ -334,6 +340,20 @@ def _migrate_users_to_email(conn: sqlite3.Connection) -> None:
     conn.execute("ALTER TABLE users_new RENAME TO users")
 
 
+# Spec-driven tables that get automatic column forward-migration: adding a column to
+# any of these specs above backfills existing DBs on the next open (no manual migration).
+_SPEC_TABLES: list[tuple[str, list[tuple[str, str]]]] = [
+    ("saved_card_predictions", SAVED_CARD_COLUMNS),
+    ("saved_model_predictions", SAVED_MODEL_COLUMNS),
+    ("event_fights", EVENT_FIGHTS_COLUMNS),
+    ("upcoming_events", UPCOMING_EVENTS_COLUMNS),
+    ("upcoming_fights", UPCOMING_FIGHTS_COLUMNS),
+    ("model_runs", MODEL_RUNS_COLUMNS),
+    ("future_fight_odds", FUTURE_FIGHT_ODDS_COLUMNS),
+    ("user_predictions", USER_PREDICTIONS_COLUMNS),
+]
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     """Create any missing tables/indexes. Safe to call on every connection."""
     for statement in SCHEMA_STATEMENTS:
@@ -342,3 +362,5 @@ def init_db(conn: sqlite3.Connection) -> None:
     # Forward-migrate older DBs.
     _migrate_users_to_email(conn)
     _ensure_columns(conn, "users", {"is_public": "INTEGER NOT NULL DEFAULT 0"})
+    for table, columns in _SPEC_TABLES:
+        _ensure_columns(conn, table, {name: sql_type for name, sql_type in columns})

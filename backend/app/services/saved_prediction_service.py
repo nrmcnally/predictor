@@ -99,6 +99,14 @@ def build_model_prediction_rows_for_card(
     odds_lookup = load_future_odds_lookup()
     saved_at = saved_at or now_iso()
 
+    provenance = load_current_provenance()
+    prov_fields = {
+        "model_version": clean_text(provenance.get("model_version", "")),
+        "model_recipe_hash": clean_text(provenance.get("recipe_hash", "")),
+        "model_trained_at": clean_text(provenance.get("trained_at", "")),
+        "model_git_commit": clean_text(provenance.get("git_commit", "")),
+    }
+
     rows: list[dict[str, Any]] = []
 
     for fight in card["fights"]:
@@ -143,6 +151,7 @@ def build_model_prediction_rows_for_card(
                         "model_name": model_name,
                         "is_best_model": bool(prediction.get("is_best_model", False)),
                         "model_metrics_json": json.dumps(prediction.get("model_metrics", {})),
+                        **prov_fields,
 
                         "prediction_available": True,
                         "error_json": "",
@@ -194,6 +203,7 @@ def build_model_prediction_rows_for_card(
                     "model_name": "",
                     "is_best_model": False,
                     "model_metrics_json": "{}",
+                    **prov_fields,
                     "prediction_available": False,
                     "error_json": json.dumps(
                         {
@@ -227,6 +237,7 @@ def build_model_prediction_rows_for_card(
                     "model_name": "",
                     "is_best_model": False,
                     "model_metrics_json": "{}",
+                    **prov_fields,
                     "prediction_available": False,
                     "error_json": json.dumps(
                         {
