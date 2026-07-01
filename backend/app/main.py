@@ -375,12 +375,20 @@ def score_predictions() -> dict[str, Any]:
 @app.get("/leaderboard/users")
 @app.get("/leaderboard/predictors", include_in_schema=False)
 def user_leaderboard(
+    scope: str = "overall",
+    window: str = "all_time",
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Public users ranked by FIGHT IQ rating (opt-in via profile visibility)."""
-    return {
-        "leaderboard": predictions_stats_service.build_leaderboard(current_user["id"])
-    }
+    try:
+        leaderboard = predictions_stats_service.build_leaderboard(
+            current_user["id"],
+            scope=scope,
+            window=window,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+    return {"leaderboard": leaderboard, "scope": scope, "window": window}
 
 
 # --- friends (mutual-accept connections) --------------------------------------

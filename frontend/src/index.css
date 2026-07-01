@@ -4236,11 +4236,54 @@ p {
   margin-bottom: 18px;
 }
 
+.leaderboard-controls-card {
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.user-leaderboard-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.user-lb-tabs {
+  max-width: 100%;
+}
+
+.user-lb-tabs button {
+  white-space: nowrap;
+}
+
+.leaderboard-window-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  color: var(--dim);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .leaderboard-summary-tags {
   display: flex;
   gap: 8px;
   margin-top: 12px;
   flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .user-leaderboard-controls,
+  .user-lb-tabs {
+    width: 100%;
+  }
+
+  .user-lb-tabs button {
+    flex: 1 1 0;
+    padding-inline: 10px;
+  }
 }
 
 /* ---------- friends + head-to-head compare ---------- */

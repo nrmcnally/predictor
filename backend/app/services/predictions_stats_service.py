@@ -5,6 +5,7 @@ from typing import Any
 
 from app.repositories import (
     event_fights_repository,
+    friends_repository,
     saved_predictions_repository,
     user_predictions_repository,
     users_repository,
@@ -20,6 +21,8 @@ from app.services.predictions_service import _parse_event_date
 # A user needs at least this many graded picks before their rating is "established"
 # (it stays provisional until then, and provisional rows sort below established ones).
 PROVISIONAL_THRESHOLD = 10
+VALID_LEADERBOARD_SCOPES = {"overall", "friends", "me"}
+VALID_LEADERBOARD_WINDOWS = {"all_time", "last5", "current_month"}
 
 # Per-account prediction stats for the Profile "Your record" tiles + the leaderboard.
 # Raw accuracy is the headline; record/streak/method come straight from scored picks; a
@@ -92,6 +95,59 @@ def _chrono_key(pick: dict[str, Any]):
         pick.get("scored_at") or "",
         pick.get("id") or 0,
     )
+
+
+def _event_key(pick: dict[str, Any]) -> str:
+    event_id = str(pick.get("event_id") or "").strip()
+    if event_id:
+        return event_id
+    event_date = str(pick.get("event_date") or "").strip()
+    event_name = str(pick.get("event_name") or "").strip()
+    if event_date or event_name:
+        return f"{event_date}|{event_name}"
+    return str(pick.get("fight_url") or "")
+
+
+def _latest_event_keys(scored: list[dict[str, Any]], count: int = 5) -> set[str]:
+    events: dict[str, tuple[date, str]] = {}
+    for pick in scored:
+        key = _event_key(pick)
+        if not key:
+            continue
+        event_date = _parse_event_date(pick.get("event_date")) or date.min
+        sort_value = (event_date, pick.get("scored_at") or "")
+        if key not in events or sort_value > events[key]:
+            events[key] = sort_value
+
+    ordered = sorted(events.items(), key=lambda item: item[1], reverse=True)
+    return {key for key, _ in ordered[:count]}
+
+
+def _filter_scored_for_window(
+    scored: list[dict[str, Any]],
+    window: str,
+    *,
+    latest_event_keys: set[str] | None = None,
+    today: date | None = None,
+) -> list[dict[str, Any]]:
+    if window == "all_time":
+        return scored
+
+    if window == "last5":
+        allowed = latest_event_keys or set()
+        return [pick for pick in scored if _event_key(pick) in allowed]
+
+    if window == "current_month":
+        reference = today or date.today()
+        return [
+            pick
+            for pick in scored
+            if (parsed := _parse_event_date(pick.get("event_date"))) is not None
+            and parsed.year == reference.year
+            and parsed.month == reference.month
+        ]
+
+    raise ValueError("Leaderboard window must be all_time, last5, or current_month.")
 
 
 def _rating(scored: list[dict[str, Any]], snapshots: dict[str, dict[str, Any]]) -> int:
@@ -183,17 +239,65 @@ def _public_name(user: dict[str, Any]) -> str:
     return display_name
 
 
-def build_leaderboard(current_user_id: Any = None, limit: int = 100) -> list[dict[str, Any]]:
+def _users_for_scope(scope: str, current_user_id: Any) -> list[dict[str, Any]]:
+    if scope == "overall":
+        return users_repository.list_public_users()
+
+    if current_user_id is None:
+        return []
+
+    if scope == "me":
+        user = users_repository.get_by_id(current_user_id)
+        return [user] if user else []
+
+    if scope == "friends":
+        ids = [int(current_user_id), *friends_repository.list_friend_ids(current_user_id)]
+        users = [users_repository.get_by_id(user_id) for user_id in ids]
+        return [user for user in users if user is not None]
+
+    raise ValueError("Leaderboard scope must be overall, friends, or me.")
+
+
+def build_leaderboard(
+    current_user_id: Any = None,
+    limit: int = 100,
+    *,
+    scope: str = "overall",
+    window: str = "all_time",
+    today: date | None = None,
+) -> list[dict[str, Any]]:
     """Public users ranked by FIGHT IQ rating. Established (>= PROVISIONAL_THRESHOLD
     graded picks) outrank provisional ones; ties break on accuracy then volume. Only
     display names are exposed."""
+    scope = (scope or "overall").strip().lower()
+    window = (window or "all_time").strip().lower()
+    if scope not in VALID_LEADERBOARD_SCOPES:
+        raise ValueError("Leaderboard scope must be overall, friends, or me.")
+    if window not in VALID_LEADERBOARD_WINDOWS:
+        raise ValueError("Leaderboard window must be all_time, last5, or current_month.")
+
     score_all_pending()  # grade everyone's now-completed picks before ranking
     snapshots = _snapshot_lookup()
+    candidate_users = _users_for_scope(scope, current_user_id)
+    picks_by_user: dict[int, list[dict[str, Any]]] = {}
+    all_scored: list[dict[str, Any]] = []
 
-    rows: list[dict[str, Any]] = []
-    for user in users_repository.list_public_users():
+    for user in candidate_users:
         picks = user_predictions_repository.list_for_user(user["id"])
         scored = [p for p in picks if p.get("status") == "scored"]
+        picks_by_user[int(user["id"])] = scored
+        all_scored.extend(scored)
+
+    latest_keys = _latest_event_keys(all_scored) if window == "last5" else None
+
+    rows: list[dict[str, Any]] = []
+    for user in candidate_users:
+        scored = _filter_scored_for_window(
+            picks_by_user.get(int(user["id"]), []),
+            window,
+            latest_event_keys=latest_keys,
+            today=today,
+        )
         wins = sum(1 for p in scored if p.get("result_correct") == 1)
         losses = sum(1 for p in scored if p.get("result_correct") == 0)
         graded = wins + losses
@@ -212,6 +316,8 @@ def build_leaderboard(current_user_id: Any = None, limit: int = 100) -> list[dic
                 "provisional_threshold": PROVISIONAL_THRESHOLD,
                 "picks_until_established": picks_until_established,
                 "is_me": current_user_id is not None and user["id"] == current_user_id,
+                "scope": scope,
+                "window": window,
             }
         )
 

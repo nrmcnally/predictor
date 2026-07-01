@@ -493,12 +493,13 @@ export async function getFriendCompare(userId) {
   });
 }
 
-export async function getUserLeaderboard() {
+export async function getUserLeaderboard({ scope = "overall", window = "all_time" } = {}) {
   if (USE_MOCK) {
-    return mock.getUserLeaderboard();
+    return mock.getUserLeaderboard({ scope, window });
   }
 
-  const data = await request("/leaderboard/users", {
+  const params = new URLSearchParams({ scope, window });
+  const data = await request(`/leaderboard/users?${params}`, {
     fallbackError: "Failed to load the user leaderboard.",
   });
   return data.leaderboard ?? [];

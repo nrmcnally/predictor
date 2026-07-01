@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -21,7 +22,7 @@ from app.repositories import (  # noqa: E402
     user_predictions_repository,
     users_repository,
 )
-from app.services import auth_service, predictions_stats_service  # noqa: E402
+from app.services import auth_service, friends_service, predictions_stats_service  # noqa: E402
 
 UP = "http://ufcstats.com/fight-details/"
 RES = "http://www.ufcstats.com/fight-details/"
@@ -31,19 +32,19 @@ def _use_temp_db(tmp):
     db_connection.set_db_path(Path(tmp) / "app.db")
 
 
-def _result(fight_url, f1, f2, winner, method="U-DEC"):
+def _result(fight_url, f1, f2, winner, method="U-DEC", event_date="January 1, 2026"):
     return {
-        "event_name": "UFC 999", "event_date": "January 1, 2026", "event_url": "u",
+        "event_name": "UFC 999", "event_date": event_date, "event_url": "u",
         "fight_url": fight_url, "fighter_1": f1, "fighter_2": f2,
         "winner": winner, "loser": f2 if winner == f1 else f1,
         "weight_class": "Lightweight", "method": method,
     }
 
 
-def _fight(fight_url, f1, f2):
+def _fight(fight_url, f1, f2, event_id="evt1", event_date="January 1, 2026"):
     return {
-        "fight_url": fight_url, "event_id": "evt1", "event_name": "UFC 999",
-        "event_url": "u", "event_date": "January 1, 2026",
+        "fight_url": fight_url, "event_id": event_id, "event_name": "UFC 999",
+        "event_url": "u", "event_date": event_date,
         "fighter_1": f1, "fighter_2": f2, "weight_class": "Lightweight",
     }
 
@@ -116,6 +117,73 @@ def test_leaderboard_falls_back_without_exposing_email(tmp_path=None):
     assert board[0]["name"] == "Unnamed User"
     assert "email" not in board[0]
     assert "noname@example.com" not in str(board)
+
+
+def test_friends_scope_includes_private_accepted_friends_only(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+
+    me = auth_service.register_user("me@example.com", "password123", "Me")
+    friend = auth_service.register_user("friend@example.com", "password123", "Friend")
+    stranger = auth_service.register_user("stranger@example.com", "password123", "Stranger")
+    # Nobody opts into the public leaderboard; friends scope is still allowed.
+    friends_service.send_friend_request(me["id"], "Friend")
+    request_id = friends_service.get_overview(friend["id"])["incoming"][0]["friendship_id"]
+    friends_service.respond_to_request(friend["id"], request_id, True)
+
+    board = predictions_stats_service.build_leaderboard(
+        current_user_id=me["id"],
+        scope="friends",
+    )
+
+    names = {row["display_name"] for row in board}
+    assert names == {"Me", "Friend"}
+    assert "Stranger" not in names
+    assert all("email" not in row for row in board)
+    assert "example.com" not in str(board)
+    assert any(row["is_me"] for row in board)
+
+
+def test_leaderboard_windows_filter_scored_picks(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+
+    user = auth_service.register_user("window@example.com", "password123", "Window")
+    auth_service.set_visibility(user["id"], True)
+
+    results = []
+    for index in range(6):
+        event_date = f"January {index + 1}, 2026"
+        fight_url = f"{UP}w{index}"
+        result_url = f"{RES}w{index}"
+        event_id = f"evt{index}"
+        results.append(_result(result_url, "A", "B", "A", event_date=event_date))
+        user_predictions_repository.upsert(
+            user["id"],
+            _fight(fight_url, "A", "B", event_id=event_id, event_date=event_date),
+            "A",
+            None,
+        )
+
+    event_fights_repository.replace_all(results)
+
+    all_time = predictions_stats_service.build_leaderboard(
+        current_user_id=user["id"], window="all_time"
+    )[0]
+    last5 = predictions_stats_service.build_leaderboard(
+        current_user_id=user["id"], window="last5"
+    )[0]
+    current_month = predictions_stats_service.build_leaderboard(
+        current_user_id=user["id"], window="current_month", today=date(2026, 1, 20)
+    )[0]
+    other_month = predictions_stats_service.build_leaderboard(
+        current_user_id=user["id"], window="current_month", today=date(2026, 2, 1)
+    )[0]
+
+    assert all_time["graded"] == 6
+    assert last5["graded"] == 5
+    assert current_month["graded"] == 6
+    assert other_month["graded"] == 0
 
 
 if __name__ == "__main__":

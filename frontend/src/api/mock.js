@@ -721,16 +721,55 @@ export function getMyStats() {
   );
 }
 
-export function getUserLeaderboard() {
-  return delay(
-    [
-      { rank: 1, display_name: "slipznslams", name: "slipznslams", rating: 1112, wins: 14, losses: 6, graded: 20, accuracy: 14 / 20, provisional: false, provisional_threshold: 10, picks_until_established: 0, is_me: false },
-      { rank: 2, display_name: "demo", name: "demo", rating: 1063, wins: 7, losses: 4, graded: 11, accuracy: 7 / 11, provisional: false, provisional_threshold: 10, picks_until_established: 0, is_me: true },
-      { rank: 3, display_name: "KO_Karen", name: "KO_Karen", rating: 1041, wins: 9, losses: 7, graded: 16, accuracy: 9 / 16, provisional: false, provisional_threshold: 10, picks_until_established: 0, is_me: false },
-      { rank: 4, display_name: "NorthStar", name: "NorthStar", rating: 1000, wins: 2, losses: 1, graded: 3, accuracy: 2 / 3, provisional: true, provisional_threshold: 10, picks_until_established: 7, is_me: false },
-    ],
-    150
-  );
+const MOCK_LEADERBOARD_ROWS = [
+  { display_name: "slipznslams", rating: 1112, wins: 14, losses: 6, recent_wins: 4, recent_losses: 1, month_wins: 2, month_losses: 1, is_me: false, is_friend: true },
+  { display_name: "demo", rating: 1063, wins: 7, losses: 4, recent_wins: 3, recent_losses: 2, month_wins: 1, month_losses: 1, is_me: true, is_friend: true },
+  { display_name: "KO_Karen", rating: 1041, wins: 9, losses: 7, recent_wins: 2, recent_losses: 3, month_wins: 0, month_losses: 2, is_me: false, is_friend: true },
+  { display_name: "NorthStar", rating: 1000, wins: 2, losses: 1, recent_wins: 2, recent_losses: 1, month_wins: 0, month_losses: 0, is_me: false, is_friend: false },
+];
+
+function leaderboardWindowRecord(row, window) {
+  if (window === "last5") {
+    return { wins: row.recent_wins, losses: row.recent_losses };
+  }
+  if (window === "current_month") {
+    return { wins: row.month_wins, losses: row.month_losses };
+  }
+  return { wins: row.wins, losses: row.losses };
+}
+
+export function getUserLeaderboard({ scope = "overall", window = "all_time" } = {}) {
+  let rows = MOCK_LEADERBOARD_ROWS;
+  if (scope === "friends") {
+    rows = rows.filter((row) => row.is_friend);
+  } else if (scope === "me") {
+    rows = rows.filter((row) => row.is_me);
+  }
+
+  const mapped = rows
+    .map((row) => {
+      const record = leaderboardWindowRecord(row, window);
+      const graded = record.wins + record.losses;
+      return {
+        display_name: row.display_name,
+        name: row.display_name,
+        rating: row.rating + (window === "last5" ? record.wins * 5 - record.losses * 4 : 0),
+        wins: record.wins,
+        losses: record.losses,
+        graded,
+        accuracy: graded ? record.wins / graded : null,
+        provisional: graded < 10,
+        provisional_threshold: 10,
+        picks_until_established: Math.max(0, 10 - graded),
+        is_me: row.is_me,
+        scope,
+        window,
+      };
+    })
+    .sort((a, b) => Number(a.provisional) - Number(b.provisional) || b.rating - a.rating)
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+
+  return delay(mapped, 150);
 }
 
 // --- friends (Phase 6) — canned demo data ---
