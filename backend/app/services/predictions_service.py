@@ -29,6 +29,23 @@ def _lock_state(row: dict[str, Any]) -> dict[str, Any]:
     return event_lock_service.build_event_lock_state(row)
 
 
+def _lock_cache_key(row: dict[str, Any]) -> tuple[str, str]:
+    # event_date is part of the key so rows missing an event_id still fall back
+    # to their own date-based lock instead of sharing another event's state.
+    return (str(row.get("event_id") or ""), str(row.get("event_date") or ""))
+
+
+def _lock_states_for(rows: list[dict[str, Any]]) -> dict[tuple[str, str], dict[str, Any]]:
+    """One lock state per distinct event. Computing it per pick row repeats the
+    controls lookup and full odds/fights table reads for every fight on a card."""
+    states: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in rows:
+        key = _lock_cache_key(row)
+        if key not in states:
+            states[key] = _lock_state(row)
+    return states
+
+
 def _fight_key(url: str | None) -> str:
     return (url or "").rstrip("/").split("/")[-1]
 
@@ -84,9 +101,12 @@ def _public(
     *,
     results: dict[str, dict[str, Any]] | None = None,
     snapshots: dict[str, dict[str, Any]] | None = None,
+    lock_states: dict[tuple[str, str], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Client-facing shape: the stored pick plus a computed ``locked`` flag."""
-    lock_state = _lock_state(prediction)
+    lock_state = (lock_states or {}).get(_lock_cache_key(prediction)) or _lock_state(
+        prediction
+    )
     payload = {
         "fight_url": prediction["fight_url"],
         "event_id": prediction.get("event_id"),
@@ -149,7 +169,11 @@ def list_predictions(user_id: Any, event_id: str | None = None) -> list[dict[str
     rows = user_predictions_repository.list_for_user(user_id, event_id)
     results = _result_lookup()
     snapshots = _snapshot_lookup()
-    return [_public(row, results=results, snapshots=snapshots) for row in rows]
+    lock_states = _lock_states_for(rows)
+    return [
+        _public(row, results=results, snapshots=snapshots, lock_states=lock_states)
+        for row in rows
+    ]
 
 
 def remove_prediction(user_id: Any, fight_url: str) -> bool:

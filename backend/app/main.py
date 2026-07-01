@@ -226,6 +226,7 @@ class VisibilityRequest(BaseModel):
 class ProfileUpdateRequest(BaseModel):
     email: str = Field(min_length=3, max_length=200)
     display_name: str | None = Field(default=None, max_length=60)
+    current_password: str | None = Field(default=None, max_length=200)
 
 
 class UserPredictionRequest(BaseModel):
@@ -311,7 +312,12 @@ def auth_update_profile(
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
     try:
-        user = update_profile(current_user["id"], request.email, request.display_name)
+        user = update_profile(
+            current_user["id"],
+            request.email,
+            request.display_name,
+            current_password=request.current_password,
+        )
     except ValueError as error:
         raise HTTPException(status_code=400, detail={"message": str(error)})
     return {"user": user}
@@ -581,12 +587,12 @@ def start_update() -> dict[str, Any]:
     return start_incremental_update_job()
 
 
-@app.get("/admin/update/status")
+@app.get("/admin/update/status", dependencies=[Depends(require_admin)])
 def update_status() -> dict[str, Any]:
     return get_update_status()
 
 
-@app.get("/admin/update/latest-report")
+@app.get("/admin/update/latest-report", dependencies=[Depends(require_admin)])
 def latest_update_report() -> dict[str, Any]:
     return get_latest_update_report()
 

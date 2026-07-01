@@ -31,9 +31,15 @@ export default function Profile() {
 
   const [displayName, setDisplayName] = useState(user.display_name || "");
   const [email, setEmail] = useState(user.email || "");
+  const [accountPw, setAccountPw] = useState("");
   const [accountMsg, setAccountMsg] = useState("");
   const [accountErr, setAccountErr] = useState("");
   const [accountBusy, setAccountBusy] = useState(false);
+
+  // Changing the email (the login key) requires the current password; username-only
+  // edits don't.
+  const emailChanged =
+    email.trim().toLowerCase() !== String(user.email || "").trim().toLowerCase();
 
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -64,9 +70,10 @@ export default function Profile() {
     setAccountMsg("");
     setAccountBusy(true);
     try {
-      await updateProfile(email.trim(), displayName.trim());
+      await updateProfile(email.trim(), displayName.trim(), emailChanged ? accountPw : null);
       await refreshUser();
       setAccountMsg("Saved.");
+      setAccountPw("");
     } catch (err) {
       setAccountErr(err.message);
     } finally {
@@ -194,6 +201,21 @@ export default function Profile() {
             <span>Email</span>
             <input type="email" value={email} required onChange={(e) => setEmail(e.target.value)} />
           </label>
+          {emailChanged && (
+            <label className="profile-field">
+              <span>Current password</span>
+              <input
+                type="password"
+                value={accountPw}
+                required
+                autoComplete="current-password"
+                onChange={(e) => setAccountPw(e.target.value)}
+              />
+              <span className="muted profile-field-note">
+                Required to change your login email.
+              </span>
+            </label>
+          )}
           <button type="submit" className="btn btn-primary" disabled={accountBusy}>
             {accountBusy ? "Saving…" : "Save"}
           </button>

@@ -146,12 +146,26 @@ def test_update_profile(tmp_path=None):
     a = auth_service.register_user("frank@example.com", "password123", "Frank")
     auth_service.register_user("grace@example.com", "password123")
 
-    updated = auth_service.update_profile(a["id"], "frank2@example.com", "Frankie")
+    # Changing the email (the login key) requires the current password.
+    assert _raises_value_error(
+        auth_service.update_profile, a["id"], "frank2@example.com", "Frankie"
+    )
+    assert _raises_value_error(
+        auth_service.update_profile,
+        a["id"], "frank2@example.com", "Frankie",
+        current_password="wrongpass",
+    )
+    updated = auth_service.update_profile(
+        a["id"], "frank2@example.com", "Frankie", current_password="password123"
+    )
     assert updated["email"] == "frank2@example.com"
     assert updated["display_name"] == "Frankie"
 
     # Can't take another account's email; invalid email rejected.
-    assert _raises_value_error(auth_service.update_profile, a["id"], "grace@example.com", "x")
+    assert _raises_value_error(
+        auth_service.update_profile, a["id"], "grace@example.com", "x",
+        current_password="password123",
+    )
     assert _raises_value_error(auth_service.update_profile, a["id"], "not-an-email", "x")
     assert _raises_value_error(
         auth_service.update_profile,

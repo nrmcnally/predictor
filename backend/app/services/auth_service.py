@@ -101,12 +101,25 @@ def set_visibility(user_id: Any, is_public: bool) -> bool:
     return users_repository.set_visibility(user_id, bool(is_public))
 
 
-def update_profile(user_id: Any, email: str, display_name: str | None) -> dict[str, Any]:
-    """Update the account's email + display name. Raises ValueError on invalid or
-    already-used email."""
+def update_profile(
+    user_id: Any,
+    email: str,
+    display_name: str | None,
+    current_password: str | None = None,
+) -> dict[str, Any]:
+    """Update the account's email + username. Changing the EMAIL (the login key)
+    additionally requires the current password, so a hijacked session can't silently
+    rotate the account's login. Username-only edits need no password."""
     email = _clean_email(email)
     if not is_valid_email(email):
         raise ValueError("Enter a valid email address.")
+
+    me = users_repository.get_by_id(user_id)
+    if me is None:
+        raise ValueError("Account not found.")
+    if email != _clean_email(me["email"]):
+        if not security.verify_password(current_password or "", me["password_hash"]):
+            raise ValueError("Enter your current password to change your email.")
 
     existing = users_repository.get_by_email(email)
     if existing is not None and existing["id"] != user_id:

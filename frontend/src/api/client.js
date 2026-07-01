@@ -114,14 +114,14 @@ export async function getMe() {
   return request("/auth/me", { fallbackError: "Session expired." });
 }
 
-export async function updateProfile(email, displayName) {
+export async function updateProfile(email, displayName, currentPassword = null) {
   if (USE_MOCK) {
     return { user: { id: 0, email, display_name: displayName, role: "user" } };
   }
 
   return request("/auth/profile", {
     method: "POST",
-    body: { email, display_name: displayName },
+    body: { email, display_name: displayName, current_password: currentPassword },
     fallbackError: "Failed to update profile.",
   });
 }

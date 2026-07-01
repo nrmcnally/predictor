@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import os
 from typing import Any
 
@@ -51,7 +52,7 @@ def require_admin(
         return users_repository.public_user(user)
 
     legacy_token = os.environ.get("ADMIN_TOKEN", "").strip()
-    if legacy_token and x_admin_token == legacy_token:
+    if legacy_token and hmac.compare_digest(x_admin_token or "", legacy_token):
         return None
 
     if not legacy_token and users_repository.count_admins() == 0:
