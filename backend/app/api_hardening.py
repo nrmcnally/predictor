@@ -26,6 +26,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         for header, value in SECURITY_HEADERS.items():
             response.headers.setdefault(header, value)
+
+        # Caching policy for the served frontend: Vite content-hashes /assets/*
+        # filenames, so they can cache forever; the HTML shell + manifest must
+        # revalidate so a deploy shows up WITHOUT users hard-refreshing.
+        path = request.url.path
+        if path.startswith("/assets/"):
+            response.headers.setdefault(
+                "Cache-Control", "public, max-age=31536000, immutable"
+            )
+        elif path == "/" or path == "/manifest.webmanifest" or path.endswith(".html"):
+            response.headers.setdefault("Cache-Control", "no-cache")
         return response
 
 
