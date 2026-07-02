@@ -84,6 +84,27 @@ def authenticate(email: str, password: str) -> dict[str, Any]:
     return {"token": token, "user": users_repository.public_user(user)}
 
 
+def admin_delete_user(target_user_id: Any, actor_id: Any | None = None) -> dict[str, Any]:
+    """Delete an account plus its picks, friendships, and avatar. Guardrails: an
+    admin can't delete themselves (lockout/misclick protection) and the last
+    remaining admin can never be deleted."""
+    target = users_repository.get_by_id(target_user_id)
+    if target is None:
+        raise ValueError("Account not found.")
+    if actor_id is not None and target["id"] == actor_id:
+        raise ValueError("You can't delete your own account.")
+    if target["role"] == "admin" and users_repository.count_admins() <= 1:
+        raise ValueError("Can't delete the only admin account.")
+
+    summary = users_repository.delete_user(target_user_id)
+
+    # Best-effort avatar cleanup (file lives outside the DB transaction).
+    from app.services import avatar_service
+
+    avatar_service.delete_avatar(target_user_id)
+    return {"user_id": target["id"], "display_name": target.get("display_name"), **summary}
+
+
 def admin_reset_password(target_user_id: Any) -> str:
     """Set a fresh random temporary password on an account and return it ONCE.
     There is no email infrastructure, so lost passwords are recovered by an admin

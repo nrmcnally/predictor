@@ -38,7 +38,10 @@ def _bearer(token: str) -> dict:
 
 
 def _admin_and_user(client):
-    users_repository.create_user("boss@example.com", security.hash_password("adminpass123"), role="admin")
+    users_repository.create_user(
+        "boss@example.com", security.hash_password("adminpass123"),
+        display_name="boss", role="admin",
+    )
     client.post("/auth/register", json={"email": "u@example.com", "password": "password123", "display_name": "U"})
     admin = client.post("/auth/login", json={"email": "boss@example.com", "password": "adminpass123"}).json()["token"]
     user = client.post("/auth/login", json={"email": "u@example.com", "password": "password123"}).json()["token"]
@@ -117,6 +120,53 @@ def test_avatar_upload_reencodes_and_serves(tmp_path=None):
         # Delete works; missing avatar -> 404.
         assert client.delete("/auth/avatar", headers=_bearer(user)).json()["removed"] is True
         assert client.get(f"/avatars/{me['id']}.png").status_code == 404
+    finally:
+        avatar_service.AVATARS_DIR = saved_dir
+
+
+def test_admin_delete_user_cascades_and_guards(tmp_path=None):
+    tmp = Path(tmp_path or tempfile.mkdtemp())
+    client = _client(tmp)
+    admin, user = _admin_and_user(client)
+
+    # The target user gets a friend link, a pick, and an avatar — all must go.
+    me = client.get("/auth/me", headers=_bearer(user)).json()["user"]
+    _seed_two_fight_card()
+    predictions_service.make_prediction(me["id"], "http://ufcstats.com/fight-details/f0", "A0")
+    friends_service.send_friend_request(me["id"], "boss")
+
+    saved_dir = avatar_service.AVATARS_DIR
+    avatar_service.AVATARS_DIR = tmp / "avatars"
+    try:
+        client.post("/auth/avatar", content=_png_bytes(), headers=_bearer(user))
+        avatar_file = avatar_service.avatar_path(me["id"])
+        assert avatar_file.is_file()
+
+        # Guards: non-admin 403, self-delete 400, unknown 404, last-admin 400.
+        assert client.delete(f"/admin/users/{me['id']}", headers=_bearer(user)).status_code == 403
+        boss_id = next(
+            u["id"] for u in client.get("/admin/users", headers=_bearer(admin)).json()["users"]
+            if u["role"] == "admin"
+        )
+        self_delete = client.delete(f"/admin/users/{boss_id}", headers=_bearer(admin))
+        assert self_delete.status_code == 400  # self AND only admin
+        assert client.delete("/admin/users/99999", headers=_bearer(admin)).status_code == 404
+
+        # The real deletion.
+        response = client.delete(f"/admin/users/{me['id']}", headers=_bearer(admin))
+        assert response.status_code == 200, response.text
+        summary = response.json()
+        assert summary["deleted"] == 1
+        assert summary["picks_removed"] == 1
+        assert summary["friendships_removed"] == 1
+        assert not avatar_file.is_file()
+
+        # Account is really gone: login fails, listing shrinks.
+        assert client.post(
+            "/auth/login", json={"email": "u@example.com", "password": "password123"}
+        ).status_code == 401
+        remaining = client.get("/admin/users", headers=_bearer(admin)).json()["users"]
+        assert all(u["id"] != me["id"] for u in remaining)
     finally:
         avatar_service.AVATARS_DIR = saved_dir
 

@@ -113,6 +113,26 @@ def update_profile(user_id: Any, email: str, display_name: str | None) -> bool:
         return cursor.rowcount > 0
 
 
+def delete_user(user_id: Any) -> dict[str, int]:
+    """Remove an account and everything keyed to it (picks, friendships) in one
+    transaction, so no ghost rows linger in leaderboards or friends lists."""
+    with connection.transaction() as conn:
+        schema.init_db(conn)
+        picks = conn.execute(
+            "DELETE FROM user_predictions WHERE user_id = ?", (user_id,)
+        ).rowcount
+        friendships = conn.execute(
+            "DELETE FROM friendships WHERE requester_id = ? OR addressee_id = ?",
+            (user_id, user_id),
+        ).rowcount
+        deleted = conn.execute("DELETE FROM users WHERE id = ?", (user_id,)).rowcount
+    return {
+        "deleted": int(deleted),
+        "picks_removed": int(picks),
+        "friendships_removed": int(friendships),
+    }
+
+
 def list_users() -> list[dict[str, Any]]:
     with connection.transaction() as conn:
         schema.init_db(conn)

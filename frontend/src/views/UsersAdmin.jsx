@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  deleteUser,
   getUsers,
   resetUserPassword,
   setRegistrationOpen,
@@ -50,6 +51,26 @@ export default function UsersAdmin() {
     try {
       await setUserRole(target.id, role);
       setUsers((list) => list.map((u) => (u.id === target.id ? { ...u, role } : u)));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const removeUser = async (target) => {
+    const confirmed = window.confirm(
+      `Delete ${target.display_name || target.email}?\n\n` +
+        "Their account, picks, friendships, and profile picture are removed permanently. " +
+        "This cannot be undone."
+    );
+    if (!confirmed) return;
+
+    setBusyId(target.id);
+    setError("");
+    try {
+      await deleteUser(target.id);
+      setUsers((list) => list.filter((u) => u.id !== target.id));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -174,6 +195,15 @@ export default function UsersAdmin() {
                         title="Set a one-time temporary password"
                       >
                         Reset password
+                      </button>{" "}
+                      <button
+                        type="button"
+                        className="chip chip-danger"
+                        disabled={busyId === u.id || isMe}
+                        onClick={() => removeUser(u)}
+                        title={isMe ? "You can't delete your own account" : "Delete account + picks permanently"}
+                      >
+                        Delete
                       </button>
                     </td>
                   </tr>

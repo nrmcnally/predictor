@@ -4517,3 +4517,8 @@ p {
 .compare-card-head.static {
   cursor: default;
 }
+
+.chip-danger:hover:not(:disabled) {
+  color: var(--red);
+  border-color: var(--red);
+}

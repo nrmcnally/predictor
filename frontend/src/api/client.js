@@ -82,7 +82,8 @@ export async function loginUser(email, password) {
     return {
       token: "mock-token",
       user: {
-        id: 0,
+        // Ids line up with the mock getUsers() list so admin self-guards behave.
+        id: email.startsWith("admin") ? 1 : 2,
         email,
         display_name: email.split("@")[0],
         role: email.startsWith("admin") ? "admin" : "user",
@@ -187,6 +188,17 @@ export async function resetUserPassword(userId) {
   return request(`/admin/users/${userId}/reset-password`, {
     method: "POST",
     fallbackError: "Failed to reset the password.",
+  });
+}
+
+export async function deleteUser(userId) {
+  if (USE_MOCK) {
+    return { user_id: userId, deleted: 1, picks_removed: 0, friendships_removed: 0 };
+  }
+
+  return request(`/admin/users/${userId}`, {
+    method: "DELETE",
+    fallbackError: "Failed to delete the account.",
   });
 }
 

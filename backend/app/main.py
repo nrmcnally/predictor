@@ -82,6 +82,7 @@ from app.services.data_quality_service import build_data_quality_summary
 
 from app.auth.dependencies import get_current_user, require_admin
 from app.services.auth_service import (
+    admin_delete_user,
     admin_reset_password,
     authenticate,
     change_password,
@@ -566,6 +567,23 @@ def admin_set_user_role(user_id: int, request: RoleUpdateRequest) -> dict[str, A
     if not users_repository.set_role(user_id, request.role):
         raise HTTPException(status_code=404, detail={"message": "User not found."})
     return {"user_id": user_id, "role": request.role}
+
+
+@app.delete("/admin/users/{user_id}")
+def admin_remove_user(
+    user_id: int,
+    current_admin: dict[str, Any] | None = Depends(require_admin),
+) -> dict[str, Any]:
+    """Delete an account and its picks/friendships/avatar. Self-delete and deleting
+    the only admin are refused."""
+    try:
+        return admin_delete_user(
+            user_id, actor_id=current_admin.get("id") if current_admin else None
+        )
+    except ValueError as error:
+        message = str(error)
+        status = 404 if "not found" in message.lower() else 400
+        raise HTTPException(status_code=status, detail={"message": message})
 
 
 @app.post("/admin/users/{user_id}/reset-password", dependencies=[Depends(require_admin)])
