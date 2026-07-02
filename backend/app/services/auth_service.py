@@ -77,6 +77,7 @@ def authenticate(email: str, password: str) -> dict[str, Any]:
     if user is None or not security.verify_password(password or "", user["password_hash"]):
         raise ValueError("Invalid email or password.")
 
+    users_repository.touch_last_login(user["id"])
     token = security.create_token(
         {"sub": user["id"], "email": user["email"], "role": user["role"]}
     )

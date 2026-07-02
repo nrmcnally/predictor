@@ -328,6 +328,15 @@ SCHEMA_STATEMENTS: list[str] = [
     "ON friendships(requester_id, addressee_id)",
     "CREATE INDEX IF NOT EXISTS idx_friendships_addressee ON friendships(addressee_id)",
     "CREATE INDEX IF NOT EXISTS idx_friendships_requester ON friendships(requester_id)",
+    # app_settings: small runtime-tunable switches (e.g. pausing registration from the
+    # admin UI without an env change + redeploy).
+    """
+    CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TEXT
+    )
+    """,
 ]
 
 
@@ -417,7 +426,11 @@ def init_db(conn: sqlite3.Connection) -> None:
 
     # Forward-migrate older DBs.
     _migrate_users_to_email(conn)
-    _ensure_columns(conn, "users", {"is_public": "INTEGER NOT NULL DEFAULT 0"})
+    _ensure_columns(
+        conn,
+        "users",
+        {"is_public": "INTEGER NOT NULL DEFAULT 0", "last_login_at": "TEXT"},
+    )
     for table, columns in _SPEC_TABLES:
         _ensure_columns(conn, table, {name: sql_type for name, sql_type in columns})
 

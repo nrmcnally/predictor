@@ -73,6 +73,14 @@ def set_role(user_id: Any, role: str) -> bool:
         return cursor.rowcount > 0
 
 
+def touch_last_login(user_id: Any) -> None:
+    with connection.transaction() as conn:
+        schema.init_db(conn)
+        conn.execute(
+            "UPDATE users SET last_login_at = ? WHERE id = ?", (_now(), user_id)
+        )
+
+
 def update_password(user_id: Any, password_hash: str) -> bool:
     with connection.transaction() as conn:
         schema.init_db(conn)
@@ -109,7 +117,8 @@ def list_users() -> list[dict[str, Any]]:
     with connection.transaction() as conn:
         schema.init_db(conn)
         rows = conn.execute(
-            "SELECT id, email, display_name, role, created_at FROM users ORDER BY id"
+            "SELECT id, email, display_name, role, created_at, last_login_at "
+            "FROM users ORDER BY id"
         ).fetchall()
     return [dict(row) for row in rows]
 

@@ -93,6 +93,8 @@ from app.services.auth_service import (
 from app.repositories import users_repository
 from app.db import connection
 from app.services import (
+    app_settings_service,
+    avatar_service,
     data_bundle_service,
     event_lock_service,
     friends_compare_service,
@@ -233,6 +235,10 @@ class VisibilityRequest(BaseModel):
     is_public: bool
 
 
+class RegistrationToggleRequest(BaseModel):
+    open: bool
+
+
 class ProfileUpdateRequest(BaseModel):
     email: str = Field(min_length=3, max_length=200)
     display_name: str | None = Field(default=None, max_length=60)
@@ -275,6 +281,7 @@ def health_check() -> dict[str, Any]:
     return {
         "status": "ok",
         "mode": "demo" if connection.is_demo() else "prod",
+        "hosted": runtime_config.is_hosted(),
     }
 
 
@@ -285,7 +292,7 @@ def health_check() -> dict[str, Any]:
 
 @app.post("/auth/register")
 def auth_register(request: RegisterRequest) -> dict[str, Any]:
-    if not runtime_config.registration_enabled():
+    if not app_settings_service.registration_open():
         raise HTTPException(
             status_code=403,
             detail={"message": "Registration is closed. Ask the admin for an account."},
@@ -346,6 +353,47 @@ def auth_update_profile(
     except ValueError as error:
         raise HTTPException(status_code=400, detail={"message": str(error)})
     return {"user": user}
+
+
+# --- avatars -------------------------------------------------------------------
+
+@app.post("/auth/avatar")
+async def upload_avatar(
+    request: Request,
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Set the signed-in user's profile picture. The upload is validated, re-encoded
+    to a fresh 256px PNG (never the original bytes), and stored by session user id."""
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > avatar_service.MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413, detail={"message": "Image too large — keep it under 2MB."}
+            )
+        chunks.append(chunk)
+
+    try:
+        avatar_service.save_avatar(current_user["id"], b"".join(chunks))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"message": str(error)})
+    return {"message": "Avatar updated.", "user_id": current_user["id"]}
+
+
+@app.delete("/auth/avatar")
+def remove_avatar(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    return {"removed": avatar_service.delete_avatar(current_user["id"])}
+
+
+@app.get("/avatars/{user_id}.png")
+def get_avatar(user_id: int) -> FileResponse:
+    path = avatar_service.avatar_path(user_id)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail={"message": "No avatar."})
+    return FileResponse(path, media_type="image/png")
 
 
 # --- user predictions (account-based picks on upcoming fights) ----------------
@@ -495,7 +543,18 @@ def compare_with_friend(
 
 @app.get("/admin/users", dependencies=[Depends(require_admin)])
 def admin_list_users() -> dict[str, Any]:
-    return {"users": users_repository.list_users()}
+    return {
+        "users": users_repository.list_users(),
+        "registration_open": app_settings_service.registration_open(),
+    }
+
+
+@app.post("/admin/settings/registration", dependencies=[Depends(require_admin)])
+def admin_toggle_registration(request: RegistrationToggleRequest) -> dict[str, Any]:
+    """Pause/unpause self-registration instantly — no env change or redeploy."""
+    return {
+        "registration_open": app_settings_service.set_registration_open(request.open)
+    }
 
 
 @app.post("/admin/users/{user_id}/role", dependencies=[Depends(require_admin)])
@@ -657,6 +716,16 @@ def update_future_fight_scheduled_rounds(
 
 @app.post("/admin/update/start", dependencies=[Depends(require_admin)])
 def start_update() -> dict[str, Any]:
+    if runtime_config.is_hosted():
+        # The serve image has no Playwright/scraper; data updates run on your PC and
+        # are pushed with deploy/push_update.py.
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Data updates run locally, not on the server. "
+                "Run Data Ops on your PC, then: python deploy/push_update.py <server-url>"
+            },
+        )
     return start_incremental_update_job()
 
 
@@ -715,7 +784,7 @@ def leaderboards(
     )
 
 
-@app.get("/model-evaluation")
+@app.get("/model-evaluation", dependencies=[Depends(require_admin)])
 def model_evaluation(
     test_fraction: float = 0.20,
     recent_prediction_limit: int = 25,
@@ -726,7 +795,7 @@ def model_evaluation(
     )
 
 
-@app.get("/walk-forward-evaluation")
+@app.get("/walk-forward-evaluation", dependencies=[Depends(require_admin)])
 def walk_forward_evaluation(
     n_folds: int = 8,
     min_test_fights: int = 150,
@@ -748,7 +817,7 @@ def predict_method(request: FightPredictionRequest) -> dict[str, Any]:
     )
 
 
-@app.get("/method-model-metrics")
+@app.get("/method-model-metrics", dependencies=[Depends(require_admin)])
 def method_model_metrics() -> dict[str, Any]:
     if not METHOD_MODEL_METRICS_PATH.exists():
         return {
@@ -793,17 +862,17 @@ def fighter_profile(fighter: str) -> dict[str, Any]:
     return build_fighter_profile(fighter)
 
 
-@app.get("/model-vs-market-evaluation")
+@app.get("/model-vs-market-evaluation", dependencies=[Depends(require_admin)])
 def model_vs_market_evaluation() -> dict[str, Any]:
     return build_model_market_evaluation()
 
 
-@app.get("/model-snapshot-evaluation")
+@app.get("/model-snapshot-evaluation", dependencies=[Depends(require_admin)])
 def model_snapshot_evaluation() -> dict[str, Any]:
     return build_model_snapshot_evaluation()
 
 
-@app.get("/clv-evaluation")
+@app.get("/clv-evaluation", dependencies=[Depends(require_admin)])
 def clv_evaluation() -> dict[str, Any]:
     return build_clv_evaluation()
 
