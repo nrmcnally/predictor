@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getUserLeaderboard } from "../api/client.js";
+import { useApi } from "../hooks/useApi.js";
+import { LeaderboardRow } from "../components/LeaderboardRow.jsx";
 import { UserAvatar } from "../components/UserAvatar.jsx";
 import {
   EmptyState,
@@ -82,59 +84,16 @@ function viewDescription(scope, timeWindow) {
 }
 
 export default function UserLeaderboard() {
-  const [rows, setRows] = useState(null);
   const [scope, setScope] = useState("overall");
   const [timeWindow, setTimeWindow] = useState("all_time");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { data: rows, loading, error } = useApi(
+    () => getUserLeaderboard({ scope, window: timeWindow }),
+    [scope, timeWindow]
+  );
 
-  function prepareReload() {
-    setLoading(true);
-    setError("");
-    setRows(null);
-  }
-
-  function chooseScope(nextScope) {
-    if (nextScope === scope) {
-      return;
-    }
-    prepareReload();
-    setScope(nextScope);
-  }
-
-  function chooseWindow(nextWindow) {
-    if (nextWindow === timeWindow) {
-      return;
-    }
-    prepareReload();
-    setTimeWindow(nextWindow);
-  }
-
-  useEffect(() => {
-    let active = true;
-
-    getUserLeaderboard({ scope, window: timeWindow })
-      .then((leaderboard) => {
-        if (active) {
-          setRows(leaderboard);
-        }
-      })
-      .catch((requestError) => {
-        if (active) {
-          setError(requestError.message);
-          setRows([]);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [scope, timeWindow]);
+  const chooseScope = (nextScope) => nextScope !== scope && setScope(nextScope);
+  const chooseWindow = (nextWindow) =>
+    nextWindow !== timeWindow && setTimeWindow(nextWindow);
 
   const myRow = rows?.find((row) => row.is_me);
   const totalGraded = rows?.reduce((sum, row) => sum + Number(row.graded || 0), 0) ?? 0;
@@ -229,40 +188,37 @@ export default function UserLeaderboard() {
               const displayName = publicDisplayName(row);
 
               return (
-                <div
-                  className={`leaderboard-row ${row.rank <= 3 ? `podium-${row.rank}` : ""} ${
-                    row.is_me ? "is-me" : ""
-                  }`}
+                <LeaderboardRow
                   key={`${row.rank}-${displayName}`}
-                >
-                  <span className="rank-medal">#{row.rank}</span>
-
-                  <div className="leaderboard-fighter lb-with-avatar">
-                    <UserAvatar userId={row.user_id} size={38} className="lb-avatar" />
-                    <div className="lb-copy">
-                      <span className="fighter-name-text">
-                        {displayName}
-                        {row.is_me && <Tag tone="gold" className="lb-you">You</Tag>}
-                        {row.provisional && <Tag>Provisional</Tag>}
-                      </span>
-                      <span className="muted">
-                        {row.wins}-{row.losses} - {row.graded} graded
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="leaderboard-score">
-                    <span className="stat-label">FIGHT IQ</span>
-                    <strong className="mono">{row.rating}</strong>
-                  </div>
-
-                  <div className="leaderboard-stats">
-                    <Tag>Accuracy: {accuracyText(row.accuracy)}</Tag>
-                    {row.picks_until_established > 0 && (
-                      <Tag>{row.picks_until_established} to establish</Tag>
-                    )}
-                  </div>
-                </div>
+                  rank={row.rank}
+                  isMe={row.is_me}
+                  withAvatar
+                  scoreLabel="FIGHT IQ"
+                  scoreValue={row.rating}
+                  leading={
+                    <>
+                      <UserAvatar userId={row.user_id} size={38} className="lb-avatar" />
+                      <div className="lb-copy">
+                        <span className="fighter-name-text">
+                          {displayName}
+                          {row.is_me && <Tag tone="gold" className="lb-you">You</Tag>}
+                          {row.provisional && <Tag>Provisional</Tag>}
+                        </span>
+                        <span className="muted">
+                          {row.wins}-{row.losses} - {row.graded} graded
+                        </span>
+                      </div>
+                    </>
+                  }
+                  stats={
+                    <>
+                      <Tag>Accuracy: {accuracyText(row.accuracy)}</Tag>
+                      {row.picks_until_established > 0 && (
+                        <Tag>{row.picks_until_established} to establish</Tag>
+                      )}
+                    </>
+                  }
+                />
               );
             })}
           </div>

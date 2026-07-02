@@ -1,0 +1,62 @@
+/* ============================================================
+   Shared component styles (W2). New extracted components style
+   here — the long-term home as index.css gets split up.
+   ============================================================ */
+
+/* ---- ConfirmDialog ---- */
+
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 6, 12, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.modal {
+  width: min(92vw, 440px);
+  padding: 22px 24px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  box-shadow: var(--shadow);
+}
+
+.modal-title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.modal-body {
+  color: var(--dim);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* destructive confirm — red is exactly what red means now */
+.btn-danger {
+  background: linear-gradient(135deg, var(--red), #c81e3e);
+  border-color: rgba(255, 51, 85, 0.5);
+  box-shadow: 0 6px 24px rgba(255, 51, 85, 0.25);
+}
+
+/* ---- ErrorBoundary fallback ---- */
+
+.boundary-fallback .btn {
+  margin-top: 14px;
+}

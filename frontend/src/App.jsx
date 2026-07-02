@@ -24,6 +24,7 @@ import Friends from "./views/Friends.jsx";
 import { AuthProvider } from "./auth/AuthProvider.jsx";
 import { useAuth } from "./auth/authContext.js";
 import { UserAvatar } from "./components/UserAvatar.jsx";
+import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 
 const FALLBACK_WEIGHT_CLASSES = [
   "Flyweight",
@@ -362,7 +363,10 @@ function AppShell() {
                   : ""}
               </div>
             )}
-            <ActiveView key={view} />
+            {/* keyed so switching tabs resets a crashed view's boundary */}
+            <ErrorBoundary key={view}>
+              <ActiveView />
+            </ErrorBoundary>
           </main>
         </div>
       </div>

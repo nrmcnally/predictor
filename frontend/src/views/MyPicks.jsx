@@ -12,6 +12,7 @@ import {
 } from "../api/client.js";
 import { EmptyState, ErrorNote, SectionCard, Spinner, StatTile, Tag } from "../components/ui.jsx";
 import { FighterName } from "../components/FighterDisplay.jsx";
+import { LeaderboardRow } from "../components/LeaderboardRow.jsx";
 import { UserAvatar } from "../components/UserAvatar.jsx";
 
 const METHODS = [
@@ -669,39 +670,37 @@ export default function MyPicks() {
                     {cardLeaderboard.map((row) => {
                       const displayName = publicDisplayName(row);
                       return (
-                        <div
-                          className={`leaderboard-row card-leaderboard-row ${
-                            row.rank <= 3 ? `podium-${row.rank}` : ""
-                          } ${row.is_me ? "is-me" : ""}`}
+                        <LeaderboardRow
                           key={`${row.rank}-${displayName}`}
-                        >
-                          <span className="rank-medal">#{row.rank}</span>
-
-                          <div className="leaderboard-fighter lb-with-avatar">
-                            <UserAvatar userId={row.user_id} size={30} className="lb-avatar" />
-                            <div className="lb-copy">
-                              <span className="fighter-name-text">
-                                {displayName}
-                                {row.is_me && <Tag tone="gold" className="lb-you">You</Tag>}
-                              </span>
-                              <span className="muted">{recordText(row)} - {row.graded} graded</span>
-                            </div>
-                          </div>
-
-                          <div className="leaderboard-score">
-                            <span className="stat-label">Card IQ</span>
-                            <strong className="mono">{row.rating}</strong>
-                          </div>
-
-                          <div className="leaderboard-stats">
-                            <Tag>Accuracy: {accuracyText(row.accuracy)}</Tag>
-                            {row.method_picks > 0 && (
-                              <Tag>
-                                Methods: {row.method_hits}/{row.method_picks}
-                              </Tag>
-                            )}
-                          </div>
-                        </div>
+                          className="card-leaderboard-row"
+                          rank={row.rank}
+                          isMe={row.is_me}
+                          withAvatar
+                          scoreLabel="Card IQ"
+                          scoreValue={row.rating}
+                          leading={
+                            <>
+                              <UserAvatar userId={row.user_id} size={30} className="lb-avatar" />
+                              <div className="lb-copy">
+                                <span className="fighter-name-text">
+                                  {displayName}
+                                  {row.is_me && <Tag tone="gold" className="lb-you">You</Tag>}
+                                </span>
+                                <span className="muted">{recordText(row)} - {row.graded} graded</span>
+                              </div>
+                            </>
+                          }
+                          stats={
+                            <>
+                              <Tag>Accuracy: {accuracyText(row.accuracy)}</Tag>
+                              {row.method_picks > 0 && (
+                                <Tag>
+                                  Methods: {row.method_hits}/{row.method_picks}
+                                </Tag>
+                              )}
+                            </>
+                          }
+                        />
                       );
                     })}
                   </div>

@@ -7,6 +7,7 @@ import {
   setUserRole,
 } from "../api/client.js";
 import { useAuth } from "../auth/authContext.js";
+import { ConfirmDialog } from "../components/ConfirmDialog.jsx";
 import { ErrorNote, SectionCard, Spinner, Tag } from "../components/ui.jsx";
 import { UserAvatar } from "../components/UserAvatar.jsx";
 
@@ -16,6 +17,7 @@ export default function UsersAdmin() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [tempReset, setTempReset] = useState(null); // { email, password } shown once
+  const [deleteTarget, setDeleteTarget] = useState(null); // user pending delete confirm
   const [regOpen, setRegOpen] = useState(true);
   const [regBusy, setRegBusy] = useState(false);
 
@@ -60,20 +62,15 @@ export default function UsersAdmin() {
   };
 
   const removeUser = async (target) => {
-    const confirmed = window.confirm(
-      `Delete ${target.display_name || target.email}?\n\n` +
-        "Their account, picks, friendships, and profile picture are removed permanently. " +
-        "This cannot be undone."
-    );
-    if (!confirmed) return;
-
     setBusyId(target.id);
     setError("");
     try {
       await deleteUser(target.id);
       setUsers((list) => list.filter((u) => u.id !== target.id));
+      setDeleteTarget(null);
     } catch (err) {
       setError(err.message);
+      setDeleteTarget(null);
     } finally {
       setBusyId(null);
     }
@@ -101,6 +98,17 @@ export default function UsersAdmin() {
       </header>
 
       <ErrorNote message={error} />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        danger
+        title="Delete account"
+        confirmLabel="Delete permanently"
+        busy={busyId === deleteTarget?.id}
+        body={`Delete ${deleteTarget?.display_name || deleteTarget?.email}?\n\nTheir account, picks, friendships, and profile picture are removed permanently. This cannot be undone.`}
+        onConfirm={() => removeUser(deleteTarget)}
+        onCancel={() => setDeleteTarget(null)}
+      />
 
       <SectionCard eyebrow="Access" title="Registration">
         <div className="profile-toggle-row">
@@ -202,7 +210,7 @@ export default function UsersAdmin() {
                         type="button"
                         className="chip chip-danger"
                         disabled={busyId === u.id || isMe}
-                        onClick={() => removeUser(u)}
+                        onClick={() => setDeleteTarget(u)}
                         title={isMe ? "You can't delete your own account" : "Delete account + picks permanently"}
                       >
                         Delete

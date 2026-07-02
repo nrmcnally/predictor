@@ -5,6 +5,7 @@ import {
   getUpdateStatus,
   startIncrementalUpdate,
 } from "../api/client.js";
+import { ConfirmDialog } from "../components/ConfirmDialog.jsx";
 import {
   ErrorNote,
   MeterBar,
@@ -66,6 +67,7 @@ export default function UpdateData() {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
   const [hosted, setHosted] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const pollRef = useRef(0);
 
   useEffect(() => {
@@ -122,17 +124,7 @@ export default function UpdateData() {
   }, [status?.running]);
 
   async function handleStart() {
-    const confirmed = window.confirm(
-      "Run an incremental data/model update?\n\n" +
-        "This refreshes completed events, scrapes missing fight details, rebuilds features, retrains the models, and refreshes future cards. " +
-        "It can take several minutes if new fights are available.\n\n" +
-        "Keep the backend running while it completes."
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+    setConfirmOpen(false);
     setStarting(true);
     setError("");
 
@@ -171,13 +163,25 @@ export default function UpdateData() {
         <button
           type="button"
           className="btn btn-primary"
-          onClick={handleStart}
+          onClick={() => setConfirmOpen(true)}
           disabled={running || starting || hosted}
           title={hosted ? "Data updates run on your PC, not the server" : undefined}
         >
           {running ? "Update running…" : starting ? "Starting…" : "▶ Run incremental update"}
         </button>
       </header>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Run incremental update?"
+        confirmLabel="Run update"
+        body={
+          "This refreshes completed events, scrapes missing fight details, rebuilds features, retrains the models, and refreshes future cards. " +
+          "It can take several minutes if new fights are available.\n\nKeep the backend running while it completes."
+        }
+        onConfirm={handleStart}
+        onCancel={() => setConfirmOpen(false)}
+      />
 
       {hosted && (
         <div className="offline-banner">

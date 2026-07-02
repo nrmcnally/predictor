@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../AppContext.js";
 import { getLeaderboardOptions, getLeaderboards } from "../api/client.js";
 import { FighterName } from "../components/FighterDisplay.jsx";
+import { LeaderboardRow } from "../components/LeaderboardRow.jsx";
 import { EmptyState, ErrorNote, Spinner, Tag } from "../components/ui.jsx";
 import {
   formatLeaderboardStatValue,
@@ -226,42 +227,31 @@ export default function Leaderboards() {
       {!loading && rows.length > 0 && (
         <div className="leaderboard-list">
           {rows.map((row) => (
-            <div
-              className={`leaderboard-row ${row.rank <= 3 ? `podium-${row.rank}` : ""}`}
+            <LeaderboardRow
               key={`${row.rank}-${row.fighter}`}
-            >
-              <span className="rank-medal">#{row.rank}</span>
-
-              <div className="leaderboard-fighter">
-                <FighterName
-                  name={row.fighter}
-                  imageLookup={imageLookup}
-                  size="lg"
-                  onClick={openProfile}
-                />
-                <span className="muted">
-                  {row.weight_class} - {formatNumber(row.prior_fights)} UFC fights
-                </span>
-              </div>
-
-              <div className="leaderboard-score">
-                <span
-                  className="stat-label"
-                  title="Heuristic, data-derived composite - not an official UFC rating."
-                >
-                  Score (heuristic)
-                </span>
-                <strong className="mono">{row.score}</strong>
-              </div>
-
-              <div className="leaderboard-stats">
-                {Object.entries(row.supporting_stats ?? {}).map(([key, value]) => (
-                  <Tag key={key}>
-                    {formatStatLabel(key)}: {formatLeaderboardStatValue(key, value)}
-                  </Tag>
-                ))}
-              </div>
-            </div>
+              rank={row.rank}
+              scoreLabel="Score (heuristic)"
+              scoreTitle="Heuristic, data-derived composite - not an official UFC rating."
+              scoreValue={row.score}
+              leading={
+                <>
+                  <FighterName
+                    name={row.fighter}
+                    imageLookup={imageLookup}
+                    size="lg"
+                    onClick={openProfile}
+                  />
+                  <span className="muted">
+                    {row.weight_class} - {formatNumber(row.prior_fights)} UFC fights
+                  </span>
+                </>
+              }
+              stats={Object.entries(row.supporting_stats ?? {}).map(([key, value]) => (
+                <Tag key={key}>
+                  {formatStatLabel(key)}: {formatLeaderboardStatValue(key, value)}
+                </Tag>
+              ))}
+            />
           ))}
         </div>
       )}
