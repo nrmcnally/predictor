@@ -2,12 +2,12 @@ import { useState } from "react";
 import { getUserLeaderboard } from "../api/client.js";
 import { useApi } from "../hooks/useApi.js";
 import { LeaderboardRow } from "../components/LeaderboardRow.jsx";
+import { SkeletonRows } from "../components/Skeleton.jsx";
 import { UserAvatar } from "../components/UserAvatar.jsx";
 import {
   EmptyState,
   ErrorNote,
   SectionCard,
-  Spinner,
   StatTile,
   Tag,
 } from "../components/ui.jsx";
@@ -139,7 +139,7 @@ export default function UserLeaderboard() {
         </div>
       </SectionCard>
 
-      {loading && <Spinner label="Ranking users..." />}
+      {loading && <SkeletonRows rows={5} height={78} />}
 
       {!loading && rows && (
         <SectionCard

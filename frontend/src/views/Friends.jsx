@@ -7,6 +7,7 @@ import {
   getFriendCompare,
 } from "../api/client.js";
 import { EmptyState, ErrorNote, SectionCard, StatTile, Tag } from "../components/ui.jsx";
+import { SkeletonRows } from "../components/Skeleton.jsx";
 import { UserAvatar } from "../components/UserAvatar.jsx";
 
 function pct(value) {
@@ -149,7 +150,9 @@ export default function Friends() {
         </p>
       </SectionCard>
 
-      {loading && !overview ? null : (
+      {loading && !overview ? (
+        <SkeletonRows rows={3} height={64} />
+      ) : (
         <>
           {overview?.incoming?.length > 0 && (
             <SectionCard eyebrow="Pending" title="Requests to you">

@@ -25,6 +25,7 @@ import { AuthProvider } from "./auth/AuthProvider.jsx";
 import { useAuth } from "./auth/authContext.js";
 import { UserAvatar } from "./components/UserAvatar.jsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
+import { useSlowHint } from "./hooks/useSlowHint.js";
 
 const FALLBACK_WEIGHT_CLASSES = [
   "Flyweight",
@@ -37,28 +38,29 @@ const FALLBACK_WEIGHT_CLASSES = [
   "Heavyweight",
 ];
 
+// Grouped by what users DO, not by analyst taxonomy (W5): the game first.
 const NAV_GROUPS = [
   {
-    label: "Analyze",
+    label: "Play",
     items: [
-      { value: "lab", label: "Fight Lab", icon: "⚔" },
-      { value: "fighters", label: "Fighters", icon: "◎" },
+      { value: "picks", label: "My Picks", icon: "✓" },
+      { value: "friends", label: "Friends", icon: "◈" },
     ],
   },
   {
-    label: "Events",
+    label: "Explore",
     items: [
-      { value: "picks", label: "My Picks", icon: "✓" },
+      { value: "lab", label: "Fight Lab", icon: "⚔" },
+      { value: "fighters", label: "Fighters", icon: "◎" },
       { value: "future", label: "Future Cards", icon: "▸" },
       { value: "recent", label: "Recent Cards", icon: "↺" },
     ],
   },
   {
-    label: "Intel",
+    label: "Standings",
     items: [
-      { value: "leaderboards", label: "Leaderboards", icon: "♛" },
       { value: "user-leaderboard", label: "User Leaderboard", icon: "◉" },
-      { value: "friends", label: "Friends", icon: "◈" },
+      { value: "leaderboards", label: "Fighter Rankings", icon: "♛" },
     ],
   },
 ];
@@ -97,7 +99,8 @@ const VIEWS = {
 // server, so deep links need no SPA-fallback or auth-wall changes.
 function viewFromHash() {
   const name = window.location.hash.replace(/^#\/?/, "");
-  return VIEWS[name] ? name : "lab";
+  // The game is the landing tab (W5) — Fight Lab is a destination, not home.
+  return VIEWS[name] ? name : "picks";
 }
 
 export default function App() {
@@ -110,11 +113,16 @@ export default function App() {
 
 function AuthGate() {
   const { user, loading } = useAuth();
+  const waking = useSlowHint(loading);
 
   if (loading) {
     return (
       <div className="login-screen">
-        <div className="login-boot">Loading FIGHT IQ…</div>
+        <div className="login-boot">
+          {waking
+            ? "Waking the server — first visit after a quiet spell takes a few seconds…"
+            : "Loading FIGHT IQ…"}
+        </div>
       </div>
     );
   }
@@ -255,20 +263,15 @@ function AppShell() {
           </div>
 
           <div className="topbar-right">
+            {/* Healthy = quiet (W5): pills only for states that need attention. */}
             {USE_MOCK && <span className="mode-pill mock">Demo data</span>}
             {apiMode === "demo" && <span className="mode-pill mock">Sandbox DB</span>}
-            <span
-              className={`mode-pill ${
-                apiOnline === null ? "pending" : apiOnline ? "online" : "offline"
-              }`}
-            >
-              <span className="status-dot" />
-              {apiOnline === null
-                ? "Checking API…"
-                : apiOnline
-                  ? "API connected"
-                  : "API offline"}
-            </span>
+            {apiOnline === false && (
+              <span className="mode-pill offline">
+                <span className="status-dot" />
+                API offline
+              </span>
+            )}
             {user && (
               <div className="user-chip">
                 <button

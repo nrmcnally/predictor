@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { USE_MOCK } from "../api/client.js";
 import { useAuth } from "../auth/authContext.js";
+import { useSlowHint } from "../hooks/useSlowHint.js";
 
 // three.js is ~half the bundle and pure decoration here — load it lazily and
 // skip it entirely on phones (W3: mobile perf + W6 code splitting head start).
@@ -16,6 +17,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const waking = useSlowHint(busy);
 
   const registering = mode === "register";
 
@@ -121,6 +123,9 @@ export default function Login() {
         <button type="submit" className="login-enter" disabled={busy}>
           {busy ? "…" : registering ? "Create account ▸" : "Enter ▸"}
         </button>
+        {waking && (
+          <p className="login-demo">Waking the server — this first request can take a few seconds…</p>
+        )}
 
         <button type="button" className="login-switch" onClick={switchMode}>
           {registering ? "Have an account? Sign in" : "New here? Create an account"}

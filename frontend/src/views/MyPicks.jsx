@@ -216,6 +216,23 @@ export default function MyPicks() {
   const [error, setError] = useState("");
   const [busyFight, setBusyFight] = useState("");
 
+  // First-run nudge (W5): shows once per browser, then never again.
+  const [showIntro, setShowIntro] = useState(() => {
+    try {
+      return !localStorage.getItem("fightiq_intro_seen");
+    } catch {
+      return false;
+    }
+  });
+  const dismissIntro = () => {
+    try {
+      localStorage.setItem("fightiq_intro_seen", "1");
+    } catch {
+      /* private mode */
+    }
+    setShowIntro(false);
+  };
+
   useEffect(() => {
     let active = true;
     Promise.all([getFutureCards(), getMyPredictions().catch(() => [])])
@@ -414,6 +431,19 @@ export default function MyPicks() {
         <p className="eyebrow">Beat the engine</p>
         <h1 className="view-title">My Picks</h1>
       </header>
+
+      {showIntro && (
+        <div className="intro-hint">
+          <div>
+            <strong>Welcome to the card.</strong> ① Tap fighters below to pick winners
+            &nbsp;② Add friends by username to compare picks &nbsp;③ Climb the User
+            Leaderboard when results land.
+          </div>
+          <button type="button" className="chip" onClick={dismissIntro}>
+            Got it
+          </button>
+        </div>
+      )}
 
       <ErrorNote message={error} />
 
