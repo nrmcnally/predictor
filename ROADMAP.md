@@ -372,6 +372,7 @@ feature pipeline reads results from the DB and writes those artifacts to CSV._
       gets tiresome, revisit a scheduled server-side job (#20 idempotent stages).
 
 ### Phase 4 — Full UI redesign _(mobile-first, accessible, restructured)_
+_Full critique + staged gameplan: see **UI_PLAN.md** (written 2026-07-02 at 90% of a session — read it first)._
 - [ ] **Friend feedback (2026-07-01, first live users):** UI reads too small and
       doesn't use the screen — widen the content column / raise density on desktop.
 - [ ] #4 Evaluation-tab progressive disclosure (Overview vs Deep Dive). #5 de-clutter tags.
