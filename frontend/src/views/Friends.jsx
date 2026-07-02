@@ -7,6 +7,7 @@ import {
   getFriendCompare,
 } from "../api/client.js";
 import { EmptyState, ErrorNote, SectionCard, StatTile, Tag } from "../components/ui.jsx";
+import { UserAvatar } from "../components/UserAvatar.jsx";
 
 function pct(value) {
   return value === null || value === undefined ? "—" : `${Math.round(value * 100)}%`;
@@ -178,7 +179,10 @@ export default function Friends() {
             )}
             {overview?.friends?.map((f) => (
               <div className="friend-row" key={f.friendship_id}>
-                <span className="friend-name">{f.display_name}</span>
+                <span className="friend-name">
+                  <UserAvatar userId={f.user_id} size={26} className="friend-row-avatar" />
+                  {f.display_name}
+                </span>
                 <div className="friend-actions">
                   <button
                     className={`btn ${compareFor?.user_id === f.user_id ? "btn-primary" : "btn-ghost"}`}
@@ -204,8 +208,47 @@ export default function Friends() {
           {compareFor && (
             <SectionCard eyebrow="Head to head" title={`You vs ${compareFor.display_name}`}>
               {compareLoading && <p className="muted">Loading comparison…</p>}
+              {!compareLoading && compare?.upcoming?.length > 0 && (
+                <div className="compare-upcoming">
+                  <p className="compare-section-label">
+                    Upcoming picks — theirs unlock once you've picked that fight
+                  </p>
+                  {compare.upcoming.map((card) => (
+                    <div className="compare-card" key={`up-${card.event_id}`}>
+                      <div className="compare-card-head static">
+                        <span className="compare-card-name">{card.event_name}</span>
+                        <span className="compare-card-score">
+                          {card.their_hidden > 0 && (
+                            <Tag>{card.their_hidden} hidden</Tag>
+                          )}
+                          <span className="muted">{card.event_date}</span>
+                        </span>
+                      </div>
+                      <div className="compare-fights">
+                        {card.fights.map((fight, index) => (
+                          <div className="compare-fight" key={index}>
+                            <div className="compare-fight-bout">
+                              {fight.fighter_1} vs {fight.fighter_2}
+                              {fight.agree === true && <Tag tone="gold" className="lb-you">Same pick</Tag>}
+                              {fight.agree === false && <Tag tone="warn" className="lb-you">Split</Tag>}
+                            </div>
+                            <div className="compare-fight-picks">
+                              <span className="compare-pick">You: {fight.your_pick || "—"}</span>
+                              <span className="compare-pick">
+                                {compareFor.display_name}:{" "}
+                                {fight.their_pick ||
+                                  (fight.their_pick_hidden ? "🔒 pick this fight to reveal" : "—")}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {!compareLoading && compare && compare.shared === 0 && (
-                <EmptyState title="No shared picks yet" message="Once you both pick the same fights, your rivalry shows up here." />
+                <EmptyState title="No graded picks yet" message="Once you've both picked the same completed fights, your rivalry record shows up here." />
               )}
               {!compareLoading && compare && compare.shared > 0 && (
                 <>

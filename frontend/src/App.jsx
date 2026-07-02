@@ -23,6 +23,7 @@ import MyPicks from "./views/MyPicks.jsx";
 import Friends from "./views/Friends.jsx";
 import { AuthProvider } from "./auth/AuthProvider.jsx";
 import { useAuth } from "./auth/authContext.js";
+import { UserAvatar } from "./components/UserAvatar.jsx";
 
 const FALLBACK_WEIGHT_CLASSES = [
   "Flyweight",
@@ -57,21 +58,22 @@ const NAV_GROUPS = [
       { value: "leaderboards", label: "Leaderboards", icon: "♛" },
       { value: "user-leaderboard", label: "User Leaderboard", icon: "◉" },
       { value: "friends", label: "Friends", icon: "◈" },
-      { value: "evaluation", label: "Evaluation", icon: "◫" },
     ],
   },
 ];
 
-// Admin-only nav — appended for admins, hidden from regular users.
+// Admin-only nav — appended for admins, hidden from regular users. Evaluation lives
+// here too: those endpoints retrain/score models and are too heavy for everyone.
 const ADMIN_NAV_GROUP = {
   label: "Admin",
   items: [
+    { value: "evaluation", label: "Evaluation", icon: "◫" },
     { value: "users", label: "User Admin", icon: "⚇" },
     { value: "update", label: "Data Ops", icon: "⟳" },
   ],
 };
 
-const ADMIN_VIEWS = new Set(["users", "update"]);
+const ADMIN_VIEWS = new Set(["users", "update", "evaluation"]);
 
 const VIEWS = {
   lab: FightLab,
@@ -251,6 +253,7 @@ function AppShell() {
                   }}
                   title="Your profile"
                 >
+                  <UserAvatar userId={user.id} size={22} className="chip-avatar" />
                   {user.display_name || user.email}
                 </button>
                 {user.role === "admin" && <span className="user-role">admin</span>}

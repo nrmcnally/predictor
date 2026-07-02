@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  checkHealth,
   getLatestUpdateReport,
   getUpdateStatus,
   startIncrementalUpdate,
@@ -64,7 +65,18 @@ export default function UpdateData() {
   const [latestReport, setLatestReport] = useState(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
+  const [hosted, setHosted] = useState(false);
   const pollRef = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    checkHealth()
+      .then((data) => active && setHosted(Boolean(data?.hosted)))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function loadStatus() {
     try {
@@ -160,11 +172,20 @@ export default function UpdateData() {
           type="button"
           className="btn btn-primary"
           onClick={handleStart}
-          disabled={running || starting}
+          disabled={running || starting || hosted}
+          title={hosted ? "Data updates run on your PC, not the server" : undefined}
         >
           {running ? "Update running…" : starting ? "Starting…" : "▶ Run incremental update"}
         </button>
       </header>
+
+      {hosted && (
+        <div className="offline-banner">
+          This is the hosted server — the scraper/training pipeline runs on your PC, not
+          here. Run Data Ops locally, then push the results:{" "}
+          <code>python deploy/push_update.py https://fightiq.fly.dev</code>
+        </div>
+      )}
 
       <ErrorNote message={error} />
 

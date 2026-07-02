@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../auth/authContext.js";
 import {
   changePassword,
+  deleteAvatar,
   getMyStats,
   setVisibility,
   updateProfile,
+  uploadAvatar,
 } from "../api/client.js";
 import { ErrorNote, SectionCard, StatTile, Tag } from "../components/ui.jsx";
+import { UserAvatar } from "../components/UserAvatar.jsx";
 
 function pct(value) {
   return value === null || value === undefined ? "—" : `${Math.round(value * 100)}%`;
@@ -51,6 +54,40 @@ export default function Profile() {
   const [visBusy, setVisBusy] = useState(false);
 
   const [stats, setStats] = useState(null);
+
+  const fileRef = useRef(null);
+  const [avatarBust, setAvatarBust] = useState("");
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarErr, setAvatarErr] = useState("");
+
+  const onAvatarFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    setAvatarErr("");
+    setAvatarBusy(true);
+    try {
+      await uploadAvatar(file);
+      setAvatarBust(String(Date.now())); // cache-bust so the new photo shows
+    } catch (err) {
+      setAvatarErr(err.message);
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const onAvatarRemove = async () => {
+    setAvatarErr("");
+    setAvatarBusy(true);
+    try {
+      await deleteAvatar();
+      setAvatarBust(String(Date.now()));
+    } catch (err) {
+      setAvatarErr(err.message);
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -120,7 +157,33 @@ export default function Profile() {
       </header>
 
       <div className="profile-identity">
-        <div className="profile-avatar">{initials(user.display_name || user.email)}</div>
+        <div className="profile-avatar-wrap">
+          <div className="profile-avatar">
+            {initials(user.display_name || user.email)}
+            <UserAvatar userId={user.id} bust={avatarBust} size={68} className="profile-avatar-img" />
+          </div>
+          <div className="profile-avatar-actions">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              style={{ display: "none" }}
+              onChange={onAvatarFile}
+            />
+            <button
+              type="button"
+              className="pick-clear"
+              disabled={avatarBusy}
+              onClick={() => fileRef.current?.click()}
+            >
+              {avatarBusy ? "Uploading…" : "Change photo"}
+            </button>
+            <button type="button" className="pick-clear" disabled={avatarBusy} onClick={onAvatarRemove}>
+              Remove
+            </button>
+          </div>
+          {avatarErr && <span className="muted profile-field-note">{avatarErr}</span>}
+        </div>
         <div className="profile-identity-body">
           <div className="profile-name">{user.display_name || user.email}</div>
           <div className="profile-email">{user.email}</div>

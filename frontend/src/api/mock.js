@@ -849,6 +849,19 @@ export function getFriendCompare(userId) {
       you: { correct: 8, accuracy: 8 / 12, rating: 1063 },
       them: { correct: 7, accuracy: 7 / 12, rating: 1041 },
       card_record: { you: 2, them: 1, tied: 0 },
+      upcoming: [
+        {
+          event_id: "mock-card-2",
+          event_name: "UFC Fight Night: Aspinall vs. Gane",
+          event_date: "July 11, 2026",
+          your_picked: 1,
+          their_hidden: 1,
+          fights: [
+            { fighter_1: "Tom Aspinall", fighter_2: "Ciryl Gane", weight_class: "Heavyweight", your_pick: "Tom Aspinall", your_method: "ko_tko", their_pick: "Tom Aspinall", their_method: null, their_pick_hidden: false, agree: true },
+            { fighter_1: "Alex Pereira", fighter_2: "Magomed Ankalaev", weight_class: "Light Heavyweight", your_pick: null, your_method: null, their_pick: null, their_method: null, their_pick_hidden: true, agree: null },
+          ],
+        },
+      ],
       cards: [
         {
           event_id: "e1", event_name: "UFC 322: Chimaev vs. Du Plessis 2", event_date: "June 27, 2026",

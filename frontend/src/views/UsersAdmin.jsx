@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { getUsers, resetUserPassword, setUserRole } from "../api/client.js";
+import {
+  getUsers,
+  resetUserPassword,
+  setRegistrationOpen,
+  setUserRole,
+} from "../api/client.js";
 import { useAuth } from "../auth/authContext.js";
 import { ErrorNote, SectionCard, Spinner, Tag } from "../components/ui.jsx";
 
@@ -9,15 +14,35 @@ export default function UsersAdmin() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [tempReset, setTempReset] = useState(null); // { email, password } shown once
+  const [regOpen, setRegOpen] = useState(true);
+  const [regBusy, setRegBusy] = useState(false);
 
   useEffect(() => {
     getUsers()
-      .then((data) => setUsers(data.users || []))
+      .then((data) => {
+        setUsers(data.users || []);
+        if (typeof data.registration_open === "boolean") {
+          setRegOpen(data.registration_open);
+        }
+      })
       .catch((err) => {
         setError(err.message);
         setUsers([]);
       });
   }, []);
+
+  const toggleRegistration = async () => {
+    setRegBusy(true);
+    setError("");
+    try {
+      const result = await setRegistrationOpen(!regOpen);
+      setRegOpen(Boolean(result.registration_open));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRegBusy(false);
+    }
+  };
 
   const changeRole = async (target, role) => {
     setBusyId(target.id);
@@ -55,6 +80,30 @@ export default function UsersAdmin() {
 
       <ErrorNote message={error} />
 
+      <SectionCard eyebrow="Access" title="Registration">
+        <div className="profile-toggle-row">
+          <div>
+            <div className="profile-toggle-label">{regOpen ? "Open" : "Paused"}</div>
+            <div className="muted">
+              {regOpen
+                ? "Anyone with the link can create an account. Pause once your crew is in."
+                : "Sign-ups are paused — only existing accounts can log in. Unpause any time."}
+            </div>
+          </div>
+          <button
+            type="button"
+            className={`switch ${regOpen ? "on" : ""}`}
+            onClick={toggleRegistration}
+            disabled={regBusy}
+            role="switch"
+            aria-checked={regOpen}
+            aria-label="Toggle registration"
+          >
+            <span className="switch-knob" />
+          </button>
+        </div>
+      </SectionCard>
+
       {tempReset && (
         <SectionCard eyebrow="One-time reveal" title={`Temp password for ${tempReset.email}`}>
           <p>
@@ -84,6 +133,7 @@ export default function UsersAdmin() {
                 <th>User</th>
                 <th>Role</th>
                 <th>Joined</th>
+                <th>Last login</th>
                 <th />
               </tr>
             </thead>
@@ -101,6 +151,11 @@ export default function UsersAdmin() {
                       <Tag tone={isAdmin ? "gold" : "neutral"}>{u.role}</Tag>
                     </td>
                     <td className="muted">{String(u.created_at || "").slice(0, 10) || "—"}</td>
+                    <td className="muted">
+                      {u.last_login_at
+                        ? String(u.last_login_at).slice(0, 16).replace("T", " ")
+                        : "never"}
+                    </td>
                     <td>
                       <button
                         type="button"

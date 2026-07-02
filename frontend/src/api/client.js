@@ -157,9 +157,10 @@ export async function getUsers() {
   if (USE_MOCK) {
     return {
       users: [
-        { id: 1, email: "admin@fightiq.local", display_name: "admin", role: "admin", created_at: "2026-06-28" },
-        { id: 2, email: "demo@fightiq.local", display_name: "demo", role: "user", created_at: "2026-06-28" },
+        { id: 1, email: "admin@fightiq.local", display_name: "admin", role: "admin", created_at: "2026-06-28", last_login_at: "2026-07-01T18:04:00" },
+        { id: 2, email: "demo@fightiq.local", display_name: "demo", role: "user", created_at: "2026-06-28", last_login_at: "2026-06-30T09:12:00" },
       ],
+      registration_open: true,
     };
   }
 
@@ -186,6 +187,61 @@ export async function resetUserPassword(userId) {
   return request(`/admin/users/${userId}/reset-password`, {
     method: "POST",
     fallbackError: "Failed to reset the password.",
+  });
+}
+
+export async function setRegistrationOpen(open) {
+  if (USE_MOCK) {
+    return { registration_open: open };
+  }
+
+  return request("/admin/settings/registration", {
+    method: "POST",
+    body: { open },
+    fallbackError: "Failed to update registration setting.",
+  });
+}
+
+// --- avatars ---
+
+export function avatarUrl(userId, bust = "") {
+  if (USE_MOCK || !userId) {
+    return null;
+  }
+  return `${API_BASE_URL}/avatars/${userId}.png${bust ? `?v=${bust}` : ""}`;
+}
+
+export async function uploadAvatar(file) {
+  if (USE_MOCK) {
+    return { message: "Avatar updated." };
+  }
+
+  const token = getToken();
+  const response = await fetch(`${API_BASE_URL}/auth/avatar`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/octet-stream" },
+    body: file,
+  });
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  if (!response.ok) {
+    throw new Error(extractErrorMessage(data, "Failed to upload the picture."));
+  }
+  return data;
+}
+
+export async function deleteAvatar() {
+  if (USE_MOCK) {
+    return { removed: true };
+  }
+
+  return request("/auth/avatar", {
+    method: "DELETE",
+    fallbackError: "Failed to remove the picture.",
   });
 }
 
