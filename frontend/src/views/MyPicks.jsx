@@ -512,7 +512,7 @@ export default function MyPicks() {
                   )}
                   {!locked && selectedProgress.complete && <Tag tone="win">Card ready</Tag>}
                 </div>
-                <div className="fight-list">
+                <div className="fight-list pick-fight-list">
                   {detail.fights.map((fight) => {
                     const pick = picks[fight.fight_url];
                     const busy = busyFight === fight.fight_url;
