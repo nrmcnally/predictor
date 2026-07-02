@@ -90,6 +90,15 @@ const VIEWS = {
   profile: Profile,
 };
 
+// The active tab lives in the URL hash (e.g. #/picks), so the browser's
+// Back/Forward buttons move between tabs, refresh keeps your place, and tab
+// links are shareable. Hash-based on purpose: the fragment never reaches the
+// server, so deep links need no SPA-fallback or auth-wall changes.
+function viewFromHash() {
+  const name = window.location.hash.replace(/^#\/?/, "");
+  return VIEWS[name] ? name : "lab";
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -117,8 +126,25 @@ function AuthGate() {
 }
 
 function AppShell() {
-  const [view, setView] = useState("lab");
+  const [view, setViewState] = useState(viewFromHash);
   const [navOpen, setNavOpen] = useState(false);
+
+  // Navigating sets the hash (which pushes a history entry); the hashchange
+  // listener is the single place state updates, so Back/Forward work the same
+  // as in-app clicks.
+  const setView = useCallback((next) => {
+    if (next === viewFromHash()) {
+      setViewState(next);
+      return;
+    }
+    window.location.hash = `/${next}`;
+  }, []);
+
+  useEffect(() => {
+    const onHashChange = () => setViewState(viewFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
   const [apiOnline, setApiOnline] = useState(null);
   const [apiMode, setApiMode] = useState(null);
   const [weightClasses, setWeightClasses] = useState(FALLBACK_WEIGHT_CLASSES);
@@ -176,7 +202,7 @@ function AppShell() {
     setView("fighters");
     setNavOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  }, [setView]);
 
   const sendToFightLab = useCallback(({ a, b }) => {
     setFightLabPrefill((current) => ({
@@ -186,7 +212,7 @@ function AppShell() {
     setView("lab");
     setNavOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  }, [setView]);
 
   const contextValue = useMemo(
     () => ({
