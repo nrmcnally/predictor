@@ -5,25 +5,33 @@
    ============================================================ */
 
 :root {
-  --bg0: #05060a;
-  --bg1: #0a0c13;
-  --surface: #0e111a;
-  --surface2: #131726;
+  /* Tokens v2 (UI_PLAN W0, Direction A). Elevation = 3 lightness steps, not borders.
+     Semantics: --action = interactive (buttons/links/focus/selection);
+     --red = NEGATIVE + brand hero only, never "go"; --green is teal (colorblind-safe
+     vs red, pair with icons); gold = prestige (ratings, "you", admin). */
+  --bg0: #0a0d14;
+  --bg1: #0d1119;
+  --surface: #11151f;
+  --surface2: #181d2a;
   --line: rgba(146, 160, 214, 0.12);
   --line-strong: rgba(146, 160, 214, 0.24);
 
-  --text: #eef1fa;
-  --dim: #9aa3bd;
-  --faint: #6b7390;
+  --text: #f2f4fb;          /* ~15:1 on surface */
+  --dim: #a8b1cb;           /* ~7:1 on surface (was #9aa3bd) */
+  --faint: #8790ac;         /* ~4.9:1 on surface (was #6b7390 at ~3.9:1 - failed AA) */
+
+  --action: #4d8dff;
+  --action-strong: #6da2ff;
+  --action-soft: rgba(77, 141, 255, 0.14);
 
   --red: #ff3355;
   --red-soft: rgba(255, 51, 85, 0.13);
-  --blue: #3d7bff;
-  --blue-soft: rgba(61, 123, 255, 0.13);
+  --blue: #4d8dff;
+  --blue-soft: rgba(77, 141, 255, 0.13);
   --accent-gold: #f5c451;
   --gold-soft: rgba(245, 196, 81, 0.12);
-  --green: #2fd58b;
-  --green-soft: rgba(47, 213, 139, 0.12);
+  --green: #2dd4bf;
+  --green-soft: rgba(45, 212, 191, 0.13);
   --amber: #fba94c;
   --amber-soft: rgba(251, 169, 76, 0.12);
   --violet: #8b7cf6;
@@ -191,7 +199,7 @@ p {
   background: var(--faint);
 }
 
-.mode-pill.online { color: var(--green); border-color: rgba(47, 213, 139, 0.35); }
+.mode-pill.online { color: var(--green); border-color: rgba(45, 212, 191, 0.35); }
 .mode-pill.online .status-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
 .mode-pill.offline { color: var(--red); border-color: rgba(255, 51, 85, 0.35); }
 .mode-pill.offline .status-dot { background: var(--red); }
@@ -259,9 +267,9 @@ p {
 }
 
 .nav-item.active {
-  background: linear-gradient(90deg, var(--red-soft), transparent 85%);
+  background: linear-gradient(90deg, var(--action-soft), transparent 85%);
   color: var(--text);
-  box-shadow: inset 2px 0 0 var(--red);
+  box-shadow: inset 2px 0 0 var(--action);
 }
 
 .nav-icon {
@@ -501,12 +509,12 @@ p {
   color: var(--dim);
 }
 
-.tag.tone-win { color: var(--green); background: var(--green-soft); border-color: rgba(47, 213, 139, 0.3); }
+.tag.tone-win { color: var(--green); background: var(--green-soft); border-color: rgba(45, 212, 191, 0.3); }
 .tag.tone-loss { color: #ff8aa0; background: var(--red-soft); border-color: rgba(255, 51, 85, 0.32); }
 .tag.tone-warn { color: var(--amber); background: var(--amber-soft); border-color: rgba(251, 169, 76, 0.32); }
 .tag.tone-gold { color: var(--accent-gold); background: var(--gold-soft); border-color: rgba(245, 196, 81, 0.32); }
 .tag.tone-confidence { color: var(--accent-gold); background: var(--gold-soft); border-color: rgba(245, 196, 81, 0.32); }
-.tag.tone-conf-high, .tag.tone-conf-strong { color: var(--green); background: var(--green-soft); border-color: rgba(47, 213, 139, 0.3); }
+.tag.tone-conf-high, .tag.tone-conf-strong { color: var(--green); background: var(--green-soft); border-color: rgba(45, 212, 191, 0.3); }
 .tag.tone-conf-moderate { color: var(--accent-gold); background: var(--gold-soft); border-color: rgba(245, 196, 81, 0.32); }
 .tag.tone-conf-close { color: var(--amber); background: var(--amber-soft); border-color: rgba(251, 169, 76, 0.32); }
 
@@ -595,13 +603,13 @@ p {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ff3355, #c81e3e);
-  border-color: rgba(255, 51, 85, 0.5);
-  box-shadow: 0 6px 24px rgba(255, 51, 85, 0.28);
+  background: linear-gradient(135deg, var(--action), #2f63d8);
+  border-color: rgba(77, 141, 255, 0.55);
+  box-shadow: 0 6px 24px rgba(77, 141, 255, 0.28);
 }
 
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 8px 30px rgba(255, 51, 85, 0.4);
+  box-shadow: 0 8px 30px rgba(77, 141, 255, 0.4);
 }
 
 .btn-lg {
@@ -644,7 +652,7 @@ p {
 
 .chip:hover {
   color: var(--text);
-  border-color: var(--red);
+  border-color: var(--action);
 }
 
 .select,
@@ -663,7 +671,7 @@ p {
 
 .select:focus,
 .control input:focus {
-  border-color: var(--red);
+  border-color: var(--action);
 }
 
 .select {
@@ -1664,8 +1672,8 @@ p {
 .event-item:hover { border-color: var(--line-strong); }
 
 .event-item.active {
-  border-color: rgba(255, 51, 85, 0.55);
-  background: linear-gradient(180deg, rgba(255, 51, 85, 0.08), var(--surface));
+  border-color: rgba(77, 141, 255, 0.55);
+  background: linear-gradient(180deg, rgba(77, 141, 255, 0.08), var(--surface));
 }
 
 .event-detail {
@@ -1705,7 +1713,7 @@ p {
 }
 
 .fight-row.market-agrees {
-  border-color: rgba(47, 213, 139, 0.22);
+  border-color: rgba(45, 212, 191, 0.22);
 }
 
 .market-signal {
@@ -2466,7 +2474,7 @@ p {
 }
 
 .evidence-card.tone-red.active { border-color: rgba(255, 51, 85, 0.6); }
-.evidence-card.tone-green.active { border-color: rgba(47, 213, 139, 0.55); }
+.evidence-card.tone-green.active { border-color: rgba(45, 212, 191, 0.55); }
 .evidence-card.tone-blue.active { border-color: rgba(61, 123, 255, 0.58); }
 .evidence-card.tone-amber.active { border-color: rgba(251, 169, 76, 0.58); }
 
@@ -2755,7 +2763,7 @@ p {
 }
 
 .edge-inspector.tone-red { border-color: rgba(255, 51, 85, 0.48); }
-.edge-inspector.tone-green { border-color: rgba(47, 213, 139, 0.44); }
+.edge-inspector.tone-green { border-color: rgba(45, 212, 191, 0.44); }
 .edge-inspector.tone-blue { border-color: rgba(61, 123, 255, 0.46); }
 .edge-inspector.tone-amber { border-color: rgba(251, 169, 76, 0.5); }
 
@@ -3242,7 +3250,7 @@ p {
 }
 
 .method-submission .reveal-result-card.visible {
-  border-color: rgba(47, 213, 139, 0.46);
+  border-color: rgba(45, 212, 191, 0.46);
 }
 
 .method-ko .reveal-result-card.visible {
@@ -3432,7 +3440,7 @@ p {
 }
 
 .reveal-evidence-card.tone-red.active { border-color: rgba(255, 51, 85, 0.6); }
-.reveal-evidence-card.tone-green.active { border-color: rgba(47, 213, 139, 0.55); }
+.reveal-evidence-card.tone-green.active { border-color: rgba(45, 212, 191, 0.55); }
 .reveal-evidence-card.tone-amber.active { border-color: rgba(251, 169, 76, 0.58); }
 
 .reveal-evidence-card strong {
@@ -3495,7 +3503,7 @@ p {
 
 .deck-card.tone-split.active { border-color: rgba(251, 169, 76, 0.65); }
 .deck-card.tone-high.active,
-.deck-card.tone-strong.active { border-color: rgba(47, 213, 139, 0.55); }
+.deck-card.tone-strong.active { border-color: rgba(45, 212, 191, 0.55); }
 
 .deck-card span,
 .evidence-lens-grid span {
@@ -3547,7 +3555,7 @@ p {
 
 .deck-detail-card.tone-high,
 .deck-detail-card.tone-strong {
-  border-color: rgba(47, 213, 139, 0.42);
+  border-color: rgba(45, 212, 191, 0.42);
 }
 
 .deck-index-row {
@@ -4060,17 +4068,17 @@ p {
   font-weight: 600;
 }
 .pick-option:hover:not(.disabled) {
-  border-color: var(--red);
+  border-color: var(--action);
 }
 .pick-option.active {
-  background: var(--red-soft);
-  border-color: var(--red);
-  box-shadow: inset 0 0 0 1px rgba(255, 51, 85, 0.4);
+  background: var(--action-soft);
+  border-color: var(--action);
+  box-shadow: inset 0 0 0 1px rgba(77, 141, 255, 0.4);
 }
 .pick-option.active.result-win {
   background: var(--green-soft);
-  border-color: rgba(47, 213, 139, 0.55);
-  box-shadow: inset 0 0 0 1px rgba(47, 213, 139, 0.32);
+  border-color: rgba(45, 212, 191, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.32);
 }
 .pick-option.active.result-win .pick-option-name,
 .pick-option.active.result-win .fighter-name-text {
@@ -4087,7 +4095,7 @@ p {
 }
 .pick-option.active .pick-option-name,
 .pick-option.active .fighter-name-text {
-  color: #ff8aa0;
+  color: var(--action-strong);
 }
 .pick-option.active.result-win .pick-option-name,
 .pick-option.active.result-win .fighter-name-text {
@@ -4198,7 +4206,7 @@ p {
   background: rgba(19, 23, 38, 0.56);
 }
 .pick-history-row.result-win {
-  border-color: rgba(47, 213, 139, 0.26);
+  border-color: rgba(45, 212, 191, 0.26);
 }
 .pick-history-row.result-loss {
   border-color: rgba(255, 51, 85, 0.28);
@@ -4360,7 +4368,7 @@ p {
   outline: none;
 }
 .friend-add input:focus {
-  border-color: var(--red);
+  border-color: var(--action);
 }
 .friend-add-note {
   margin: 10px 0 0;
