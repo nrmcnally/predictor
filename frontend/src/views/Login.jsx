@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { USE_MOCK } from "../api/client.js";
 import { useAuth } from "../auth/authContext.js";
-import OctagonScene from "../three/OctagonScene.jsx";
+
+// three.js is ~half the bundle and pure decoration here — load it lazily and
+// skip it entirely on phones (W3: mobile perf + W6 code splitting head start).
+const OctagonScene = lazy(() => import("../three/OctagonScene.jsx"));
+const SHOW_SCENE =
+  typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches;
 
 export default function Login() {
   const { login, register } = useAuth();
@@ -39,7 +44,11 @@ export default function Login() {
   return (
     <div className="login-screen">
       <div className="login-bg" aria-hidden="true">
-        <OctagonScene className="login-scene" />
+        {SHOW_SCENE && (
+          <Suspense fallback={null}>
+            <OctagonScene className="login-scene" />
+          </Suspense>
+        )}
         <div className="login-spot" />
       </div>
 

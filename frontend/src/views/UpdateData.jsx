@@ -4,6 +4,7 @@ import {
   getLatestUpdateReport,
   getUpdateStatus,
   startIncrementalUpdate,
+  uploadDataBundle,
 } from "../api/client.js";
 import { ConfirmDialog } from "../components/ConfirmDialog.jsx";
 import {
@@ -69,6 +70,26 @@ export default function UpdateData() {
   const [hosted, setHosted] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const pollRef = useRef(0);
+
+  const bundleRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+
+  async function onBundleFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    setUploadResult(null);
+    setError("");
+    try {
+      setUploadResult(await uploadDataBundle(file));
+    } catch (uploadError) {
+      setError(uploadError.message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -186,12 +207,46 @@ export default function UpdateData() {
       {hosted && (
         <div className="offline-banner">
           This is the hosted server — the scraper/training pipeline runs on your PC, not
-          here. Run Data Ops locally, then push the results:{" "}
-          <code>python deploy/push_update.py https://fightiq.fly.dev</code>
+          here. After a local update, build the bundle (
+          <code>python deploy/make_bundle.py</code>) and upload it below — no terminal
+          login needed.
         </div>
       )}
 
       <ErrorNote message={error} />
+
+      <SectionCard
+        eyebrow="Data refresh"
+        title="Upload data bundle"
+        description="Apply a locally-built deploy bundle (deploy/deploy_bundle.tar.gz). Merges results, cards, odds, and models — accounts, picks, and friendships on this server are never touched."
+      >
+        <input
+          ref={bundleRef}
+          type="file"
+          accept=".gz,.tar.gz,application/gzip"
+          style={{ display: "none" }}
+          onChange={onBundleFile}
+        />
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={uploading}
+          onClick={() => bundleRef.current?.click()}
+        >
+          {uploading ? "Uploading + applying… (~44MB, can take a minute)" : "⬆ Choose bundle & apply"}
+        </button>
+        {uploadResult && (
+          <p className="form-ok" style={{ marginTop: 12 }}>
+            {uploadResult.message}{" "}
+            {uploadResult.db && typeof uploadResult.db === "object"
+              ? `· ${Object.entries(uploadResult.db)
+                  .map(([table, rows]) => `${table}: ${rows}`)
+                  .join(", ")}`
+              : ""}
+            {` · ${uploadResult.files_updated} files updated`}
+          </p>
+        )}
+      </SectionCard>
 
       <SectionCard
         eyebrow="Pipeline status"

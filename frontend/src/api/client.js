@@ -246,6 +246,29 @@ export async function uploadAvatar(file) {
   return data;
 }
 
+export async function uploadDataBundle(file) {
+  if (USE_MOCK) {
+    return { message: "Bundle applied.", db: { event_fights: 8758 }, files_updated: 25 };
+  }
+
+  const token = getToken();
+  const response = await fetch(`${API_BASE_URL}/admin/data/upload-bundle`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/gzip" },
+    body: file,
+  });
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  if (!response.ok) {
+    throw new Error(extractErrorMessage(data, "Failed to apply the bundle."));
+  }
+  return data;
+}
+
 export async function deleteAvatar() {
   if (USE_MOCK) {
     return { removed: true };

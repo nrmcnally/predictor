@@ -1,7 +1,9 @@
-import { useContext, useState } from "react";
+import { lazy, Suspense, useContext, useState } from "react";
 import { AppContext } from "../AppContext.js";
 import { predictFight, predictMethod } from "../api/client.js";
-import OctagonScene from "../three/OctagonScene.jsx";
+
+// Lazy so three.js gets its own chunk (Login lazy-imports it too).
+const OctagonScene = lazy(() => import("../three/OctagonScene.jsx"));
 import FighterSearchInput from "../components/FighterSearchInput.jsx";
 import { FighterAvatar } from "../components/FighterDisplay.jsx";
 import {
@@ -101,7 +103,9 @@ export default function FightLab() {
   return (
     <div className={`view fight-lab ${hasPrediction ? "has-results" : ""}`}>
       <div className={`stage ${hasPrediction ? "stage-compact" : ""}`}>
-        <OctagonScene className="stage-scene" />
+        <Suspense fallback={null}>
+          <OctagonScene className="stage-scene" />
+        </Suspense>
         <div className="stage-overlay" />
 
         <div className="stage-content">
