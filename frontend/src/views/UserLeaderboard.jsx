@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getUserLeaderboard } from "../api/client.js";
+import { UserAvatar } from "../components/UserAvatar.jsx";
 import {
   EmptyState,
   ErrorNote,
@@ -236,15 +237,18 @@ export default function UserLeaderboard() {
                 >
                   <span className="rank-medal">#{row.rank}</span>
 
-                  <div className="leaderboard-fighter">
-                    <span className="fighter-name-text">
-                      {displayName}
-                      {row.is_me && <Tag tone="gold" className="lb-you">You</Tag>}
-                      {row.provisional && <Tag>Provisional</Tag>}
-                    </span>
-                    <span className="muted">
-                      {row.wins}-{row.losses} - {row.graded} graded
-                    </span>
+                  <div className="leaderboard-fighter lb-with-avatar">
+                    <UserAvatar userId={row.user_id} size={38} className="lb-avatar" />
+                    <div className="lb-copy">
+                      <span className="fighter-name-text">
+                        {displayName}
+                        {row.is_me && <Tag tone="gold" className="lb-you">You</Tag>}
+                        {row.provisional && <Tag>Provisional</Tag>}
+                      </span>
+                      <span className="muted">
+                        {row.wins}-{row.losses} - {row.graded} graded
+                      </span>
+                    </div>
                   </div>
 
                   <div className="leaderboard-score">

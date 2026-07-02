@@ -4522,3 +4522,16 @@ p {
   color: var(--red);
   border-color: var(--red);
 }
+
+/* avatar inside leaderboard rows (nested in the fighter cell to keep the row grid) */
+.leaderboard-fighter.lb-with-avatar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.lb-with-avatar .lb-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}

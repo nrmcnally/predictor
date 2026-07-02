@@ -722,10 +722,10 @@ export function getMyStats() {
 }
 
 const MOCK_LEADERBOARD_ROWS = [
-  { display_name: "slipznslams", rating: 1112, wins: 14, losses: 6, recent_wins: 4, recent_losses: 1, month_wins: 2, month_losses: 1, is_me: false, is_friend: true },
-  { display_name: "demo", rating: 1063, wins: 7, losses: 4, recent_wins: 3, recent_losses: 2, month_wins: 1, month_losses: 1, is_me: true, is_friend: true },
-  { display_name: "KO_Karen", rating: 1041, wins: 9, losses: 7, recent_wins: 2, recent_losses: 3, month_wins: 0, month_losses: 2, is_me: false, is_friend: true },
-  { display_name: "NorthStar", rating: 1000, wins: 2, losses: 1, recent_wins: 2, recent_losses: 1, month_wins: 0, month_losses: 0, is_me: false, is_friend: false },
+  { user_id: 5, display_name: "slipznslams", rating: 1112, wins: 14, losses: 6, recent_wins: 4, recent_losses: 1, month_wins: 2, month_losses: 1, is_me: false, is_friend: true },
+  { user_id: 2, display_name: "demo", rating: 1063, wins: 7, losses: 4, recent_wins: 3, recent_losses: 2, month_wins: 1, month_losses: 1, is_me: true, is_friend: true },
+  { user_id: 3, display_name: "KO_Karen", rating: 1041, wins: 9, losses: 7, recent_wins: 2, recent_losses: 3, month_wins: 0, month_losses: 2, is_me: false, is_friend: true },
+  { user_id: 7, display_name: "NorthStar", rating: 1000, wins: 2, losses: 1, recent_wins: 2, recent_losses: 1, month_wins: 0, month_losses: 0, is_me: false, is_friend: false },
 ];
 
 function leaderboardWindowRecord(row, window) {

@@ -155,7 +155,10 @@ export default function Friends() {
             <SectionCard eyebrow="Pending" title="Requests to you">
               {overview.incoming.map((r) => (
                 <div className="friend-row" key={r.friendship_id}>
-                  <span className="friend-name">{r.display_name}</span>
+                  <span className="friend-name">
+                    <UserAvatar userId={r.user_id} size={26} className="friend-row-avatar" />
+                    {r.display_name}
+                  </span>
                   <div className="friend-actions">
                     <button className="btn btn-primary" disabled={busy} onClick={() => respond(r.friendship_id, true)}>
                       Accept
@@ -199,7 +202,10 @@ export default function Friends() {
             ))}
             {overview?.outgoing?.map((r) => (
               <div className="friend-row pending" key={r.friendship_id}>
-                <span className="friend-name">{r.display_name}</span>
+                <span className="friend-name">
+                  <UserAvatar userId={r.user_id} size={26} className="friend-row-avatar" />
+                  {r.display_name}
+                </span>
                 <Tag>Request sent</Tag>
               </div>
             ))}

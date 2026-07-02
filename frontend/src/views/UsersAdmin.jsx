@@ -8,6 +8,7 @@ import {
 } from "../api/client.js";
 import { useAuth } from "../auth/authContext.js";
 import { ErrorNote, SectionCard, Spinner, Tag } from "../components/ui.jsx";
+import { UserAvatar } from "../components/UserAvatar.jsx";
 
 export default function UsersAdmin() {
   const { user: me } = useAuth();
@@ -165,6 +166,7 @@ export default function UsersAdmin() {
                 return (
                   <tr key={u.id}>
                     <td>
+                      <UserAvatar userId={u.id} size={22} className="friend-row-avatar" />
                       {u.email}
                       {isMe && <span className="muted"> (you)</span>}
                     </td>

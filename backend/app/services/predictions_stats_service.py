@@ -305,6 +305,8 @@ def build_leaderboard(
         picks_until_established = max(0, PROVISIONAL_THRESHOLD - graded)
         rows.append(
             {
+                # Numeric id only — it keys the avatar image; emails stay private.
+                "user_id": int(user["id"]),
                 "display_name": display_name,
                 "name": display_name,
                 "rating": _rating(scored, snapshots),
@@ -380,6 +382,7 @@ def build_event_leaderboard(
 
         rows.append(
             {
+                "user_id": int(user["id"]),
                 "display_name": display_name,
                 "name": display_name,
                 "event_id": event_id,
