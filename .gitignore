@@ -65,3 +65,4 @@ backend/models/*.json
 backend/models/
 /deploy/deploy_bundle.tar.gz
 /deploy/.env
+/backups/

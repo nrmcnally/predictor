@@ -128,3 +128,17 @@ fly ssh sftp put deploy/deploy_bundle.tar.gz /data/bundle.tar.gz
 fly ssh console -C "sh /app/deploy/update_from_bundle.sh"
 ```
 </details>
+
+## Backing up the server's user data
+
+Accounts, picks, friendships, and avatars exist **only** on the server volume (the
+bundle flows the other way). Fly keeps ~5 days of automatic volume snapshots; for an
+off-site copy you control:
+
+```bash
+python deploy/backup_server.py        # -> backups/fightiq_backup_<UTC>.tar.gz
+```
+
+It takes a **consistent** SQLite backup on the server (safe while the app is live),
+includes the avatars directory, downloads one tarball, and cleans up after itself.
+Run it before risky changes and after big pick weekends.
