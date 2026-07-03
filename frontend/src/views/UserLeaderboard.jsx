@@ -117,6 +117,7 @@ export default function UserLeaderboard() {
                 key={option.value}
                 type="button"
                 className={scope === option.value ? "active" : ""}
+                aria-pressed={scope === option.value}
                 onClick={() => chooseScope(option.value)}
               >
                 {option.label}
@@ -130,6 +131,7 @@ export default function UserLeaderboard() {
                 key={option.value}
                 type="button"
                 className={timeWindow === option.value ? "active" : ""}
+                aria-pressed={timeWindow === option.value}
                 onClick={() => chooseWindow(option.value)}
               >
                 {option.label}

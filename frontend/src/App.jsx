@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppContext } from "./AppContext.js";
 import {
   USE_MOCK,
@@ -26,6 +26,21 @@ import { useAuth } from "./auth/authContext.js";
 import { UserAvatar } from "./components/UserAvatar.jsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 import { useSlowHint } from "./hooks/useSlowHint.js";
+import {
+  IconActivity,
+  IconCalendar,
+  IconCrown,
+  IconDatabase,
+  IconFighter,
+  IconFriends,
+  IconHistory,
+  IconLab,
+  IconLogout,
+  IconMenu,
+  IconPicks,
+  IconPodium,
+  IconShield,
+} from "./components/icons.jsx";
 
 const FALLBACK_WEIGHT_CLASSES = [
   "Flyweight",
@@ -43,24 +58,24 @@ const NAV_GROUPS = [
   {
     label: "Play",
     items: [
-      { value: "picks", label: "My Picks", icon: "✓" },
-      { value: "friends", label: "Friends", icon: "◈" },
+      { value: "picks", label: "My Picks", icon: IconPicks },
+      { value: "friends", label: "Friends", icon: IconFriends },
     ],
   },
   {
     label: "Explore",
     items: [
-      { value: "lab", label: "Fight Lab", icon: "⚔" },
-      { value: "fighters", label: "Fighters", icon: "◎" },
-      { value: "future", label: "Future Cards", icon: "▸" },
-      { value: "recent", label: "Recent Cards", icon: "↺" },
+      { value: "lab", label: "Fight Lab", icon: IconLab },
+      { value: "fighters", label: "Fighters", icon: IconFighter },
+      { value: "future", label: "Future Cards", icon: IconCalendar },
+      { value: "recent", label: "Recent Cards", icon: IconHistory },
     ],
   },
   {
     label: "Standings",
     items: [
-      { value: "user-leaderboard", label: "User Leaderboard", icon: "◉" },
-      { value: "leaderboards", label: "Fighter Rankings", icon: "♛" },
+      { value: "user-leaderboard", label: "User Leaderboard", icon: IconPodium },
+      { value: "leaderboards", label: "Fighter Rankings", icon: IconCrown },
     ],
   },
 ];
@@ -70,13 +85,22 @@ const NAV_GROUPS = [
 const ADMIN_NAV_GROUP = {
   label: "Admin",
   items: [
-    { value: "evaluation", label: "Evaluation", icon: "◫" },
-    { value: "users", label: "User Admin", icon: "⚇" },
-    { value: "update", label: "Data Ops", icon: "⟳" },
+    { value: "evaluation", label: "Evaluation", icon: IconActivity },
+    { value: "users", label: "User Admin", icon: IconShield },
+    { value: "update", label: "Data Ops", icon: IconDatabase },
   ],
 };
 
 const ADMIN_VIEWS = new Set(["users", "update", "evaluation"]);
+
+// Per-tab document titles (W4) — so history entries, bookmarks, and screen
+// readers say where you are instead of ten identical "FIGHT IQ" tabs.
+const VIEW_TITLES = Object.fromEntries(
+  [...NAV_GROUPS, ADMIN_NAV_GROUP]
+    .flatMap((group) => group.items)
+    .map((item) => [item.value, item.label])
+);
+VIEW_TITLES.profile = "Profile";
 
 const VIEWS = {
   lab: FightLab,
@@ -137,6 +161,8 @@ function AuthGate() {
 function AppShell() {
   const [view, setViewState] = useState(viewFromHash);
   const [navOpen, setNavOpen] = useState(false);
+  const mainRef = useRef(null);
+  const mountedRef = useRef(false);
 
   // Navigating sets the hash (which pushes a history entry); the hashchange
   // listener is the single place state updates, so Back/Forward work the same
@@ -154,6 +180,19 @@ function AppShell() {
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
+
+  // W4: title tracks the tab; focus moves to the new view so keyboard/screen-
+  // reader users don't have to walk back through the whole sidebar. Skipped on
+  // mount — stealing focus from the page on load is worse than not managing it.
+  useEffect(() => {
+    document.title = VIEW_TITLES[view]
+      ? `${VIEW_TITLES[view]} · FIGHT IQ`
+      : "FIGHT IQ";
+    if (mountedRef.current) {
+      mainRef.current?.focus({ preventScroll: true });
+    }
+    mountedRef.current = true;
+  }, [view]);
   const [apiOnline, setApiOnline] = useState(null);
   const [apiMode, setApiMode] = useState(null);
   const [weightClasses, setWeightClasses] = useState(FALLBACK_WEIGHT_CLASSES);
@@ -243,15 +282,29 @@ function AppShell() {
   return (
     <AppContext.Provider value={contextValue}>
       <div className="app-shell">
+        {/* preventDefault: a real #main-content hash would bounce viewFromHash
+            back to the picks tab — focus the landmark directly instead. */}
+        <a
+          className="skip-link"
+          href="#main-content"
+          onClick={(event) => {
+            event.preventDefault();
+            mainRef.current?.focus();
+          }}
+        >
+          Skip to content
+        </a>
         <header className="topbar">
           <div className="topbar-left">
             <button
               type="button"
               className="nav-toggle"
               aria-label="Toggle navigation"
+              aria-expanded={navOpen}
+              aria-controls="primary-nav"
               onClick={() => setNavOpen((open) => !open)}
             >
-              ☰
+              <IconMenu size={20} />
             </button>
             <img src="/fight-iq-mark.png" alt="" className="brand-mark" />
             <div className="brand-copy">
@@ -294,7 +347,7 @@ function AppShell() {
                   title="Log out"
                   aria-label="Log out"
                 >
-                  ⎋
+                  <IconLogout size={15} />
                 </button>
               </div>
             )}
@@ -302,24 +355,34 @@ function AppShell() {
         </header>
 
         <div className="shell-body">
-          <nav className={`sidebar ${navOpen ? "open" : ""}`}>
+          <nav
+            id="primary-nav"
+            className={`sidebar ${navOpen ? "open" : ""}`}
+            aria-label="Primary"
+          >
             {navGroups.map((group) => (
               <div className="nav-group" key={group.label}>
                 <span className="nav-group-label">{group.label}</span>
-                {group.items.map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={`nav-item ${view === item.value ? "active" : ""}`}
-                    onClick={() => {
-                      setView(item.value);
-                      setNavOpen(false);
-                    }}
-                  >
-                    <span className="nav-icon">{item.icon}</span>
-                    {item.label}
-                  </button>
-                ))}
+                {group.items.map((item) => {
+                  const ItemIcon = item.icon;
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      className={`nav-item ${view === item.value ? "active" : ""}`}
+                      aria-current={view === item.value ? "page" : undefined}
+                      onClick={() => {
+                        setView(item.value);
+                        setNavOpen(false);
+                      }}
+                    >
+                      <span className="nav-icon">
+                        <ItemIcon />
+                      </span>
+                      {item.label}
+                    </button>
+                  );
+                })}
               </div>
             ))}
 
@@ -340,7 +403,7 @@ function AppShell() {
             />
           )}
 
-          <main className="main-content">
+          <main className="main-content" id="main-content" ref={mainRef} tabIndex={-1}>
             {apiOnline === false && !USE_MOCK && (
               <div className="offline-banner">
                 Backend unreachable at the configured API URL. Start it with{" "}

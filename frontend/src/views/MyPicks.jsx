@@ -576,6 +576,7 @@ export default function MyPicks() {
                                 tabIndex={pickDisabled ? -1 : 0}
                                 aria-pressed={active}
                                 aria-disabled={pickDisabled}
+                                aria-label={`Pick ${fighter} to win`}
                                 className={`pick-option ${active ? "active" : ""} ${
                                   active ? status.className : ""
                                 } ${pickDisabled ? "disabled" : ""}`}
@@ -623,6 +624,7 @@ export default function MyPicks() {
                                 className={`pick-method ${
                                   pick.picked_method === method.value ? "active" : ""
                                 }`}
+                                aria-pressed={pick.picked_method === method.value}
                                 onClick={() => onPickMethod(fight, method.value)}
                                 disabled={locked || busy}
                               >
