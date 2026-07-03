@@ -129,6 +129,21 @@ fly ssh console -C "sh /app/deploy/update_from_bundle.sh"
 ```
 </details>
 
+**Hands-off (scheduled) data refresh** — run once from the repo root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File deploy\setup_auto_update.ps1   # options: -Time 07:00 -Email you@x.com
+```
+
+It stores your admin password encrypted with Windows DPAPI (readable only by your
+Windows account on this PC) and registers a **"FIGHT IQ data update"** scheduled
+task: daily at the chosen time, it scrapes fresh data locally and pushes the bundle
+— and if the PC was off or asleep at that moment, it runs as soon as the machine is
+next awake instead (it never wakes the PC). A failed scrape never pushes, so bad
+data can't overwrite the server. Logs land in `deploy\logs\`; test immediately with
+`Start-ScheduledTask -TaskName "FIGHT IQ data update"`. Uploads are free on Fly
+(inbound bandwidth isn't billed; the brief machine wake-up is fractions of a cent).
+
 ## Backing up the server's user data
 
 Accounts, picks, friendships, and avatars exist **only** on the server volume (the

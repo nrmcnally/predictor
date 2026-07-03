@@ -66,3 +66,8 @@ backend/models/
 /deploy/deploy_bundle.tar.gz
 /deploy/.env
 /backups/
+
+# Unattended-update secrets/config/logs (setup_auto_update.ps1 output)
+/deploy/.fightiq_admin_pw.dpapi
+/deploy/auto_update.config.json
+/deploy/logs/
