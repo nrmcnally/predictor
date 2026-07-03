@@ -751,6 +751,7 @@ export function getUserLeaderboard({ scope = "overall", window = "all_time" } = 
       const record = leaderboardWindowRecord(row, window);
       const graded = record.wins + record.losses;
       return {
+        user_id: row.user_id,
         display_name: row.display_name,
         name: row.display_name,
         rating: row.rating + (window === "last5" ? record.wins * 5 - record.losses * 4 : 0),
@@ -791,6 +792,7 @@ export function getUserCardLeaderboard(eventId, { scope = "friends" } = {}) {
       const methodPicks = Math.max(1, Math.floor(graded / 2));
       const methodHits = Math.min(methodPicks, Math.max(0, wins - (index % 2)));
       return {
+        user_id: row.user_id,
         display_name: row.display_name,
         name: row.display_name,
         event_id: eventId,

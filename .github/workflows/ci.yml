@@ -28,7 +28,7 @@ jobs:
         run: pytest -q -p no:warnings
 
   frontend:
-    name: Frontend lint + build
+    name: Frontend lint + test + build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -44,5 +44,9 @@ jobs:
         run: npm ci
       - name: Lint
         run: npx eslint .
+      # Vitest/RTL: components, hooks, routing, and the mock-contract check
+      # (mock API must keep the same functions + field shapes the UI reads).
+      - name: Test
+        run: npm test
       - name: Build
         run: npm run build

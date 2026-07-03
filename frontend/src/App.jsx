@@ -8,6 +8,7 @@ import {
   getWeightClasses,
 } from "./api/client.js";
 import { normalizeFighterName } from "./lib/format.js";
+import { parseRoute, routeHash } from "./lib/routing.js";
 // Eager: the two screens on the critical path — the auth gate and the landing tab.
 import Login from "./views/Login.jsx";
 import MyPicks from "./views/MyPicks.jsx";
@@ -127,20 +128,11 @@ const VIEWS = {
 // server, so deep links need no SPA-fallback or auth-wall changes.
 // W7: an optional second segment deep-links into a view — #/fighters/<name>,
 // #/picks/<event_id>, #/friends/<username>.
+const VIEW_NAMES = new Set(Object.keys(VIEWS));
+
 function routeFromHash() {
-  const raw = window.location.hash.replace(/^#\/?/, "");
-  const slash = raw.indexOf("/");
-  const name = slash === -1 ? raw : raw.slice(0, slash);
-  let param = "";
-  if (slash !== -1) {
-    try {
-      param = decodeURIComponent(raw.slice(slash + 1));
-    } catch {
-      param = raw.slice(slash + 1);
-    }
-  }
   // The game is the landing tab (W5) — Fight Lab is a destination, not home.
-  return VIEWS[name] ? { view: name, param } : { view: "picks", param: "" };
+  return parseRoute(window.location.hash, VIEW_NAMES, "picks");
 }
 
 export default function App() {
@@ -194,21 +186,19 @@ function AppShell() {
   // as in-app clicks.
   const setView = useCallback((next, param = "") => {
     delete scrollMemoryRef.current[next];
-    const target = param ? `/${next}/${encodeURIComponent(param)}` : `/${next}`;
-    if (window.location.hash.replace(/^#/, "") === target) {
+    const target = routeHash(next, param);
+    if (window.location.hash === target) {
       setRoute(routeFromHash());
       return;
     }
-    window.location.hash = target;
+    window.location.hash = target.slice(1);
   }, []);
 
   // Deep-linkable state inside a view (selected card, opened compare) mirrors
   // into the URL without pushing history — Back should leave the tab, not
   // unwind every card click.
   const reflectRoute = useCallback((viewName, param = "") => {
-    const target = param
-      ? `#/${viewName}/${encodeURIComponent(param)}`
-      : `#/${viewName}`;
+    const target = routeHash(viewName, param);
     if (window.location.hash !== target) {
       window.history.replaceState(null, "", target);
     }
