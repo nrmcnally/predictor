@@ -201,10 +201,11 @@ function marketProb(odds, name) {
 }
 
 export default function MyPicks() {
-  const { imageLookup, openProfile } = useContext(AppContext);
+  const { imageLookup, openProfile, routeParam, reflectRoute } = useContext(AppContext);
 
   const [cards, setCards] = useState([]);
-  const [selectedId, setSelectedId] = useState("");
+  // #/picks/<event_id> deep-links straight to a card (W7).
+  const [selectedId, setSelectedId] = useState(routeParam || "");
   const [detail, setDetail] = useState(null);
   const [oddsRows, setOddsRows] = useState([]);
   const [picks, setPicks] = useState({}); // fight_url -> pick
@@ -234,6 +235,15 @@ export default function MyPicks() {
     setShowIntro(false);
   };
 
+  // Back/Forward between #/picks/<event_id> entries re-selects that card.
+  useEffect(() => {
+    if (routeParam) {
+      // URL-sync effect: the hash is the external source of truth here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedId(routeParam);
+    }
+  }, [routeParam]);
+
   useEffect(() => {
     let active = true;
     Promise.all([getFutureCards(), getMyPredictions().catch(() => [])])
@@ -242,7 +252,11 @@ export default function MyPicks() {
         setCards(rows);
         setAllPicks(myPicks);
         const firstOpen = rows.find((card) => !isCardLocked(card));
-        setSelectedId((current) => current || firstOpen?.event_id || rows[0]?.event_id || "");
+        setSelectedId((current) => {
+          // A deep-linked id that doesn't match any card falls back gracefully.
+          const valid = current && rows.some((card) => card.event_id === current);
+          return valid ? current : firstOpen?.event_id || rows[0]?.event_id || "";
+        });
       })
       .catch((err) => active && setError(err.message))
       .finally(() => active && setLoading(false));
@@ -499,7 +513,10 @@ export default function MyPicks() {
                   key={card.event_id}
                   type="button"
                   className={`event-item ${selectedId === card.event_id ? "active" : ""}`}
-                  onClick={() => setSelectedId(card.event_id)}
+                  onClick={() => {
+                    setSelectedId(card.event_id);
+                    reflectRoute?.("picks", card.event_id);
+                  }}
                 >
                   <strong>{card.event_name}</strong>
                   <span>{card.event_date}</span>

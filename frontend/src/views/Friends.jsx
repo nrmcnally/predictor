@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { AppContext } from "../AppContext.js";
 import {
   getFriends,
   sendFriendRequest,
@@ -23,6 +24,7 @@ function pickResult(name, correct) {
 }
 
 export default function Friends() {
+  const { routeParam, reflectRoute } = useContext(AppContext);
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -96,6 +98,7 @@ export default function Friends() {
       if (compareFor?.user_id === userId) {
         setCompareFor(null);
         setCompare(null);
+        reflectRoute?.("friends");
       }
       await load();
     } catch (err) {
@@ -110,6 +113,7 @@ export default function Friends() {
     setCompare(null);
     setOpenCard("");
     setCompareLoading(true);
+    reflectRoute?.("friends", friend.display_name);
     try {
       setCompare(await getFriendCompare(friend.user_id));
     } catch (err) {
@@ -118,6 +122,26 @@ export default function Friends() {
       setCompareLoading(false);
     }
   }
+
+  // #/friends/<username> deep-links straight into that head-to-head (W7).
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (autoOpenedRef.current || !routeParam || !overview?.friends?.length) {
+      return;
+    }
+    const wanted = routeParam.toLowerCase();
+    const match = overview.friends.find(
+      (friend) => (friend.display_name || "").toLowerCase() === wanted
+    );
+    if (match) {
+      autoOpenedRef.current = true;
+      // URL-sync effect: acting on the deep-linked hash param once, ref-guarded.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      openCompare(match);
+    }
+    // openCompare is stable in behavior; the ref guard makes reruns no-ops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeParam, overview]);
 
   return (
     <div className="view">

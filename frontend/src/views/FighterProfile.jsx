@@ -61,7 +61,7 @@ function buildProfileSummary(profile = {}, headline = {}, styleProfile = {}) {
 }
 
 export default function FighterProfile() {
-  const { imageLookup, profileFighter, sendToFightLab } = useContext(AppContext);
+  const { imageLookup, profileFighter, sendToFightLab, reflectRoute } = useContext(AppContext);
 
   const [query, setQuery] = useState(profileFighter || "Khamzat Chimaev");
   const [profile, setProfile] = useState(null);
@@ -82,6 +82,8 @@ export default function FighterProfile() {
       const data = await getFighterProfile(cleaned);
       setProfile(data);
       setQuery(data.fighter || cleaned);
+      // Keep the URL shareable: #/fighters/<name> always points at what's shown.
+      reflectRoute?.("fighters", data.fighter || cleaned);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (requestError) {
       setError(requestError.message);

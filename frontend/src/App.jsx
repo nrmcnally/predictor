@@ -125,10 +125,22 @@ const VIEWS = {
 // Back/Forward buttons move between tabs, refresh keeps your place, and tab
 // links are shareable. Hash-based on purpose: the fragment never reaches the
 // server, so deep links need no SPA-fallback or auth-wall changes.
-function viewFromHash() {
-  const name = window.location.hash.replace(/^#\/?/, "");
+// W7: an optional second segment deep-links into a view — #/fighters/<name>,
+// #/picks/<event_id>, #/friends/<username>.
+function routeFromHash() {
+  const raw = window.location.hash.replace(/^#\/?/, "");
+  const slash = raw.indexOf("/");
+  const name = slash === -1 ? raw : raw.slice(0, slash);
+  let param = "";
+  if (slash !== -1) {
+    try {
+      param = decodeURIComponent(raw.slice(slash + 1));
+    } catch {
+      param = raw.slice(slash + 1);
+    }
+  }
   // The game is the landing tab (W5) — Fight Lab is a destination, not home.
-  return VIEWS[name] ? name : "picks";
+  return VIEWS[name] ? { view: name, param } : { view: "picks", param: "" };
 }
 
 export default function App() {
@@ -163,24 +175,50 @@ function AuthGate() {
 }
 
 function AppShell() {
-  const [view, setViewState] = useState(viewFromHash);
+  const [route, setRoute] = useState(routeFromHash);
   const [navOpen, setNavOpen] = useState(false);
+  const view = route.view;
   const mainRef = useRef(null);
   const mountedRef = useRef(false);
+  const routeRef = useRef(route);
+  // Per-tab scroll positions (W7). Only Back/Forward restores them — a fresh
+  // in-app navigation clears the target's slot so it lands at the top.
+  const scrollMemoryRef = useRef({});
+
+  useEffect(() => {
+    routeRef.current = route;
+  }, [route]);
 
   // Navigating sets the hash (which pushes a history entry); the hashchange
   // listener is the single place state updates, so Back/Forward work the same
   // as in-app clicks.
-  const setView = useCallback((next) => {
-    if (next === viewFromHash()) {
-      setViewState(next);
+  const setView = useCallback((next, param = "") => {
+    delete scrollMemoryRef.current[next];
+    const target = param ? `/${next}/${encodeURIComponent(param)}` : `/${next}`;
+    if (window.location.hash.replace(/^#/, "") === target) {
+      setRoute(routeFromHash());
       return;
     }
-    window.location.hash = `/${next}`;
+    window.location.hash = target;
+  }, []);
+
+  // Deep-linkable state inside a view (selected card, opened compare) mirrors
+  // into the URL without pushing history — Back should leave the tab, not
+  // unwind every card click.
+  const reflectRoute = useCallback((viewName, param = "") => {
+    const target = param
+      ? `#/${viewName}/${encodeURIComponent(param)}`
+      : `#/${viewName}`;
+    if (window.location.hash !== target) {
+      window.history.replaceState(null, "", target);
+    }
   }, []);
 
   useEffect(() => {
-    const onHashChange = () => setViewState(viewFromHash());
+    const onHashChange = () => {
+      scrollMemoryRef.current[routeRef.current.view] = window.scrollY;
+      setRoute(routeFromHash());
+    };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
@@ -188,12 +226,15 @@ function AppShell() {
   // W4: title tracks the tab; focus moves to the new view so keyboard/screen-
   // reader users don't have to walk back through the whole sidebar. Skipped on
   // mount — stealing focus from the page on load is worse than not managing it.
+  // W7: scroll returns to where you left the tab (Back/Forward) or the top.
   useEffect(() => {
     document.title = VIEW_TITLES[view]
       ? `${VIEW_TITLES[view]} · FIGHT IQ`
       : "FIGHT IQ";
     if (mountedRef.current) {
       mainRef.current?.focus({ preventScroll: true });
+      const saved = scrollMemoryRef.current[view] ?? 0;
+      requestAnimationFrame(() => window.scrollTo(0, saved));
     }
     mountedRef.current = true;
   }, [view]);
@@ -205,6 +246,16 @@ function AppShell() {
   const [profileFighter, setProfileFighter] = useState("");
   const [dataFreshness, setDataFreshness] = useState(null);
   const { user, logout } = useAuth();
+
+  // #/fighters/<name> drives which profile loads; the state survives leaving
+  // the tab so revisiting Fighters shows the last-opened fighter.
+  useEffect(() => {
+    if (route.view === "fighters" && route.param) {
+      // URL-sync effect: the hash is the external source of truth here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setProfileFighter(route.param);
+    }
+  }, [route]);
 
   useEffect(() => {
     checkHealth()
@@ -250,10 +301,8 @@ function AppShell() {
       return;
     }
 
-    setProfileFighter(cleaned);
-    setView("fighters");
+    setView("fighters", cleaned);
     setNavOpen(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [setView]);
 
   const sendToFightLab = useCallback(({ a, b }) => {
@@ -263,7 +312,6 @@ function AppShell() {
     }));
     setView("lab");
     setNavOpen(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [setView]);
 
   const contextValue = useMemo(
@@ -274,8 +322,10 @@ function AppShell() {
       sendToFightLab,
       fightLabPrefill,
       profileFighter,
+      routeParam: route.param,
+      reflectRoute,
     }),
-    [imageLookup, weightClasses, openProfile, sendToFightLab, fightLabPrefill, profileFighter]
+    [imageLookup, weightClasses, openProfile, sendToFightLab, fightLabPrefill, profileFighter, route.param, reflectRoute]
   );
 
   const isAdmin = user?.role === "admin";
