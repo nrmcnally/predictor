@@ -13,13 +13,18 @@ $logDir = Join-Path $deployDir "logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $log = Join-Path $logDir ("auto_update_{0}.log" -f (Get-Date -Format "yyyyMMdd_HHmmss"))
 
+# Tee-Object writes UTF-16 in PS 5.1 (unreadable in most tools) — log UTF-8 by hand.
+function Write-Log([string]$Message) {
+    $Message
+    Add-Content -Path $log -Value $Message -Encoding UTF8
+}
+
 if (-not (Test-Path $secretPath)) {
-    "No stored admin password at $secretPath - run deploy\setup_auto_update.ps1 once." |
-        Tee-Object -FilePath $log
+    Write-Log "No stored admin password at $secretPath - run deploy\setup_auto_update.ps1 once."
     exit 1
 }
 if (-not (Test-Path $python)) {
-    "Backend venv python not found at $python." | Tee-Object -FilePath $log
+    Write-Log "Backend venv python not found at $python."
     exit 1
 }
 
@@ -33,8 +38,7 @@ $env:FIGHTIQ_ADMIN_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto
 # Native stderr must not become a terminating error mid-run (PS 5.1 quirk).
 $ErrorActionPreference = "Continue"
 & $python (Join-Path $deployDir "auto_update.py") 2>&1 |
-    ForEach-Object { "$_" } |
-    Tee-Object -FilePath $log
+    ForEach-Object { Write-Log "$_" }
 $exitCode = $LASTEXITCODE
 
 # Keep the 30 most recent logs.
