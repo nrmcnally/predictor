@@ -2,11 +2,11 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { AppContext } from "../AppContext.js";
 import { getRecentCardDetail, getRecentCards } from "../api/client.js";
 import { FighterMatchup } from "../components/FighterDisplay.jsx";
+import { SkeletonRows } from "../components/Skeleton.jsx";
 import {
   EmptyState,
   ErrorNote,
   SectionCard,
-  Spinner,
   SplitBar,
   StatTile,
   Tag,
@@ -460,7 +460,7 @@ export default function RecentCards() {
             ))}
           </div>
 
-          {loading && cards.length === 0 && <Spinner label="Loading saved cards…" />}
+          {loading && cards.length === 0 && <SkeletonRows rows={4} height={104} />}
           {!loading && cards.length === 0 && (
             <EmptyState
               title="No saved cards"
@@ -504,7 +504,7 @@ export default function RecentCards() {
         </aside>
 
         <section className="event-detail">
-          {detailLoading && <Spinner label="Loading results…" />}
+          {detailLoading && <SkeletonRows rows={5} height={96} />}
 
           {!detailLoading && selectedCard && (
             <>

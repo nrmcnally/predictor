@@ -10,7 +10,8 @@ import {
   savePrediction,
   deletePrediction,
 } from "../api/client.js";
-import { EmptyState, ErrorNote, SectionCard, Spinner, StatTile, Tag } from "../components/ui.jsx";
+import { EmptyState, ErrorNote, SectionCard, StatTile, Tag } from "../components/ui.jsx";
+import { SkeletonRows } from "../components/Skeleton.jsx";
 import { FighterName } from "../components/FighterDisplay.jsx";
 import { LeaderboardRow } from "../components/LeaderboardRow.jsx";
 import { UserAvatar } from "../components/UserAvatar.jsx";
@@ -447,7 +448,7 @@ export default function MyPicks() {
 
       <ErrorNote message={error} />
 
-      {loading && cards.length === 0 && <Spinner label="Loading cards…" />}
+      {loading && cards.length === 0 && <SkeletonRows rows={4} height={92} />}
       {!loading && cards.length === 0 && (
         <EmptyState title="No upcoming cards" message="Check back once the schedule is scraped." />
       )}
@@ -521,7 +522,7 @@ export default function MyPicks() {
           </aside>
 
           <section className="event-detail">
-            {detailLoading && <Spinner label="Loading card…" />}
+            {detailLoading && <SkeletonRows rows={5} height={128} />}
 
             {!detailLoading && detail && (
               <SectionCard
@@ -684,7 +685,7 @@ export default function MyPicks() {
                 }
                 className="card-leaderboard-card"
               >
-                {leaderboardLoading && <Spinner label="Loading card standings..." />}
+                {leaderboardLoading && <SkeletonRows rows={3} height={56} />}
 
                 {!leaderboardLoading && cardLeaderboard.length === 0 && (
                   <EmptyState

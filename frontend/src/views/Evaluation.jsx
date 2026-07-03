@@ -16,6 +16,7 @@ import {
   StatTile,
   Tag,
 } from "../components/ui.jsx";
+import { SkeletonRows } from "../components/Skeleton.jsx";
 import {
   clampProbability,
   formatDecimal,
@@ -345,7 +346,7 @@ function MethodMetricsCard({ payload }) {
 
 function DataQualityCard({ summary }) {
   if (!summary) {
-    return <p className="dim-note">Loading data quality summary...</p>;
+    return <SkeletonRows rows={2} height={60} />;
   }
 
   if (!summary.available) {

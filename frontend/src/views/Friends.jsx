@@ -216,7 +216,7 @@ export default function Friends() {
 
           {compareFor && (
             <SectionCard eyebrow="Head to head" title={`You vs ${compareFor.display_name}`}>
-              {compareLoading && <p className="muted">Loading comparison…</p>}
+              {compareLoading && <SkeletonRows rows={3} height={64} />}
               {!compareLoading && compare?.upcoming?.length > 0 && (
                 <div className="compare-upcoming">
                   <p className="compare-section-label">

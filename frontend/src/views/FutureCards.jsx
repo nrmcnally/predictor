@@ -10,6 +10,7 @@ import {
   updateFutureFightScheduledRounds,
 } from "../api/client.js";
 import { FighterMatchup } from "../components/FighterDisplay.jsx";
+import { SkeletonRows } from "../components/Skeleton.jsx";
 import {
   InsightsCard,
   RiskFlagsCard,
@@ -546,7 +547,7 @@ export default function FutureCards() {
 
       <div className="cards-layout">
         <aside className="event-list">
-          {cardsLoading && cards.length === 0 && <Spinner label="Loading cards…" />}
+          {cardsLoading && cards.length === 0 && <SkeletonRows rows={4} height={104} />}
           {!cardsLoading && cards.length === 0 && (
             <EmptyState title="No upcoming cards" message="Refresh to scrape the schedule." />
           )}

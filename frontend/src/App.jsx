@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppContext } from "./AppContext.js";
 import {
   USE_MOCK,
@@ -8,23 +8,27 @@ import {
   getWeightClasses,
 } from "./api/client.js";
 import { normalizeFighterName } from "./lib/format.js";
-import FightLab from "./views/FightLab.jsx";
-import FighterProfile from "./views/FighterProfile.jsx";
-import FutureCards from "./views/FutureCards.jsx";
-import RecentCards from "./views/RecentCards.jsx";
-import Leaderboards from "./views/Leaderboards.jsx";
-import UserLeaderboard from "./views/UserLeaderboard.jsx";
-import Evaluation from "./views/Evaluation.jsx";
-import UpdateData from "./views/UpdateData.jsx";
-import UsersAdmin from "./views/UsersAdmin.jsx";
+// Eager: the two screens on the critical path — the auth gate and the landing tab.
 import Login from "./views/Login.jsx";
-import Profile from "./views/Profile.jsx";
 import MyPicks from "./views/MyPicks.jsx";
-import Friends from "./views/Friends.jsx";
+// Route-level code splitting (W6): every other tab is its own chunk, fetched on
+// first visit. Shared components stay in the main bundle via MyPicks.
+const FightLab = lazy(() => import("./views/FightLab.jsx"));
+const FighterProfile = lazy(() => import("./views/FighterProfile.jsx"));
+const FutureCards = lazy(() => import("./views/FutureCards.jsx"));
+const RecentCards = lazy(() => import("./views/RecentCards.jsx"));
+const Leaderboards = lazy(() => import("./views/Leaderboards.jsx"));
+const UserLeaderboard = lazy(() => import("./views/UserLeaderboard.jsx"));
+const Evaluation = lazy(() => import("./views/Evaluation.jsx"));
+const UpdateData = lazy(() => import("./views/UpdateData.jsx"));
+const UsersAdmin = lazy(() => import("./views/UsersAdmin.jsx"));
+const Profile = lazy(() => import("./views/Profile.jsx"));
+const Friends = lazy(() => import("./views/Friends.jsx"));
 import { AuthProvider } from "./auth/AuthProvider.jsx";
 import { useAuth } from "./auth/authContext.js";
 import { UserAvatar } from "./components/UserAvatar.jsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
+import { SkeletonRows } from "./components/Skeleton.jsx";
 import { useSlowHint } from "./hooks/useSlowHint.js";
 import {
   IconActivity,
@@ -431,7 +435,9 @@ function AppShell() {
             )}
             {/* keyed so switching tabs resets a crashed view's boundary */}
             <ErrorBoundary key={view}>
-              <ActiveView />
+              <Suspense fallback={<SkeletonRows rows={4} height={92} />}>
+                <ActiveView />
+              </Suspense>
             </ErrorBoundary>
           </main>
         </div>
