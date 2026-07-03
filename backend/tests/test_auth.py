@@ -123,6 +123,39 @@ def test_change_password(tmp_path=None):
     assert auth_service.authenticate("dave@example.com", "newpassword123")["user"]["email"] == "dave@example.com"
 
 
+def test_password_change_invalidates_old_tokens(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+
+    user = auth_service.register_user("session@example.com", "password123")
+    old_token = auth_service.authenticate("session@example.com", "password123")["token"]
+    assert dependencies._user_from_authorization(f"Bearer {old_token}") is not None
+
+    # Self-service change kills the old session...
+    auth_service.change_password(user["id"], "password123", "newpassword123")
+    assert dependencies._user_from_authorization(f"Bearer {old_token}") is None
+
+    # ...a fresh login works again...
+    fresh_token = auth_service.authenticate("session@example.com", "newpassword123")["token"]
+    assert dependencies._user_from_authorization(f"Bearer {fresh_token}") is not None
+
+    # ...and an admin reset kills sessions the same way.
+    auth_service.admin_reset_password(user["id"])
+    assert dependencies._user_from_authorization(f"Bearer {fresh_token}") is None
+
+
+def test_legacy_token_without_pwd_claim_rejected(tmp_path=None):
+    """Tokens minted before the pwd claim existed force one re-login, not a bypass."""
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+
+    user = users_repository.create_user(
+        "legacy@example.com", security.hash_password("password123")
+    )
+    legacy = security.create_token({"sub": user["id"], "role": "user"})
+    assert dependencies._user_from_authorization(f"Bearer {legacy}") is None
+
+
 # --- profile visibility -------------------------------------------------------
 
 def test_visibility_defaults_private_and_toggles(tmp_path=None):
@@ -210,7 +243,13 @@ def test_require_admin_allows_admin_jwt(tmp_path=None):
     admin = users_repository.create_user(
         "admin1@example.com", security.hash_password("password123"), role="admin"
     )
-    token = security.create_token({"sub": admin["id"], "role": "admin"})
+    token = security.create_token(
+        {
+            "sub": admin["id"],
+            "role": "admin",
+            "pwd": security.password_fingerprint(admin["password_hash"]),
+        }
+    )
 
     result = dependencies.require_admin(authorization=f"Bearer {token}", x_admin_token=None)
     assert result["role"] == "admin"
@@ -223,7 +262,13 @@ def test_require_admin_denies_regular_user(tmp_path=None):
 
     users_repository.create_user("admin1@example.com", security.hash_password("password123"), role="admin")
     user = users_repository.create_user("user1@example.com", security.hash_password("password123"), role="user")
-    token = security.create_token({"sub": user["id"], "role": "user"})
+    token = security.create_token(
+        {
+            "sub": user["id"],
+            "role": "user",
+            "pwd": security.password_fingerprint(user["password_hash"]),
+        }
+    )
 
     try:
         dependencies.require_admin(authorization=f"Bearer {token}", x_admin_token=None)

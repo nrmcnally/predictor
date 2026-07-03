@@ -45,6 +45,16 @@ function extractErrorMessage(data, fallback) {
   return detail?.message || detail?.error || data?.message || fallback;
 }
 
+// A 401 while we HOLD a token means the session died server-side (expired, or the
+// password changed). Clear it and reload so the auth gate shows the login screen,
+// instead of every view erroring with "Authentication required." until a refresh.
+function handleSessionExpiry(response, token) {
+  if (response.status === 401 && token) {
+    setToken("");
+    window.location.reload();
+  }
+}
+
 async function request(path, { method = "GET", body, fallbackError } = {}) {
   const token = getToken();
   const headers = {};
@@ -70,6 +80,7 @@ async function request(path, { method = "GET", body, fallbackError } = {}) {
   }
 
   if (!response.ok) {
+    handleSessionExpiry(response, token);
     throw new Error(extractErrorMessage(data, fallbackError || "Request failed."));
   }
 
@@ -241,6 +252,7 @@ export async function uploadAvatar(file) {
     data = null;
   }
   if (!response.ok) {
+    handleSessionExpiry(response, token);
     throw new Error(extractErrorMessage(data, "Failed to upload the picture."));
   }
   return data;
@@ -264,6 +276,7 @@ export async function uploadDataBundle(file) {
     data = null;
   }
   if (!response.ok) {
+    handleSessionExpiry(response, token);
     throw new Error(extractErrorMessage(data, "Failed to apply the bundle."));
   }
   return data;

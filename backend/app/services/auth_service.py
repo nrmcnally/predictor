@@ -79,7 +79,14 @@ def authenticate(email: str, password: str) -> dict[str, Any]:
 
     users_repository.touch_last_login(user["id"])
     token = security.create_token(
-        {"sub": user["id"], "email": user["email"], "role": user["role"]}
+        {
+            "sub": user["id"],
+            "email": user["email"],
+            "role": user["role"],
+            # Ties the session to the CURRENT password: any password change
+            # (self-service or admin reset) invalidates all earlier tokens.
+            "pwd": security.password_fingerprint(user["password_hash"]),
+        }
     )
     return {"token": token, "user": users_repository.public_user(user)}
 

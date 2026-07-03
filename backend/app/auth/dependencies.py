@@ -18,7 +18,14 @@ def _user_from_authorization(authorization: str | None) -> dict[str, Any] | None
     if not payload:
         return None
     # Load fresh from the DB so role changes / deletions take effect immediately.
-    return users_repository.get_by_id(payload.get("sub"))
+    user = users_repository.get_by_id(payload.get("sub"))
+    if user is None:
+        return None
+    # Session dies with the password it was issued under (change or admin reset).
+    # Tokens minted before this claim existed fail too — a one-time forced re-login.
+    if payload.get("pwd") != security.password_fingerprint(user["password_hash"]):
+        return None
+    return user
 
 
 def get_current_user(authorization: str | None = Header(default=None)) -> dict[str, Any]:

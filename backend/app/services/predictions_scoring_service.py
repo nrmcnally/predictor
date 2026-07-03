@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import unicodedata
+from datetime import date
 from typing import Any
 
-from app.repositories import event_fights_repository, user_predictions_repository
+from app.repositories import (
+    event_fights_repository,
+    future_cards_repository,
+    user_predictions_repository,
+)
 
 # Grades account picks against completed results (event_fights). Designed around the
 # card-volatility rules: a pick is VOIDED (never penalized) when the bout changed
@@ -14,6 +19,13 @@ from app.repositories import event_fights_repository, user_predictions_repositor
 # Upcoming fights use "ufcstats.com/..."; results use "www.ufcstats.com/..." — so the
 # trailing fight-details id is the only reliable cross-table join key.
 _NO_RESULT_METHODS = {"CNC", "OVERTURNED", "NC", "NO CONTEST", "DRAW", "OVERTURN"}
+
+# A pick whose fight simply never happened (bout scrapped, card cancelled) gets no
+# result row, so nothing above ever resolves it. Once the event date is this far past
+# AND the fight is off every upcoming card, void it — otherwise it sits "open"
+# forever, locked against deletion. The grace period covers late result scrapes and
+# postponements that keep the fight scheduled.
+ORPHAN_GRACE_DAYS = 3
 
 
 def _fight_key(url: str | None) -> str:
@@ -85,13 +97,39 @@ def _result_lookup() -> dict[str, dict[str, Any]]:
     return lookup
 
 
-def _score(pending: list[dict[str, Any]]) -> dict[str, int]:
+def _orphan_overdue(pick: dict[str, Any], today: date | None = None) -> bool:
+    """True when the pick's event date is more than ORPHAN_GRACE_DAYS past."""
+    from app.services.event_lock_service import parse_event_date
+
+    parsed = parse_event_date(str(pick.get("event_date") or ""))
+    if parsed is None:
+        return False
+    return ((today or date.today()) - parsed).days > ORPHAN_GRACE_DAYS
+
+
+def _upcoming_fight_keys() -> set[str]:
+    df = future_cards_repository.read_upcoming_fights_df()
+    if df.empty:
+        return set()
+    return {_fight_key(url) for url in df.get("fight_url", []) if url}
+
+
+def _score(pending: list[dict[str, Any]], today: date | None = None) -> dict[str, int]:
     results = _result_lookup()
+    upcoming_keys: set[str] | None = None  # built lazily, only if needed
     scored = 0
     voided = 0
     for pick in pending:
-        result = results.get(_fight_key(pick.get("fight_url")))
+        key = _fight_key(pick.get("fight_url"))
+        result = results.get(key)
         if result is None:
+            if _orphan_overdue(pick, today):
+                if upcoming_keys is None:
+                    upcoming_keys = _upcoming_fight_keys()
+                # Still on an upcoming card (postponed/rescheduled) — leave it.
+                if key not in upcoming_keys:
+                    user_predictions_repository.mark_void(pick["id"])
+                    voided += 1
             continue  # event not completed yet — leave pending
 
         outcome = grade_pick(pick, result)

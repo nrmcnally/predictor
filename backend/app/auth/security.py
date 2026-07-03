@@ -39,6 +39,13 @@ def verify_password(password: str, stored: str) -> bool:
 DEFAULT_TOKEN_TTL_SECONDS = 7 * 24 * 3600  # 7 days
 
 
+def password_fingerprint(password_hash: str) -> str:
+    """A short non-reversible digest of the stored password hash, embedded in each
+    token. Changing the password changes the fingerprint, which invalidates every
+    previously issued token — stolen or forgotten sessions die with the old password."""
+    return hashlib.sha256((password_hash or "").encode("utf-8")).hexdigest()[:12]
+
+
 def _secret() -> bytes:
     # Set AUTH_SECRET in production. The dev fallback is intentionally obvious.
     return os.environ.get("AUTH_SECRET", "dev-insecure-auth-secret-change-me").encode("utf-8")

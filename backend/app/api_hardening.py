@@ -127,8 +127,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 # frontend files the login page itself needs.
 PUBLIC_PATHS = {"/", "/health", "/auth/login", "/auth/register"}
 
+# Endpoints the file-extension rule would otherwise expose. The API schema is a
+# free recon map (every endpoint + parameter) — keep it behind the wall like /docs.
+NEVER_PUBLIC_PATHS = {"/openapi.json"}
+
 
 def _is_public_path(path: str) -> bool:
+    if path in NEVER_PUBLIC_PATHS:
+        return False
     if path in PUBLIC_PATHS:
         return True
     # Static frontend files (JS/CSS/images) — anything with a file extension.

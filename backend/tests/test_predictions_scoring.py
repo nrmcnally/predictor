@@ -41,13 +41,13 @@ def _result(fight_url, fighter_1, fighter_2, winner, method):
     }
 
 
-def _fight(fight_url, fighter_1, fighter_2):
+def _fight(fight_url, fighter_1, fighter_2, event_date="January 1, 2026"):
     return {
         "fight_url": fight_url,
         "event_id": "evt1",
         "event_name": "UFC 999",
         "event_url": "http://ufcstats.com/event-details/e",
-        "event_date": "January 1, 2026",
+        "event_date": event_date,
         "fighter_1": fighter_1,
         "fighter_2": fighter_2,
         "weight_class": "Lightweight",
@@ -144,9 +144,9 @@ def test_pending_without_result_and_idempotent(tmp_path=None):
     user_predictions_repository.upsert(
         user["id"], _fight(UP + "done", "Won Guy", "Lost Guy"), "Won Guy", None
     )
-    # This bout has no result row yet -> stays pending.
+    # This bout has no result row yet and hasn't happened -> stays pending.
     user_predictions_repository.upsert(
-        user["id"], _fight(UP + "future", "X", "Y"), "X", None
+        user["id"], _fight(UP + "future", "X", "Y", event_date="December 31, 2099"), "X", None
     )
 
     first = predictions_scoring_service.score_all_pending()
@@ -156,6 +156,64 @@ def test_pending_without_result_and_idempotent(tmp_path=None):
     assert second == {"scored": 0, "voided": 0, "still_pending": 1}
 
     assert user_predictions_repository.get(user["id"], UP + "future")["status"] == "open"
+
+
+# --- orphaned picks (fight never happened, no result will ever arrive) ---------
+
+def test_orphaned_pick_voids_after_grace(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+    user = auth_service.register_user("orphan@example.com", "password123")
+
+    # Event date long past, no result row, and the bout is on no upcoming card:
+    # the fight was scrapped. Void it instead of leaving it open+locked forever.
+    user_predictions_repository.upsert(
+        user["id"], _fight(UP + "ghost", "Gone Guy", "Also Gone"), "Gone Guy", None
+    )
+
+    summary = predictions_scoring_service.score_all_pending()
+    assert summary == {"scored": 0, "voided": 1, "still_pending": 0}
+    assert user_predictions_repository.get(user["id"], UP + "ghost")["status"] == "void"
+
+
+def test_orphan_rules_spare_scheduled_and_recent_picks(tmp_path=None):
+    from datetime import date, timedelta
+
+    from app.repositories import future_cards_repository
+
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+    user = auth_service.register_user("spared@example.com", "password123")
+
+    # (a) Past event date but the fight is STILL on an upcoming card — a
+    # postponement, not a cancellation. Leave the pick alone.
+    postponed = _fight(UP + "moved", "Still On", "The Card")
+    future_cards_repository.replace_upcoming_fights([
+        {
+            "event_id": "evt2",
+            "event_name": "UFC 1000",
+            "event_date": "December 31, 2099",
+            "event_location": "Las Vegas",
+            "event_url": "http://ufcstats.com/event-details/evt2",
+            "fight_url": UP + "moved",
+            "fighter_1": "Still On",
+            "fighter_2": "The Card",
+            "weight_class": "Lightweight",
+        }
+    ])
+    user_predictions_repository.upsert(user["id"], postponed, "Still On", None)
+
+    # (b) Event was only yesterday — results may simply not be scraped yet.
+    yesterday = (date.today() - timedelta(days=1)).strftime("%B %d, %Y")
+    user_predictions_repository.upsert(
+        user["id"], _fight(UP + "fresh", "New Guy", "Other Guy", event_date=yesterday),
+        "New Guy", None,
+    )
+
+    summary = predictions_scoring_service.score_all_pending()
+    assert summary == {"scored": 0, "voided": 0, "still_pending": 2}
+    assert user_predictions_repository.get(user["id"], UP + "moved")["status"] == "open"
+    assert user_predictions_repository.get(user["id"], UP + "fresh")["status"] == "open"
 
 
 def test_matches_across_host_and_accents(tmp_path=None):

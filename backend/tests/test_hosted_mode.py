@@ -99,6 +99,8 @@ def test_require_auth_walls_data_endpoints(tmp_path=None):
         assert client.get("/future-cards").status_code == 401
         assert client.get("/recent-cards").status_code == 401
         assert client.get("/docs").status_code == 401
+        # The schema is a recon map; the ".json" extension must not open the wall.
+        assert client.get("/openapi.json").status_code == 401
         authed = client.get("/future-cards", headers={"Authorization": f"Bearer {token}"})
         assert authed.status_code == 200
 
