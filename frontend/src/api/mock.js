@@ -1431,6 +1431,13 @@ export function getDataQualitySummary() {
   return delay({
     available: true,
     generated_at: "2026-06-26T12:00:00",
+    data_freshness: {
+      latest_event_date: "2026-06-27",
+      latest_event_name: "UFC Fight Night: Fiziev vs. Torres",
+      days_since_latest_event: 7,
+      // Relative so the demo banner always reads like a live install.
+      last_refreshed_at: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+    },
     fighters: {
       total: 2688,
       inactive_over_3_years: 1801,

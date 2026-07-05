@@ -166,6 +166,34 @@ function AuthGate() {
   return <AppShell />;
 }
 
+// "2026-06-27" -> "Jun 27, 2026" for the freshness banner.
+function formatEventDate(isoDate) {
+  const parsed = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return isoDate;
+  }
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+// Coarse "refreshed 3 hours ago" for the freshness banner.
+function relativeTime(isoDateTime) {
+  const then = new Date(isoDateTime);
+  if (Number.isNaN(then.getTime())) {
+    return null;
+  }
+  const minutes = Math.round((Date.now() - then.getTime()) / 60000);
+  if (minutes < 2) return "just now";
+  if (minutes < 60) return `${minutes} minutes ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 36) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
 function AppShell() {
   const [route, setRoute] = useState(routeFromHash);
   const [navOpen, setNavOpen] = useState(false);
@@ -455,6 +483,11 @@ function AppShell() {
                 run the frontend with <code>npm run dev:mock</code> for demo data.
               </div>
             )}
+            {/* Two different facts: "results through" = the last completed event
+                (doesn't move between fight nights); "refreshed" = when the update
+                pipeline last actually ran — the signal that data is being kept
+                current. The old banner only showed the first, which made a fresh
+                update look like nothing happened. */}
             {dataFreshness?.latest_event_date && (
               <div
                 className={`data-age-banner ${
@@ -462,12 +495,15 @@ function AppShell() {
                 }`}
               >
                 {dataFreshness.days_since_latest_event > 30 ? "⚠ " : ""}
-                Data current through {dataFreshness.latest_event_date}
-                {Number.isFinite(dataFreshness.days_since_latest_event)
-                  ? ` · ${dataFreshness.days_since_latest_event} day${
-                      dataFreshness.days_since_latest_event === 1 ? "" : "s"
-                    } ago`
-                  : ""}
+                Results through {formatEventDate(dataFreshness.latest_event_date)}
+                {dataFreshness.last_refreshed_at &&
+                relativeTime(dataFreshness.last_refreshed_at)
+                  ? ` · data refreshed ${relativeTime(dataFreshness.last_refreshed_at)}`
+                  : Number.isFinite(dataFreshness.days_since_latest_event)
+                    ? ` · ${dataFreshness.days_since_latest_event} day${
+                        dataFreshness.days_since_latest_event === 1 ? "" : "s"
+                      } ago`
+                    : ""}
                 {dataFreshness.days_since_latest_event > 30
                   ? " — open Data Ops to refresh."
                   : ""}

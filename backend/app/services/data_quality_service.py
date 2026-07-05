@@ -218,12 +218,33 @@ def summarize_historical_results(df: pd.DataFrame) -> dict[str, Any]:
     }
 
 
-def summarize_data_freshness(event_fights_df: pd.DataFrame) -> dict[str, Any]:
-    """How current is the underlying data: the most recent completed event we hold."""
+def _last_refreshed_at(saved_predictions_df: pd.DataFrame | None) -> str | None:
+    """When the update pipeline last wrote fresh snapshots. The saved_at column is
+    stamped by the local pipeline run and travels to the server inside the bundle,
+    so it works as the "data refreshed" signal in both places. Between UFC events
+    the latest-event date never moves — this is the number that shows an update
+    actually landed."""
+    if saved_predictions_df is None or saved_predictions_df.empty:
+        return None
+    if "saved_at" not in saved_predictions_df.columns:
+        return None
+    stamps = pd.to_datetime(saved_predictions_df["saved_at"], errors="coerce")
+    if stamps.notna().sum() == 0:
+        return None
+    return stamps.max().isoformat(timespec="seconds")
+
+
+def summarize_data_freshness(
+    event_fights_df: pd.DataFrame,
+    saved_predictions_df: pd.DataFrame | None = None,
+) -> dict[str, Any]:
+    """How current is the underlying data: the most recent completed event we hold,
+    plus when the update pipeline last actually ran."""
     empty = {
         "latest_event_date": None,
         "latest_event_name": None,
         "days_since_latest_event": None,
+        "last_refreshed_at": _last_refreshed_at(saved_predictions_df),
     }
 
     if event_fights_df.empty or "event_date" not in event_fights_df.columns:
@@ -246,6 +267,7 @@ def summarize_data_freshness(event_fights_df: pd.DataFrame) -> dict[str, Any]:
         "latest_event_date": latest.date().isoformat(),
         "latest_event_name": latest_name or None,
         "days_since_latest_event": days_since,
+        "last_refreshed_at": empty["last_refreshed_at"],
     }
 
 
@@ -259,7 +281,7 @@ def build_data_quality_summary() -> dict[str, Any]:
     return {
         "available": True,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
-        "data_freshness": summarize_data_freshness(event_fights_df),
+        "data_freshness": summarize_data_freshness(event_fights_df, saved_predictions_df),
         "fighters": summarize_current_fighters(current_fighters_df),
         "future_cards": summarize_future_cards(upcoming_fights_df, future_odds_df),
         "saved_predictions": summarize_saved_predictions(saved_predictions_df),
