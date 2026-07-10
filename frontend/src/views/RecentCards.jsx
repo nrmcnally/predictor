@@ -12,6 +12,7 @@ import {
   Tag,
 } from "../components/ui.jsx";
 import { clampProbability, parsePercentageText } from "../lib/format.js";
+import { marketOutlierState } from "../lib/marketOutlier.js";
 
 function fmtNum(value, digits = 3) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
@@ -548,6 +549,7 @@ export default function RecentCards() {
               <div className="fight-list">
                 {selectedCard.fights?.map((fight) => {
                   const state = fightResultState(fight);
+                  const marketOutlier = marketOutlierState(fight);
                   const expanded = expandedFightId === fight.fight_id;
                   const probability1 =
                     parsePercentageText(fight.fighter_1_percentage) ?? 0.5;
@@ -555,7 +557,9 @@ export default function RecentCards() {
                   return (
                     <div
                       key={fight.fight_id}
-                      className={`fight-row result-${state} ${expanded ? "expanded" : ""}`}
+                      className={`fight-row result-${state} ${marketOutlier} ${
+                        expanded ? "expanded" : ""
+                      }`}
                     >
                       <div
                         role="button"
@@ -615,6 +619,12 @@ export default function RecentCards() {
                                   {fight.model_quality.label}
                                 </Tag>
                               )}
+                            {marketOutlier === "market-beat" && (
+                              <Tag tone="win">Beat the market</Tag>
+                            )}
+                            {marketOutlier === "market-lost" && (
+                              <Tag tone="loss">Market won</Tag>
+                            )}
                           </div>
                         </div>
 

@@ -1761,6 +1761,22 @@ main:focus-visible {
   border-color: rgba(45, 212, 191, 0.22);
 }
 
+/* Resolved market outliers (Recent Cards): the model called it AGAINST the market
+   favorite. Green wash = the model's side won; red wash = the market was right.
+   Same gradient treatment as the amber .market-split on upcoming cards. */
+.fight-row.market-beat {
+  border-color: rgba(45, 212, 191, 0.45);
+  background:
+    linear-gradient(90deg, rgba(45, 212, 191, 0.11), transparent 38%),
+    var(--surface);
+}
+.fight-row.market-lost {
+  border-color: rgba(255, 51, 85, 0.4);
+  background:
+    linear-gradient(90deg, rgba(255, 51, 85, 0.1), transparent 38%),
+    var(--surface);
+}
+
 .market-signal {
   font-weight: 800;
 }
