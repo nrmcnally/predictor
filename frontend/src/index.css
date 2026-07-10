@@ -4487,29 +4487,76 @@ main:focus-visible {
 }
 
 .compare-fights {
-  padding: 4px 14px 12px;
+  padding: 4px 16px 14px;
 }
+/* One bout per row: matchup (avatars + clickable names) left, verdict right. */
 .compare-fight {
-  padding: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 13px 0;
   border-top: 1px solid var(--line);
 }
-.compare-fight-bout {
-  font-size: 13px;
-  margin-bottom: 6px;
+.compare-fight .fighter-matchup {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+.compare-fight-side {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.compare-winner {
+  font-size: 12.5px;
+  color: var(--dim);
+  white-space: nowrap;
 }
 .compare-fight-picks {
   display: flex;
-  gap: 16px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 .compare-pick {
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  font-size: 12.5px;
   font-weight: 600;
+  white-space: nowrap;
+}
+.compare-pick-who {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--faint);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .compare-pick.hit {
   color: var(--green);
+  border-color: rgba(45, 212, 191, 0.4);
+  background: var(--green-soft);
 }
 .compare-pick.miss {
+  color: var(--red);
+  border-color: rgba(255, 51, 85, 0.35);
+  background: var(--red-soft);
+}
+.compare-pick.hidden {
+  color: var(--dim);
+  border-style: dashed;
+}
+.compare-pick.none {
   color: var(--faint);
 }
 

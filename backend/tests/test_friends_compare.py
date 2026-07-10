@@ -78,6 +78,53 @@ def test_compare_records_shared_picks_and_card_winner(tmp_path=None):
     assert f1["their_pick"] == "Favorite" and f1["their_correct"] is False
 
 
+def test_fights_come_back_in_card_order_not_alphabetical(tmp_path=None):
+    """Fights must follow the scraped card order (main event first, like My Picks).
+    Names are chosen so alphabetical order would REVERSE the card order."""
+    from app.repositories import future_cards_repository
+
+    _use_temp_db(tmp_path or tempfile.mkdtemp())
+    a = auth_service.register_user("ada@example.com", "password123", "Ada")
+    b = auth_service.register_user("boz@example.com", "password123", "Boz")
+    _befriend(a, b)
+
+    # Completed card: results table rows are in card order — main event first.
+    event_fights_repository.replace_all([
+        _result(RES + "main", "Zed Mainman", "Yves Costar", "Zed Mainman"),
+        _result(RES + "prelim", "Aaron Opener", "Bob Undercard", "Aaron Opener"),
+    ])
+    for user in (a, b):
+        user_predictions_repository.upsert(user["id"], _fight(UP + "main", "Zed Mainman", "Yves Costar"), "Zed Mainman", None)
+        user_predictions_repository.upsert(user["id"], _fight(UP + "prelim", "Aaron Opener", "Bob Undercard"), "Aaron Opener", None)
+
+    # Upcoming card: same idea, seeded through the upcoming_fights table.
+    upcoming = [
+        {"event_id": "evt2", "event_name": "UFC 1000", "event_date": "December 31, 2099",
+         "event_location": "Vegas", "event_url": "u2",
+         "fight_url": UP + "up-main", "fighter_1": "Zola Headliner", "fighter_2": "Yuri Second",
+         "weight_class": "Lightweight"},
+        {"event_id": "evt2", "event_name": "UFC 1000", "event_date": "December 31, 2099",
+         "event_location": "Vegas", "event_url": "u2",
+         "fight_url": UP + "up-prelim", "fighter_1": "Abe Firstfight", "fighter_2": "Ben Prelim",
+         "weight_class": "Lightweight"},
+    ]
+    future_cards_repository.replace_upcoming_fights(upcoming)
+    for row in upcoming:
+        fight = {**_fight(row["fight_url"], row["fighter_1"], row["fighter_2"]),
+                 "event_id": "evt2", "event_date": "December 31, 2099"}
+        user_predictions_repository.upsert(a["id"], fight, row["fighter_1"], None)
+
+    cmp = friends_compare_service.build_compare(a["id"], b["id"])
+
+    completed = cmp["cards"][0]["fights"]
+    assert [f["fighter_1"] for f in completed] == ["Zed Mainman", "Aaron Opener"]
+
+    upcoming_card = next(c for c in cmp["upcoming"] if c["event_id"] == "evt2")
+    assert [f["fighter_1"] for f in upcoming_card["fights"]] == [
+        "Zola Headliner", "Abe Firstfight",
+    ]
+
+
 def test_only_shared_picks_count(tmp_path=None):
     _use_temp_db(tmp_path or tempfile.mkdtemp())
     a = auth_service.register_user("ada@example.com", "password123", "Ada")

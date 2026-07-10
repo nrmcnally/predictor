@@ -10,21 +10,27 @@ import {
 import { EmptyState, ErrorNote, SectionCard, StatTile, Tag } from "../components/ui.jsx";
 import { SkeletonRows } from "../components/Skeleton.jsx";
 import { UserAvatar } from "../components/UserAvatar.jsx";
+import { FighterMatchup } from "../components/FighterDisplay.jsx";
 
 function pct(value) {
   return value === null || value === undefined ? "—" : `${Math.round(value * 100)}%`;
 }
 
-function pickResult(name, correct) {
+/* One labeled pick pill: whose pick + what they picked + how it went.
+   state: hit | miss (graded) · neutral (committed) · hidden | none (upcoming) */
+function PickChip({ who, name, state }) {
   return (
-    <span className={`compare-pick ${correct ? "hit" : "miss"}`}>
-      {correct ? "✓" : "✗"} {name}
+    <span className={`compare-pick ${state}`}>
+      <span className="compare-pick-who">{who}</span>
+      {state === "hit" && "✓ "}
+      {state === "miss" && "✗ "}
+      {name}
     </span>
   );
 }
 
 export default function Friends() {
-  const { routeParam, reflectRoute } = useContext(AppContext);
+  const { routeParam, reflectRoute, imageLookup, openProfile } = useContext(AppContext);
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -115,7 +121,10 @@ export default function Friends() {
     setCompareLoading(true);
     reflectRoute?.("friends", friend.display_name);
     try {
-      setCompare(await getFriendCompare(friend.user_id));
+      const data = await getFriendCompare(friend.user_id);
+      setCompare(data);
+      // The most recent card starts expanded — one less click to the good part.
+      setOpenCard(data?.cards?.[0]?.event_id ?? "");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -259,19 +268,36 @@ export default function Friends() {
                       </div>
                       <div className="compare-fights">
                         {card.fights.map((fight, index) => (
-                          <div className="compare-fight" key={index}>
-                            <div className="compare-fight-bout">
-                              {fight.fighter_1} vs {fight.fighter_2}
-                              {fight.agree === true && <Tag tone="gold" className="lb-you">Same pick</Tag>}
-                              {fight.agree === false && <Tag tone="warn" className="lb-you">Split</Tag>}
-                            </div>
-                            <div className="compare-fight-picks">
-                              <span className="compare-pick">You: {fight.your_pick || "—"}</span>
-                              <span className="compare-pick">
-                                {compareFor.display_name}:{" "}
-                                {fight.their_pick ||
-                                  (fight.their_pick_hidden ? "🔒 pick this fight to reveal" : "—")}
-                              </span>
+                          <div className="compare-fight" key={fight.fight_key || index}>
+                            <FighterMatchup
+                              fighter1={fight.fighter_1}
+                              fighter2={fight.fighter_2}
+                              imageLookup={imageLookup}
+                              onFighterClick={openProfile}
+                            />
+                            <div className="compare-fight-side">
+                              {fight.agree === true && <Tag tone="gold">Same pick</Tag>}
+                              {fight.agree === false && <Tag tone="warn">Split</Tag>}
+                              <div className="compare-fight-picks">
+                                <PickChip
+                                  who="You"
+                                  name={fight.your_pick || "—"}
+                                  state={fight.your_pick ? "neutral" : "none"}
+                                />
+                                {fight.their_pick_hidden ? (
+                                  <PickChip
+                                    who={compareFor.display_name}
+                                    name="🔒 pick to reveal"
+                                    state="hidden"
+                                  />
+                                ) : (
+                                  <PickChip
+                                    who={compareFor.display_name}
+                                    name={fight.their_pick || "—"}
+                                    state={fight.their_pick ? "neutral" : "none"}
+                                  />
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -327,16 +353,31 @@ export default function Friends() {
                           {open && (
                             <div className="compare-fights">
                               {card.fights.map((fight, i) => (
-                                <div className="compare-fight" key={i}>
-                                  <div className="compare-fight-bout">
-                                    {fight.fighter_1} vs {fight.fighter_2}
+                                <div className="compare-fight" key={fight.fight_key || i}>
+                                  <FighterMatchup
+                                    fighter1={fight.fighter_1}
+                                    fighter2={fight.fighter_2}
+                                    imageLookup={imageLookup}
+                                    onFighterClick={openProfile}
+                                  />
+                                  <div className="compare-fight-side">
                                     {fight.actual_winner && (
-                                      <span className="muted"> · won by {fight.actual_winner}</span>
+                                      <span className="compare-winner">
+                                        won by {fight.actual_winner}
+                                      </span>
                                     )}
-                                  </div>
-                                  <div className="compare-fight-picks">
-                                    {pickResult(fight.your_pick, fight.your_correct)}
-                                    {pickResult(fight.their_pick, fight.their_correct)}
+                                    <div className="compare-fight-picks">
+                                      <PickChip
+                                        who="You"
+                                        name={fight.your_pick}
+                                        state={fight.your_correct ? "hit" : "miss"}
+                                      />
+                                      <PickChip
+                                        who={compareFor.display_name}
+                                        name={fight.their_pick}
+                                        state={fight.their_correct ? "hit" : "miss"}
+                                      />
+                                    </div>
                                   </div>
                                 </div>
                               ))}
