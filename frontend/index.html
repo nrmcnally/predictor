@@ -6,8 +6,22 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0a0d14" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0f1115" />
+    <!-- Apply the saved/system theme before first paint so light-theme users
+         don't get a dark flash. Kept in sync by useTheme after mount. -->
+    <script>
+      try {
+        var t = localStorage.getItem("fightiq_theme");
+        if (t !== "light" && t !== "dark") {
+          t = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        document.documentElement.dataset.theme = t;
+        if (t === "light") {
+          document.querySelector('meta[name="theme-color"]').content = "#f6f7f9";
+        }
+      } catch (e) {}
+    </script>
     <meta
       name="description"
       content="Fight IQ — UFC fight prediction engine with calibrated win probabilities, fighter intel, and model evaluation."

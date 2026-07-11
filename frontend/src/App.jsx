@@ -31,6 +31,7 @@ import { UserAvatar } from "./components/UserAvatar.jsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
 import { SkeletonRows } from "./components/Skeleton.jsx";
 import { useSlowHint } from "./hooks/useSlowHint.js";
+import { useTheme } from "./hooks/useTheme.js";
 import {
   IconActivity,
   IconCalendar,
@@ -42,9 +43,11 @@ import {
   IconLab,
   IconLogout,
   IconMenu,
+  IconMoon,
   IconPicks,
   IconPodium,
   IconShield,
+  IconSun,
 } from "./components/icons.jsx";
 
 const FALLBACK_WEIGHT_CLASSES = [
@@ -197,6 +200,7 @@ function relativeTime(isoDateTime) {
 function AppShell() {
   const [route, setRoute] = useState(routeFromHash);
   const [navOpen, setNavOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
   const view = route.view;
   const mainRef = useRef(null);
   const mountedRef = useRef(false);
@@ -389,6 +393,15 @@ function AppShell() {
 
           <div className="topbar-right">
             {/* Healthy = quiet (W5): pills only for states that need attention. */}
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            >
+              {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
+            </button>
             {USE_MOCK && <span className="mode-pill mock">Demo data</span>}
             {apiMode === "demo" && <span className="mode-pill mock">Sandbox DB</span>}
             {apiOnline === false && (

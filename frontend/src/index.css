@@ -4,83 +4,91 @@
    Display: Barlow Condensed · Body: Inter · Numbers: JetBrains Mono
    ============================================================ */
 
-:root {
-  /* Tokens v3 (rework P1). Semantics unchanged from v2: --action = interactive
-     (buttons/links/focus/selection); --red = NEGATIVE + brand hero only, never
-     "go"; --green is teal (colorblind-safe vs red, pair with icons); gold =
-     prestige (ratings, "you", admin); --blue = blue-corner identity, NOT
+:root,
+[data-theme="light"] .stage,
+[data-theme="light"] .login-screen {
+  /* Tokens v4 (rework P2, "Pro"): neutral charcoal, one blue accent.
+     Semantics: --action = interactive (buttons/links/focus/selection);
+     --red = NEGATIVE + brand mark only, never "go"; --green = positive
+     outcomes only (pair with icons for colorblind safety); gold = prestige
+     (top-3 ranks, "you", admin); --blue = blue-corner identity, NOT
      interactive.
      Convention: every alpha wash derives from its base hue via
-     color-mix(in srgb, var(--hue) N%, transparent) — never a raw rgba() re-mix.
-     Values below are the dark (default) theme; light lands in
-     [data-theme="light"] below. */
-  --bg0: #0a0d14;
-  --bg1: #0d1119;
-  --surface: #11151f;
-  --surface2: #181d2a;
+     color-mix(in srgb, var(--hue) N%, transparent) — never a raw rgba()
+     re-mix. Dark is the default theme; [data-theme="light"] below overrides.
+     The .stage / .login-screen selectors here re-pin the dark values inside
+     the light theme: cinematic surfaces are screens, not chrome — they stay
+     dark in both themes. */
+  --bg0: #0f1115;
+  --bg1: #131519;
+  --surface: #16181d;
+  --surface2: #1c1f26;
 
-  /* mix bases: "toward foreground / toward background" — these flip in the
-     light theme so derived tints track it */
+  /* mix bases: "toward foreground / toward background" — flip per theme so
+     derived tints track it */
   --mix-fg: #ffffff;
   --mix-bg: #000000;
 
-  --line-hue: #92a0d6;
-  --line: color-mix(in srgb, var(--line-hue) 12%, transparent);
-  --line-strong: color-mix(in srgb, var(--line-hue) 24%, transparent);
+  --line-hue: #94a3b8;
+  --line: color-mix(in srgb, var(--line-hue) 14%, transparent);
+  --line-strong: color-mix(in srgb, var(--line-hue) 26%, transparent);
 
-  --text: #f2f4fb;          /* ~15:1 on surface */
-  --dim: #a8b1cb;           /* ~7:1 on surface (was #9aa3bd) */
-  --faint: #8790ac;         /* ~4.9:1 on surface (was #6b7390 at ~3.9:1 - failed AA) */
+  --text: #e8eaed;          /* ~14:1 on surface */
+  --dim: #9ba1ab;           /* ~7:1 on surface */
+  --faint: #828a97;         /* ~5:1 on surface */
 
-  --action: #4d8dff;
-  --action-strong: #6da2ff;
+  --action: #3b82f6;
+  --action-strong: #60a5fa;
   --action-soft: color-mix(in srgb, var(--action) 14%, transparent);
-  --action-deep: #2f63d8;   /* gradient dark end of --action */
+  --action-deep: #2563eb;   /* gradient dark end of --action */
   --on-action: #ffffff;     /* text on action-filled controls, both themes */
 
-  --red: #ff3355;
+  --red: #e11d48;
   --red-soft: color-mix(in srgb, var(--red) 13%, transparent);
-  --red-text: #ff8aa0;      /* red-tinted text that stays readable on dark */
-  --red-text-soft: #ffb3c1;
-  --red-deep: #c81e3e;
-  --red-deeper: #a51635;
-  --blue: #4d8dff;
+  --red-text: #fb7185;      /* red-tinted text that stays readable on the bg */
+  --red-text-soft: #fda4af;
+  --red-deep: #be123c;
+  --red-deeper: #9f1239;
+  --blue: #3b82f6;
   --blue-soft: color-mix(in srgb, var(--blue) 13%, transparent);
-  --blue-text: #8fb4ff;
-  --blue-text-dim: #7ba4ff;
-  --blue-deep: #2456c4;
-  --blue-deeper: #1d4dbd;
-  --accent-gold: #f5c451;
+  --blue-text: #93c5fd;
+  --blue-text-dim: #7fb0f9;
+  --blue-deep: #1d4ed8;
+  --blue-deeper: #1e40af;
+  --accent-gold: #eab308;
   --gold-soft: color-mix(in srgb, var(--accent-gold) 12%, transparent);
-  --gold-bright: #ffd97a;
-  --gold-deep: #c79428;
-  --gold-hot: #ffb020;      /* streak/fire accents */
-  --on-gold: #1a1206;       /* text on gold-filled controls */
-  --green: #2dd4bf;
+  --gold-bright: #facc15;
+  --gold-deep: #a16207;
+  --gold-hot: #f59e0b;      /* streak/fire accents */
+  --on-gold: #1c1400;       /* text on gold-filled controls */
+  --green: #4ade80;
   --green-soft: color-mix(in srgb, var(--green) 13%, transparent);
-  --amber: #fba94c;
+  --amber: #fbbf24;
   --amber-soft: color-mix(in srgb, var(--amber) 12%, transparent);
-  --amber-text: #ffcf8a;
-  --violet: #8b7cf6;
+  --amber-text: #fde68a;
+  --violet: #8b5cf6;
   --violet-soft: color-mix(in srgb, var(--violet) 14%, transparent);
-  --violet-deep: #6354c9;
+  --violet-deep: #6d28d9;
 
-  --glow-blue: #3d7bff;     /* decorative backdrop glows only */
+  --glow-blue: #3b82f6;     /* decorative backdrop glows only */
   --slate: #94a3b8;
-  --medal-silver: #c4cbe0;
-  --medal-bronze: #d39a6a;
-  --scrollbar-thumb: #232a3f;
+  --medal-silver: #cbd5e1;
+  --medal-bronze: #c08457;
+  --scrollbar-thumb: #2a2e36;
 
-  /* ink ladder: near-black washes and gradient stops, darkest first */
-  --ink0: #04060c;
-  --ink1: #05060a;
-  --ink2: #06070c;
-  --ink3: #080a10;
-  --ink4: #0a0c13;
-  --ink5: #0b0e17;
-  --ink6: #0c0f18;
-  --ink7: #0e111a;
-  --ink8: #131726;
+  /* ink ladder: near-black washes and gradient stops, darkest first.
+     Light theme flips these to near-white so UI washes (topbar glass, input
+     fields, subcards) track the theme; the dark-island selectors above keep
+     them dark on cinematic surfaces. */
+  --ink0: #050608;
+  --ink1: #060709;
+  --ink2: #08090b;
+  --ink3: #0b0c10;
+  --ink4: #0e0f13;
+  --ink5: #111318;
+  --ink6: #14151a;
+  --ink7: #16181d;
+  --ink8: #1c1f26;
 
   --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -88,13 +96,76 @@
 
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  /* re-resolve inherited text color where this rule re-pins tokens (the dark
+     islands inherit body's already-computed light color otherwise) */
+  color: var(--text);
 
   color-scheme: dark;
 }
 
-/* Light theme lands in P2 of the rework: token values flip here, nothing else. */
 [data-theme="light"] {
+  --bg0: #f6f7f9;
+  --bg1: #eef0f3;
+  --surface: #ffffff;
+  --surface2: #f3f5f7;
+
+  --mix-fg: #000000;
+  --mix-bg: #ffffff;
+
+  --line-hue: #64748b;
+  --line: color-mix(in srgb, var(--line-hue) 24%, transparent);
+  --line-strong: color-mix(in srgb, var(--line-hue) 40%, transparent);
+
+  --text: #14181f;
+  --dim: #4b5563;
+  --faint: #667085;
+
+  --action: #2563eb;
+  --action-strong: #1d4ed8;
+  --action-deep: #1e40af;
+
+  --red: #dc2626;
+  --red-text: #b91c1c;
+  --red-text-soft: #dc2626;
+  --red-deep: #991b1b;
+  --red-deeper: #7f1d1d;
+  --blue: #2563eb;
+  --blue-text: #1d4ed8;
+  --blue-text-dim: #1e40af;
+  --blue-deep: #1e3a8a;
+  --blue-deeper: #172554;
+  --accent-gold: #a16207;
+  --gold-bright: #ca8a04;
+  --gold-deep: #854d0e;
+  --gold-hot: #b45309;
+  --on-gold: #fefce8;
+  --green: #15803d;
+  --amber: #c2410c;
+  --amber-text: #9a3412;
+  --violet: #6d28d9;
+  --violet-deep: #5b21b6;
+
+  --glow-blue: #2563eb;
+  --slate: #64748b;
+  --medal-silver: #94a3b8;
+  --medal-bronze: #a05e2c;
+  --scrollbar-thumb: #cbd5e1;
+
+  --ink0: #ffffff;
+  --ink1: #fdfdfe;
+  --ink2: #fbfcfd;
+  --ink3: #f8f9fb;
+  --ink4: #f4f6f8;
+  --ink5: #f0f2f5;
+  --ink6: #eceff3;
+  --ink7: #e8ebf0;
+  --ink8: #e2e6ec;
+
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+
+  color-scheme: light;
 }
 
 * {
@@ -108,10 +179,7 @@ body {
 }
 
 body {
-  background:
-    radial-gradient(1100px 500px at 12% -10%, color-mix(in srgb, var(--red) 7%, transparent), transparent 60%),
-    radial-gradient(1100px 520px at 88% -12%, color-mix(in srgb, var(--glow-blue) 8%, transparent), transparent 60%),
-    var(--bg0);
+  background: var(--bg0);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 14.5px;
@@ -132,7 +200,7 @@ p {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--red) 35%, transparent);
+  background: color-mix(in srgb, var(--action) 30%, transparent);
 }
 
 ::-webkit-scrollbar {
@@ -226,6 +294,24 @@ main:focus-visible {
   font-size: 16px;
   padding: 6px 10px;
   cursor: pointer;
+}
+
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
 }
 
 .brand-mark {
