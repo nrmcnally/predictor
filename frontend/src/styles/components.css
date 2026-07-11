@@ -28,7 +28,7 @@
 .modal-title {
   margin: 0 0 10px;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: var(--fs-title-sm);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.03em;
