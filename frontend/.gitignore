@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# UI rework computed-style baseline (local artifact)
+ui-baseline*.json
