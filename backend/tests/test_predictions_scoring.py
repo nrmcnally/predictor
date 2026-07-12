@@ -235,6 +235,41 @@ def test_matches_across_host_and_accents(tmp_path=None):
     assert p["status"] == "scored" and p["result_correct"] == 1 and p["method_correct"] == 1
 
 
+def test_nan_result_cells_do_not_crash_grading():
+    """Regression (2026-07-11 auto-update crash): a mid-scrape partial result row
+    (NULL method) reaches grading as float NaN through the results DataFrame.
+    Winner is posted, so the winner grades; no method pick means method is None."""
+    nan = float("nan")
+    pick = {"picked_fighter": "Ada", "fighter_1": "Ada", "fighter_2": "Boz",
+            "picked_method": None}
+    result = {"fighter_1": "Ada", "fighter_2": "Boz", "winner": "Ada", "method": nan}
+    assert predictions_scoring_service.grade_pick(pick, result) == (True, None)
+
+
+def test_nan_method_with_method_pick_leaves_method_ungraded():
+    """A method pick against a result whose method cell is still empty must not be
+    graded as a miss on missing data — winner grades, method stays None."""
+    nan = float("nan")
+    pick = {"picked_fighter": "Ada", "fighter_1": "Ada", "fighter_2": "Boz",
+            "picked_method": "ko_tko"}
+    result = {"fighter_1": "Ada", "fighter_2": "Boz", "winner": "Ada", "method": nan}
+    assert predictions_scoring_service.grade_pick(pick, result) == (True, None)
+
+
+def test_draw_with_nan_winner_voids():
+    """A draw row has a real method but a NULL winner. _norm used to stringify NaN
+    to the truthy "nan", grading the pick as a miss instead of voiding it."""
+    nan = float("nan")
+    pick = {"picked_fighter": "Ada", "fighter_1": "Ada", "fighter_2": "Boz",
+            "picked_method": None}
+    result = {"fighter_1": "Ada", "fighter_2": "Boz", "winner": nan, "method": "M-DEC"}
+    assert predictions_scoring_service.grade_pick(pick, result) is None
+
+
+def test_method_bucket_nan_safe():
+    assert predictions_scoring_service.method_bucket(float("nan")) is None
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import unicodedata
 from datetime import date
 from typing import Any
@@ -32,9 +33,18 @@ def _fight_key(url: str | None) -> str:
     return (url or "").rstrip("/").split("/")[-1]
 
 
+def _clean_str(value: Any) -> str:
+    """Stripped string, treating None AND pandas NaN as missing. Result rows come
+    through a DataFrame, where a NULL cell is a float NaN — which is truthy, so a
+    plain `(value or "")` lets it straight through to .strip()."""
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return ""
+    return str(value).strip()
+
+
 def _norm(name: Any) -> str:
     """Accent- and case-insensitive name key (UFCStats spells names a few ways)."""
-    text = unicodedata.normalize("NFKD", str(name or ""))
+    text = unicodedata.normalize("NFKD", _clean_str(name))
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
     return " ".join(text.split()).casefold()
 
@@ -42,7 +52,7 @@ def _norm(name: Any) -> str:
 def method_bucket(method: str | None) -> str | None:
     """Map a result's method string onto the coarse pick buckets, or None if it isn't
     one of them (DQ, no-contest, etc.)."""
-    value = (method or "").strip().upper()
+    value = _clean_str(method).upper()
     if not value:
         return None
     if value.startswith("KO/TKO"):
@@ -67,7 +77,7 @@ def grade_pick(
     if picked not in result_fighters or snapshot != result_fighters:
         return None
 
-    method = (result.get("method") or "").strip().upper()
+    method = _clean_str(result.get("method")).upper()
     winner = _norm(result.get("winner"))
     if method in _NO_RESULT_METHODS or not winner:
         return None  # draw / no-contest / overturned — no gradable winner
@@ -76,8 +86,14 @@ def grade_pick(
 
     method_correct: bool | None = None
     if pick.get("picked_method"):
-        bucket = method_bucket(result.get("method"))
-        method_correct = bucket is not None and bucket == pick["picked_method"]
+        if not method:
+            # Winner is posted but the method cell is still empty (mid-scrape
+            # partial results): grade the winner, leave the method ungraded
+            # rather than calling it a miss on missing data.
+            method_correct = None
+        else:
+            bucket = method_bucket(result.get("method"))
+            method_correct = bucket is not None and bucket == pick["picked_method"]
 
     return result_correct, method_correct
 
