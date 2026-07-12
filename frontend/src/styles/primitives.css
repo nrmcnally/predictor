@@ -42,6 +42,32 @@
   background: color-mix(in srgb, var(--ink8) 50%, transparent);
 }
 
+/* tile: solid list-item surface at the small radius; tile-lg the same at
+   the large radius. The extra selectors are pre-existing variants
+   consolidated onto the pattern (rework P4b) — new JSX should just use
+   .tile / .tile-lg. */
+.tile,
+.calibration-row,
+.prediction-item,
+.ranking-card,
+.method-summary-col,
+.history-row,
+.edge-row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.tile-lg,
+.event-item,
+.fight-row,
+.leaderboard-row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+
 .mini-heading {
   font-size: var(--fs-md);
   font-weight: 600;

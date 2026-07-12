@@ -79,9 +79,6 @@
 
 .calibration-row {
   padding: 12px 15px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
 }
 
 .calibration-head {
@@ -106,10 +103,7 @@
   justify-content: space-between;
   gap: 14px;
   padding: 10px 14px;
-  border: 1px solid var(--line);
   border-left: 3px solid var(--faint);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
   font-size: var(--fs-sm);
 }
 

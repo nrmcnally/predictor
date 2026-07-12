@@ -321,9 +321,6 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
 }
 
 .edge-label {

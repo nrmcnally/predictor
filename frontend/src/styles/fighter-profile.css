@@ -94,9 +94,6 @@
 
 .ranking-card {
   padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
 }
 
 .ranking-category {
@@ -137,10 +134,7 @@
 }
 
 .method-summary-col {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
   padding: 12px 15px;
-  background: var(--surface);
 }
 
 .kv-grid {
@@ -175,9 +169,6 @@
   gap: 14px;
   align-items: center;
   padding: 12px 15px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
 }
 
 .history-meta {
