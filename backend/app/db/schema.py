@@ -176,6 +176,15 @@ FUTURE_FIGHT_ODDS_COLUMNS: list[tuple[str, str]] = [
     ("market_favorite", "TEXT"),
     ("market_favorite_probability", "REAL"),
     ("market_favorite_percentage", "TEXT"),
+    # Rounds totals (over/under) market — comparison-only, like h2h.
+    ("rounds_line", "REAL"),
+    ("over_odds_american", "REAL"),
+    ("under_odds_american", "REAL"),
+    ("over_market_probability", "REAL"),
+    ("under_market_probability", "REAL"),
+    ("over_market_percentage", "TEXT"),
+    ("under_market_percentage", "TEXT"),
+    ("totals_bookmakers_matched", "INTEGER"),
 ]
 
 

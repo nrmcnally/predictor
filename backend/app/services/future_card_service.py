@@ -13,6 +13,7 @@ from app.services.fight_context_override_service import (
     upsert_scheduled_rounds_override,
 )
 from app.services.event_lock_service import build_event_lock_state
+from app.services.method_prediction_service import predict_method_data
 from app.services.prediction_service import FighterNotFoundError, predict_fight_data
 from app.repositories import future_cards_repository
 
@@ -180,6 +181,28 @@ def get_future_card(event_id: str) -> dict[str, Any]:
     }
 
 
+def _model_distance_probability(
+    fighter_1: str, fighter_2: str, weight_class: str
+) -> float | None:
+    """P(fight goes the distance) = the broad method model's Decision probability.
+    Comparison-only context for the rounds O/U market; never a pick input.
+    Returns None when the method model can't cover the matchup."""
+    try:
+        payload = predict_method_data(
+            fighter_a=fighter_1,
+            fighter_b=fighter_2,
+            weight_class=weight_class,
+        )
+    except Exception:
+        return None
+
+    for row in payload.get("broad_method_probabilities", []):
+        if clean_text(row.get("label", "")).lower() == "decision":
+            probability = row.get("probability")
+            return float(probability) if probability is not None else None
+    return None
+
+
 def get_future_card_predictions(event_id: str) -> dict[str, Any]:
     card = get_future_card(event_id)
 
@@ -198,11 +221,21 @@ def get_future_card_predictions(event_id: str) -> dict[str, Any]:
                 fight_context=fight.get("fight_context"),
             )
 
+            distance_probability = _model_distance_probability(
+                fighter_1, fighter_2, weight_class
+            )
+
             predicted_fights.append(
                 {
                     **fight,
                     "prediction_available": True,
                     "prediction": prediction,
+                    "model_distance_probability": distance_probability,
+                    "model_distance_percentage": (
+                        f"{distance_probability * 100.0:.1f}%"
+                        if distance_probability is not None
+                        else ""
+                    ),
                     "error": None,
                 }
             )

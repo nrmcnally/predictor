@@ -230,6 +230,18 @@ function OddsLine({ fight, odds }) {
         {fight.fighter_2}: {formatAmericanOdds(odds.fighter_2_odds_american)} ·{" "}
         {odds.fighter_2_market_percentage || "N/A"}
       </span>
+      {odds.rounds_line !== "" && odds.rounds_line != null && (
+        <span>
+          Rounds O/U <strong>{odds.rounds_line}</strong>: Ov{" "}
+          {odds.over_market_percentage || "N/A"} / Un{" "}
+          {odds.under_market_percentage || "N/A"}
+        </span>
+      )}
+      {fight.model_distance_percentage && (
+        <span>
+          Model distance: <strong>{fight.model_distance_percentage}</strong>
+        </span>
+      )}
       {odds.odds_bookmaker && (
         <span className="muted">
           {odds.odds_bookmaker}

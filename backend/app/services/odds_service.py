@@ -121,12 +121,14 @@ def get_api_key(api_key: str | None = None) -> str:
 def fetch_current_mma_odds(api_key: str | None = None) -> list[dict[str, Any]]:
     key = get_api_key(api_key)
 
+    # NOTE: quota — the-odds-api bills usage as markets x regions per request,
+    # so h2h,totals costs 2 credits per call instead of 1.
     response = requests.get(
         ODDS_API_URL,
         params={
             "apiKey": key,
             "regions": "us",
-            "markets": "h2h",
+            "markets": "h2h,totals",
             "oddsFormat": "american",
             "dateFormat": "iso",
         },
@@ -146,8 +148,9 @@ def fetch_current_mma_odds(api_key: str | None = None) -> list[dict[str, Any]]:
         "fetched_at": datetime.now().isoformat(timespec="seconds"),
         "source": "the-odds-api",
         "sport_key": "mma_mixed_martial_arts",
-        "markets": "h2h",
+        "markets": "h2h,totals",
         "odds_format": "american",
+        "requests_remaining": response.headers.get("x-requests-remaining"),
         "data": data,
     }
 
@@ -188,6 +191,86 @@ def extract_h2h_market(bookmaker: dict[str, Any]) -> dict[str, Any] | None:
             return market
 
     return None
+
+
+def get_bookmaker_totals(bookmaker: dict[str, Any]) -> dict[str, Any] | None:
+    """One bookmaker's rounds over/under: the line plus no-vig probabilities.
+    Returns None when the book doesn't quote totals for this event."""
+    market = None
+    for candidate in bookmaker.get("markets", []):
+        if candidate.get("key") == "totals":
+            market = candidate
+            break
+
+    if not market:
+        return None
+
+    over = under = None
+    for outcome in market.get("outcomes", []):
+        name = clean_text(outcome.get("name", "")).lower()
+        if name == "over":
+            over = outcome
+        elif name == "under":
+            under = outcome
+
+    if not over or not under:
+        return None
+
+    line = over.get("point", under.get("point"))
+    try:
+        line = float(line)
+    except (TypeError, ValueError):
+        return None
+
+    over_implied = american_to_implied_probability(over.get("price"))
+    under_implied = american_to_implied_probability(under.get("price"))
+
+    if over_implied is None or under_implied is None:
+        return None
+
+    total_implied = over_implied + under_implied
+    if total_implied <= 0:
+        return None
+
+    return {
+        "bookmaker_key": clean_text(bookmaker.get("key", "")),
+        "bookmaker_title": clean_text(bookmaker.get("title", "")),
+        "rounds_line": line,
+        "over_odds_american": over.get("price"),
+        "under_odds_american": under.get("price"),
+        "over_market_probability": over_implied / total_implied,
+        "under_market_probability": under_implied / total_implied,
+    }
+
+
+def aggregate_totals(bookmakers: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Consensus rounds O/U across an event's bookmakers: books quote different
+    lines (2.5 vs 1.5), so pick the most common line and average the no-vig
+    probabilities of only the books quoting it."""
+    quotes = [q for q in (get_bookmaker_totals(b) for b in bookmakers) if q]
+    if not quotes:
+        return None
+
+    line_counts: dict[float, int] = {}
+    for quote in quotes:
+        line_counts[quote["rounds_line"]] = line_counts.get(quote["rounds_line"], 0) + 1
+    consensus_line = max(line_counts, key=lambda line: (line_counts[line], -line))
+
+    at_line = [q for q in quotes if q["rounds_line"] == consensus_line]
+    over_probability = sum(q["over_market_probability"] for q in at_line) / len(at_line)
+    under_probability = sum(q["under_market_probability"] for q in at_line) / len(at_line)
+    representative = choose_representative_bookmaker(at_line)
+
+    return {
+        "rounds_line": consensus_line,
+        "over_odds_american": representative.get("over_odds_american"),
+        "under_odds_american": representative.get("under_odds_american"),
+        "over_market_probability": over_probability,
+        "under_market_probability": under_probability,
+        "over_market_percentage": format_percent(over_probability),
+        "under_market_percentage": format_percent(under_probability),
+        "totals_bookmakers_matched": len(at_line),
+    }
 
 
 def choose_representative_bookmaker(matches: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -347,6 +430,14 @@ def build_odds_row_for_fight(
         "market_favorite": "",
         "market_favorite_probability": None,
         "market_favorite_percentage": "",
+        "rounds_line": None,
+        "over_odds_american": None,
+        "under_odds_american": None,
+        "over_market_probability": None,
+        "under_market_probability": None,
+        "over_market_percentage": "",
+        "under_market_percentage": "",
+        "totals_bookmakers_matched": 0,
     }
 
     if not best_event:
@@ -388,8 +479,11 @@ def build_odds_row_for_fight(
         market_favorite = fighter_2
         market_favorite_probability = fighter_2_market_probability
 
+    totals = aggregate_totals(best_event.get("bookmakers", [])) or {}
+
     return {
         **base_row,
+        **totals,
         "odds_available": True,
         "odds_event_id": clean_text(best_event.get("id", "")),
         "odds_commence_time": clean_text(best_event.get("commence_time", "")),

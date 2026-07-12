@@ -587,7 +587,16 @@ export async function getFutureCardPredictions(eventId) {
 
       const prediction = await predictFight(fighter1, fighter2, weightClass);
 
-      return { ...base, prediction_available: true, prediction };
+      // P(goes the distance) — mirrors the live endpoint's method-model derived field.
+      const distanceProbability = 0.28 + hashString(`${fighter1}-distance`) * 0.5;
+
+      return {
+        ...base,
+        prediction_available: true,
+        prediction,
+        model_distance_probability: distanceProbability,
+        model_distance_percentage: percent(distanceProbability),
+      };
     })
   );
 
@@ -974,6 +983,14 @@ export function getFutureFightOdds() {
         fighter_2_market_percentage: percent(favorite1 ? 1 - probability : probability),
         odds_bookmaker: "Consensus (no-vig)",
         bookmakers_matched: 6,
+        rounds_line: index === 0 ? 4.5 : 2.5,
+        over_odds_american: -130,
+        under_odds_american: +105,
+        over_market_probability: 0.5 + seed * 0.14,
+        under_market_probability: 0.5 - seed * 0.14,
+        over_market_percentage: percent(0.5 + seed * 0.14),
+        under_market_percentage: percent(0.5 - seed * 0.14),
+        totals_bookmakers_matched: 4,
       });
     });
   }
