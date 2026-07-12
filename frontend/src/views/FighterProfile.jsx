@@ -28,7 +28,7 @@ const HERO_STAT_KEYS = new Set([
   "age_years",
 ]);
 
-function buildProfileSummary(profile = {}, headline = {}, styleProfile = {}) {
+function buildProfileSummary(profile = {}, styleProfile = {}) {
   const form = profile.form_summary || {};
   const recentResults = Array.isArray(form.recent_results)
     ? form.recent_results.map((result) => result?.[0]?.toUpperCase() || "?").join(" ")
@@ -114,7 +114,7 @@ export default function FighterProfile() {
   const styleProfile = profile?.style_profile ?? {};
   const methodSummary = profile?.method_summary ?? {};
   const profileSummary = profile
-    ? buildProfileSummary(profile, headline, styleProfile)
+    ? buildProfileSummary(profile, styleProfile)
     : [];
 
   return (
