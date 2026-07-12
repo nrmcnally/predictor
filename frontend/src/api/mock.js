@@ -1601,7 +1601,15 @@ export function getLatestUpdateReport() {
                 best_model_name: "calibrated_xgboost",
                 best_model_metrics: { accuracy: 0.643, brier_score: 0.2216 },
               }
-            : { rows_processed: 120 + index * 48 },
+            : name === "Add newly completed fights"
+              ? {
+                  rows_processed: 168,
+                  incomplete_result_rows_written: 3,
+                  validation_warnings: [
+                    "UFC Fight Night: Fiziev vs. Torres: 3 of 12 results still posting (missing winner/method) — will re-scrape next run.",
+                  ],
+                }
+              : { rows_processed: 120 + index * 48 },
       })),
     },
   });

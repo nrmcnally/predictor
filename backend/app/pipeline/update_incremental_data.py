@@ -30,6 +30,7 @@ from app.services.saved_prediction_service import (
     SAVED_MODEL_PREDICTIONS_CSV,
 )
 
+from app.services.data_validation_service import validate_scraped_event_fights
 from app.repositories import (
     event_fights_repository,
     future_cards_repository,
@@ -421,6 +422,8 @@ def update_event_fights_incrementally_stage() -> dict[str, Any]:
     print(f"Events needing fight-list scrape: {len(events_to_scrape_df)}")
 
     refreshed_event_urls: set[str] = set()
+    validation_warnings: list[str] = []
+    incomplete_result_rows = 0
 
     for index, event in events_to_scrape_df.iterrows():
         event_name = clean_text(event["name"])
@@ -440,8 +443,24 @@ def update_event_fights_incrementally_stage() -> dict[str, Any]:
 
         print(f"    Found {len(fights)} fights.")
 
-        for fight in fights:
-            new_fight_rows.append(asdict(fight))
+        fight_rows = [asdict(fight) for fight in fights]
+
+        # Data-contract L2: structural problems abort BEFORE anything is
+        # written; incomplete results are recorded and written as-is (the
+        # incomplete-results re-scrape completes them next run).
+        report = validate_scraped_event_fights(fight_rows, event_name)
+        if not report.ok:
+            details = "\n  ".join(report.failures)
+            raise RuntimeError(
+                f"Scrape validation failed for {event_name} — the parser "
+                f"output is structurally broken, not writing it:\n  {details}"
+            )
+        for warning in report.warnings:
+            print(f"    WARNING: {warning}")
+        validation_warnings.extend(report.warnings)
+        incomplete_result_rows += report.incomplete_rows
+
+        new_fight_rows.extend(fight_rows)
 
         time.sleep(0.25)
 
@@ -483,6 +502,8 @@ def update_event_fights_incrementally_stage() -> dict[str, Any]:
         "events_needing_scrape": int(len(events_to_scrape_df)),
         "new_event_fights": int(len(new_fights_df)),
         "total_event_fights": int(len(combined_fights_df)),
+        "incomplete_result_rows_written": incomplete_result_rows,
+        "validation_warnings": validation_warnings,
         "output_file": str(EVENT_FIGHTS_CSV),
     }
 

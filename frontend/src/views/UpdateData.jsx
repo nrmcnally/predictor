@@ -334,23 +334,40 @@ export default function UpdateData() {
                   <span>{group.stages.length} stages</span>
                 </header>
                 <div className="stage-list">
-                  {group.stages.map((stage) => (
-                    <div className="stage-row" key={stage.name}>
-                      <Tag
-                        tone={
-                          String(stage.status || "").toLowerCase().includes("fail")
-                            ? "loss"
-                            : "win"
-                        }
-                      >
-                        {stage.status || "done"}
-                      </Tag>
-                      <span className="stage-name">{stage.name}</span>
-                      <span className="muted mono">
-                        {formatDuration(stage.duration_seconds)}
-                      </span>
-                    </div>
-                  ))}
+                  {group.stages.map((stage) => {
+                    const warnings = Array.isArray(stage.details?.validation_warnings)
+                      ? stage.details.validation_warnings
+                      : [];
+                    return (
+                      <div className="stage-block" key={stage.name}>
+                        <div className="stage-row">
+                          <Tag
+                            tone={
+                              String(stage.status || "").toLowerCase().includes("fail")
+                                ? "loss"
+                                : warnings.length > 0
+                                  ? "warn"
+                                  : "win"
+                            }
+                          >
+                            {stage.status || "done"}
+                          </Tag>
+                          <span className="stage-name">{stage.name}</span>
+                          <span className="muted mono">
+                            {formatDuration(stage.duration_seconds)}
+                          </span>
+                        </div>
+                        {/* Data-quality warnings (e.g. "results still posting")
+                            surface here so a quiet site update has a visible
+                            explanation. */}
+                        {warnings.map((warning) => (
+                          <p className="dim-note stage-warning" key={warning}>
+                            {warning}
+                          </p>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             ))}
