@@ -2438,186 +2438,7 @@ main:focus-visible {
 .stage-row:last-child { border-bottom: none; }
 .stage-name { flex: 1; }
 
-/* ---------- 3d lab ---------- */
-
-.prototype-tabs.segmented {
-  display: flex;
-  flex-wrap: wrap;
-  width: fit-content;
-  max-width: 100%;
-}
-
-.prototype-tabs.segmented button {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  white-space: nowrap;
-}
-
-.prototype-tabs.segmented button small {
-  color: var(--faint);
-  font-size: var(--fs-2xs);
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.prototype-tabs.segmented button.active small {
-  color: var(--text);
-}
-
-.prototype-tabs.segmented button.status-parked:not(.active) {
-  opacity: 0.72;
-}
-
-.prototype-tabs.segmented button.status-support.active {
-  box-shadow: inset 0 -2px 0 var(--accent-gold);
-}
-
-.prototype-tabs.segmented button.status-parked.active {
-  box-shadow: inset 0 -2px 0 var(--amber);
-}
-
-.prototype-stage-head .tag-row {
-  justify-content: flex-end;
-  margin-top: 0;
-}
-
-.hybrid-scoreboard,
-.corner-card,
-.board-legend,
-.board-inspector {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--ink3) 82%, transparent);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(8px);
-}
-
-.hybrid-scoreboard span,
-.corner-card span,
-.evidence-card span,
-.board-fight-card span,
-.board-inspector span {
-  display: block;
-  color: var(--faint);
-  font-size: var(--fs-2xs);
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.hybrid-scoreboard em,
-.corner-card em,
-.evidence-card em,
-.board-fight-card em {
-  display: block;
-  margin-top: 4px;
-  color: var(--dim);
-  font-style: normal;
-  font-size: var(--fs-sm);
-}
-
-.corner-card {
-  position: absolute;
-  top: 112px;
-  z-index: 3;
-  width: min(230px, 28%);
-  padding: 12px 14px;
-}
-
-.corner-card strong {
-  display: block;
-  margin-top: 4px;
-  color: var(--text);
-  font-size: var(--fs-md);
-}
-
-.corner-card-red {
-  left: 18px;
-  border-top: 2px solid var(--red);
-}
-
-.corner-card-blue {
-  right: 18px;
-  border-top: 2px solid var(--blue);
-}
-
-.evidence-card.active,
-.board-fight-card.active {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--accent-gold) 55%, transparent);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent-gold) 8%, transparent), transparent),
-    var(--surface);
-}
-
-.evidence-card.tone-red.active { border-color: color-mix(in srgb, var(--red) 60%, transparent); }
-.evidence-card.tone-green.active { border-color: color-mix(in srgb, var(--green) 55%, transparent); }
-.evidence-card.tone-blue.active { border-color: color-mix(in srgb, var(--glow-blue) 58%, transparent); }
-.evidence-card.tone-amber.active { border-color: color-mix(in srgb, var(--amber) 58%, transparent); }
-
-.fighter-preview-card.red {
-  border-left: 2px solid var(--red);
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--red) 12%, transparent), transparent 55%),
-    color-mix(in srgb, var(--ink4) 82%, transparent);
-}
-
-.fighter-preview-card.blue {
-  border-left: 2px solid var(--blue);
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--glow-blue) 12%, transparent), transparent 55%),
-    color-mix(in srgb, var(--ink4) 82%, transparent);
-}
-
 /* ---------- test lab ---------- */
-
-.test-prototype-tabs button.active {
-  color: var(--text);
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--red) 18%, transparent), transparent 78%),
-    color-mix(in srgb, var(--ink8) 70%, transparent);
-  box-shadow: inset 0 -3px 0 var(--red);
-}
-
-.reveal-scenario-picker button.active {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--accent-gold) 55%, transparent);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent-gold) 8%, transparent), transparent),
-    color-mix(in srgb, var(--ink3) 82%, transparent);
-}
-
-.reveal-scenario-picker button.active em {
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--accent-gold) 38%, transparent);
-  background: color-mix(in srgb, var(--accent-gold) 8%, transparent);
-}
-
-.reveal-fighter .avatar {
-  flex: 0 0 64px;
-}
-
-.reveal-fighter.red {
-  left: 20px;
-  border-left: 2px solid var(--red);
-}
-
-.reveal-fighter.blue {
-  right: 20px;
-  border-left: 2px solid var(--blue);
-}
-
-.phase-lock .reveal-fighter.red { transform: translate(22px, 48px) scale(0.94); }
-.phase-lock .reveal-fighter.blue { transform: translate(-22px, 48px) scale(0.94); }
-.phase-scan .reveal-fighter.red,
-.phase-evidence-0 .reveal-fighter.red,
-.phase-evidence-1 .reveal-fighter.red,
-.phase-evidence-2 .reveal-fighter.red { transform: translate(34px, 82px) scale(0.9); }
-.phase-scan .reveal-fighter.blue,
-.phase-evidence-0 .reveal-fighter.blue,
-.phase-evidence-1 .reveal-fighter.blue,
-.phase-evidence-2 .reveal-fighter.blue { transform: translate(-34px, 82px) scale(0.9); }
 
 .result-card-fighter .avatar {
   flex: 0 0 64px;
@@ -2627,41 +2448,6 @@ main:focus-visible {
   color: var(--accent-gold);
   border-color: color-mix(in srgb, var(--accent-gold) 42%, transparent);
   background: var(--gold-soft);
-}
-
-.reveal-evidence-card.active {
-  transform: translateY(-2px);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent-gold) 8%, transparent), transparent),
-    color-mix(in srgb, var(--ink3) 86%, transparent);
-}
-
-.reveal-evidence-card.tone-red.active { border-color: color-mix(in srgb, var(--red) 60%, transparent); }
-.reveal-evidence-card.tone-green.active { border-color: color-mix(in srgb, var(--green) 55%, transparent); }
-.reveal-evidence-card.tone-amber.active { border-color: color-mix(in srgb, var(--amber) 58%, transparent); }
-
-.deck-card.active {
-  border-color: color-mix(in srgb, var(--accent-gold) 58%, transparent);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
-}
-
-.deck-card.tone-split.active { border-color: color-mix(in srgb, var(--amber) 65%, transparent); }
-.deck-card.tone-high.active,
-.deck-card.tone-strong.active { border-color: color-mix(in srgb, var(--green) 55%, transparent); }
-
-.deck-index-row button.active {
-  border-color: var(--accent-gold);
-  background: var(--accent-gold);
-}
-
-.lens-fighter-card.red {
-  left: 22px;
-  border-left: 2px solid var(--red);
-}
-
-.lens-fighter-card.blue {
-  right: 22px;
-  border-left: 2px solid var(--blue);
 }
 
 .evidence-lens-grid button.active {
@@ -2701,21 +2487,6 @@ main:focus-visible {
   .profile-hero-actions { flex-direction: row; }
   .method-summary-grid { grid-template-columns: 1fr; }
   .history-row { grid-template-columns: 1fr; gap: 6px; }
-  .prototype-stage-head .tag-row { justify-content: flex-start; }
-  .hybrid-scoreboard,
-  .corner-card,
-  .board-legend,
-  .board-card-row {
-    position: static;
-    transform: none;
-    width: auto;
-    margin: 10px;
-  }
-  .corner-card {
-    display: inline-block;
-    width: calc(50% - 16px);
-    vertical-align: top;
-  }
 }
 
 @media (max-width: 1000px) {
@@ -2756,30 +2527,6 @@ main:focus-visible {
   .kv-grid { grid-template-columns: 1fr; }
   .fight-row-main { flex-direction: column; align-items: flex-start; gap: 10px; }
   .fight-row-pick { align-items: flex-start; text-align: left; }
-  .prototype-tabs.segmented { width: 100%; }
-  .prototype-tabs.segmented button { flex: 1 1 130px; }
-  .corner-card {
-    display: block;
-    width: auto;
-  }
-}
-
-@media (max-width: 1200px) {
-
-  .phase-scan .reveal-fighter.red,
-  .phase-scan .reveal-fighter.blue,
-  .phase-lock .reveal-fighter.red,
-  .phase-lock .reveal-fighter.blue,
-  .phase-evidence-0 .reveal-fighter.red,
-  .phase-evidence-0 .reveal-fighter.blue,
-  .phase-evidence-1 .reveal-fighter.red,
-  .phase-evidence-1 .reveal-fighter.blue,
-  .phase-evidence-2 .reveal-fighter.red,
-  .phase-evidence-2 .reveal-fighter.blue,
-  .phase-result .reveal-fighter {
-    transform: none;
-  }
-
 }
 
 /* ---------- my picks (account-based predictions) ---------- */
