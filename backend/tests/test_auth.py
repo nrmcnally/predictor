@@ -158,16 +158,17 @@ def test_legacy_token_without_pwd_claim_rejected(tmp_path=None):
 
 # --- profile visibility -------------------------------------------------------
 
-def test_visibility_defaults_private_and_toggles(tmp_path=None):
+def test_visibility_defaults_public_and_toggles(tmp_path=None):
+    # Opt-out model (2026-07-13): new accounts are public; the toggle hides them.
     tmp = tmp_path or tempfile.mkdtemp()
     _use_temp_db(tmp)
 
     user = auth_service.register_user("erin@example.com", "password123")
-    assert user["is_public"] is False
+    assert user["is_public"] is True
 
-    auth_service.set_visibility(user["id"], True)
+    auth_service.set_visibility(user["id"], False)
     refreshed = users_repository.public_user(users_repository.get_by_id(user["id"]))
-    assert refreshed["is_public"] is True
+    assert refreshed["is_public"] is False
 
 
 # --- update profile -----------------------------------------------------------

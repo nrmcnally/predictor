@@ -24,8 +24,8 @@ def create_user(
         schema.init_db(conn)
         try:
             cursor = conn.execute(
-                "INSERT INTO users (email, display_name, password_hash, role, created_at) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO users (email, display_name, password_hash, role, "
+                "is_public, created_at) VALUES (?, ?, ?, ?, 1, ?)",
                 (email, display_name, password_hash, role, _now()),
             )
         except sqlite3.IntegrityError as error:

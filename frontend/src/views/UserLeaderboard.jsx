@@ -39,7 +39,7 @@ function recordText(row) {
 
 function rankSummary(row) {
   if (!row) {
-    return "Turn on your public profile and make picks to appear here.";
+    return "Make picks to appear here (profiles are public by default; check yours in Profile).";
   }
 
   if (!row.provisional) {
@@ -64,7 +64,7 @@ function emptyMessage(scope, timeWindow) {
   if (timeWindow !== "all_time") {
     return "No public users have scored picks in this window yet.";
   }
-  return "Make your profile public and start picking to appear here.";
+  return "Nobody has scored picks yet — they land here once results are graded. (Hidden profiles can re-enable visibility in Profile.)";
 }
 
 function viewDescription(scope, timeWindow) {
@@ -73,7 +73,7 @@ function viewDescription(scope, timeWindow) {
       ? "Accepted friends plus you."
       : scope === "me"
         ? "Only your scored picks."
-        : "Public opt-in users only.";
+        : "Public profiles only (on by default; opt out in Profile).";
   const windowText =
     timeWindow === "last5"
       ? "Filtered to the latest five scored cards in this view."

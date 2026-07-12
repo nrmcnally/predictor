@@ -310,7 +310,7 @@ SCHEMA_STATEMENTS: list[str] = [
         display_name TEXT,
         password_hash TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'user',
-        is_public INTEGER NOT NULL DEFAULT 0,
+        is_public INTEGER NOT NULL DEFAULT 1,
         created_at TEXT
     )
     """,
@@ -372,7 +372,7 @@ def _migrate_users_to_email(conn: sqlite3.Connection) -> None:
             display_name TEXT,
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'user',
-            is_public INTEGER NOT NULL DEFAULT 0,
+            is_public INTEGER NOT NULL DEFAULT 1,
             created_at TEXT
         )
         """
@@ -438,10 +438,18 @@ def init_db(conn: sqlite3.Connection) -> None:
     _ensure_columns(
         conn,
         "users",
-        {"is_public": "INTEGER NOT NULL DEFAULT 0", "last_login_at": "TEXT"},
+        {"is_public": "INTEGER NOT NULL DEFAULT 1", "last_login_at": "TEXT"},
     )
     for table, columns in _SPEC_TABLES:
         _ensure_columns(conn, table, {name: sql_type for name, sql_type in columns})
+
+    # One-shot (PRAGMA user_version) migrations. v1: leaderboard visibility became
+    # opt-out (2026-07-13) — flip everyone who registered under the opt-in default.
+    # Runs once per database; anyone who opts out afterwards stays out.
+    version = conn.execute("PRAGMA user_version").fetchone()[0]
+    if version < 1:
+        conn.execute("UPDATE users SET is_public = 1")
+        conn.execute("PRAGMA user_version = 1")
 
     # Display name is the unique username (case-insensitive): de-dupe then enforce.
     _ensure_unique_display_names(conn)

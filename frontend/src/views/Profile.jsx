@@ -322,8 +322,8 @@ export default function Profile() {
             <div className="profile-toggle-label">{isPublic ? "Public" : "Private"}</div>
             <div className="muted">
               {isPublic
-                ? "You can appear on leaderboards and be compared by friends."
-                : "Hidden from leaderboards and comparisons (opt-in any time)."}
+                ? "You appear on public leaderboards (display name only — never your email)."
+                : "Hidden from public leaderboards. Friends still see you in friend scopes."}
             </div>
           </div>
           <button

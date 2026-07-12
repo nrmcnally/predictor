@@ -69,9 +69,8 @@ def test_leaderboard_only_public_ranked_by_rating(tmp_path=None):
     pub_a = auth_service.register_user("a@example.com", "password123", "Ada")
     pub_b = auth_service.register_user("b@example.com", "password123", "Boz")
     priv = auth_service.register_user("c@example.com", "password123", "Cyd")
-    auth_service.set_visibility(pub_a["id"], True)
-    auth_service.set_visibility(pub_b["id"], True)
-    # priv stays private (default).
+    # Public is the default (opt-out model); Cyd deliberately hides.
+    auth_service.set_visibility(priv["id"], False)
 
     event_fights_repository.replace_all([
         _result(RES + "f1", "Underdog", "Favorite", "Underdog", "KO/TKO"),
@@ -193,8 +192,9 @@ def test_event_leaderboard_scores_one_card_without_email_leakage(tmp_path=None):
     me = auth_service.register_user("me-card@example.com", "password123", "MeCard")
     friend = auth_service.register_user("friend-card@example.com", "password123", "CardFriend")
     stranger = auth_service.register_user("stranger-card@example.com", "password123", "CardStranger")
-    auth_service.set_visibility(me["id"], True)
-    auth_service.set_visibility(stranger["id"], True)
+    # Public is the default; CardFriend opts out to prove hidden users stay
+    # off the overall board while remaining visible in friend scopes.
+    auth_service.set_visibility(friend["id"], False)
 
     friends_service.send_friend_request(me["id"], "CardFriend")
     request_id = friends_service.get_overview(friend["id"])["incoming"][0]["friendship_id"]
