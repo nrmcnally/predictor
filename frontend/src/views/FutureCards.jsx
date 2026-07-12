@@ -543,7 +543,7 @@ export default function FutureCards() {
       <header className="view-head">
         <div>
           <p className="eyebrow">Upcoming schedule</p>
-          <h1 className="view-title">Future Cards</h1>
+          <h1 className="view-title">Future cards</h1>
         </div>
         <button
           type="button"

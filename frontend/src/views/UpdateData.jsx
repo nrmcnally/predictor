@@ -178,7 +178,7 @@ export default function UpdateData() {
       <header className="view-head">
         <div>
           <p className="eyebrow">Data operations</p>
-          <h1 className="view-title">Data Ops</h1>
+          <h1 className="view-title">Data ops</h1>
         </div>
 
         <button

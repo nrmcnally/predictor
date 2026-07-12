@@ -94,7 +94,7 @@ export default function UsersAdmin() {
     <div className="view">
       <header>
         <p className="eyebrow">Admin</p>
-        <h1 className="view-title">Users</h1>
+        <h1 className="view-title">User admin</h1>
       </header>
 
       <ErrorNote message={error} />

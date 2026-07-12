@@ -409,7 +409,7 @@ export default function RecentCards() {
       <header className="view-head">
         <div>
           <p className="eyebrow">Prediction tracking</p>
-          <h1 className="view-title">Recent Cards</h1>
+          <h1 className="view-title">Recent cards</h1>
         </div>
         {currentModel?.model_version && (
           <Tag tone="neutral">

@@ -66,24 +66,24 @@ const NAV_GROUPS = [
   {
     label: "Play",
     items: [
-      { value: "picks", label: "My Picks", icon: IconPicks },
+      { value: "picks", label: "My picks", icon: IconPicks },
       { value: "friends", label: "Friends", icon: IconFriends },
     ],
   },
   {
     label: "Explore",
     items: [
-      { value: "lab", label: "Fight Lab", icon: IconLab },
+      { value: "lab", label: "Fight lab", icon: IconLab },
       { value: "fighters", label: "Fighters", icon: IconFighter },
-      { value: "future", label: "Future Cards", icon: IconCalendar },
-      { value: "recent", label: "Recent Cards", icon: IconHistory },
+      { value: "future", label: "Future cards", icon: IconCalendar },
+      { value: "recent", label: "Recent cards", icon: IconHistory },
     ],
   },
   {
     label: "Standings",
     items: [
-      { value: "user-leaderboard", label: "User Leaderboard", icon: IconPodium },
-      { value: "leaderboards", label: "Fighter Rankings", icon: IconCrown },
+      { value: "user-leaderboard", label: "User leaderboard", icon: IconPodium },
+      { value: "leaderboards", label: "Fighter rankings", icon: IconCrown },
     ],
   },
 ];
@@ -94,8 +94,8 @@ const ADMIN_NAV_GROUP = {
   label: "Admin",
   items: [
     { value: "evaluation", label: "Evaluation", icon: IconActivity },
-    { value: "users", label: "User Admin", icon: IconShield },
-    { value: "update", label: "Data Ops", icon: IconDatabase },
+    { value: "users", label: "User admin", icon: IconShield },
+    { value: "update", label: "Data ops", icon: IconDatabase },
   ],
 };
 

@@ -103,7 +103,7 @@ export default function UserLeaderboard() {
       <header className="view-head">
         <div>
           <p className="eyebrow">User predictions</p>
-          <h1 className="view-title">User Leaderboard</h1>
+          <h1 className="view-title">User leaderboard</h1>
         </div>
       </header>
 

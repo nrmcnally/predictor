@@ -88,7 +88,7 @@ export default function Leaderboards() {
       <header className="view-head">
         <div>
           <p className="eyebrow">Fighter rankings</p>
-          <h1 className="view-title">Leaderboards</h1>
+          <h1 className="view-title">Fighter rankings</h1>
         </div>
       </header>
 
