@@ -10,7 +10,7 @@ import {
   savePrediction,
   deletePrediction,
 } from "../api/client.js";
-import { EmptyState, ErrorNote, SectionCard, StatTile, Tag } from "../components/ui.jsx";
+import { EmptyState, ErrorNote, SectionCard, Tag } from "../components/ui.jsx";
 import { SkeletonRows } from "../components/Skeleton.jsx";
 import { FighterName } from "../components/FighterDisplay.jsx";
 import { LeaderboardRow } from "../components/LeaderboardRow.jsx";
@@ -159,19 +159,6 @@ function progressTone(progress, locked) {
   return "warn";
 }
 
-function lockLabel(card) {
-  const state = card?.lock_state;
-  if (!state) {
-    return isCardLocked(card) ? "Locked" : "Open";
-  }
-  if (!state.locked) {
-    return state.effective_start_at_utc ? "Open until start" : "Open";
-  }
-  if (state.lock_reason === "force_locked") return "Locked by admin";
-  if (state.lock_reason === "event_start_at_utc") return "Event started";
-  return "Locked";
-}
-
 function fightKey(url) {
   return String(url || "").replace(/\/+$/, "").split("/").pop();
 }
@@ -215,6 +202,9 @@ export default function MyPicks() {
   const [cardLeaderboard, setCardLeaderboard] = useState([]);
   const [leaderboardScope, setLeaderboardScope] = useState("friends");
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  // "fights" | "standings" — the two halves of the card detail; standings
+  // only fetches once its tab is opened.
+  const [detailTab, setDetailTab] = useState("fights");
   const [error, setError] = useState("");
   const [busyFight, setBusyFight] = useState("");
 
@@ -304,7 +294,7 @@ export default function MyPicks() {
   }, [selectedId]);
 
   useEffect(() => {
-    if (!selectedId) return undefined;
+    if (!selectedId || detailTab !== "standings") return undefined;
     let active = true;
 
     Promise.resolve()
@@ -325,7 +315,7 @@ export default function MyPicks() {
     return () => {
       active = false;
     };
-  }, [selectedId, leaderboardScope]);
+  }, [selectedId, leaderboardScope, detailTab]);
 
   const locked = detail ? isCardLocked(detail) : false;
 
@@ -341,20 +331,6 @@ export default function MyPicks() {
     }
     return byEvent;
   }, [cards, allPicks]);
-
-  const selectedCard = useMemo(
-    () => cards.find((card) => card.event_id === selectedId) || detail,
-    [cards, detail, selectedId]
-  );
-
-  const selectedProgress = detail
-    ? {
-        total: detail.fights.length,
-        picked: pickedCount,
-        missing: Math.max(0, detail.fights.length - pickedCount),
-        complete: detail.fights.length > 0 && pickedCount >= detail.fights.length,
-      }
-    : progressByEvent[selectedId] || { total: 0, picked: 0, missing: 0, complete: false };
 
   const openCards = useMemo(
     () => cards.filter((card) => !isCardLocked(card)),
@@ -444,7 +420,7 @@ export default function MyPicks() {
     <div className="view">
       <header>
         <p className="eyebrow">Beat the engine</p>
-        <h1 className="view-title">My Picks</h1>
+        <h1 className="view-title">My picks</h1>
       </header>
 
       {showIntro && (
@@ -467,39 +443,33 @@ export default function MyPicks() {
         <EmptyState title="No upcoming cards" message="Check back once the schedule is scraped." />
       )}
 
+      {/* One-line queue summary; the per-card detail lives on the cards
+          themselves (the old 4-tile dashboard repeated both). */}
       {cards.length > 0 && (
-        <SectionCard
-          eyebrow="Pick queue"
-          title="Upcoming cards"
-          description={
-            nextNeedsPick
-              ? `${nextNeedsPick.event_name} is the next card in your queue.`
-              : "No open cards need attention right now."
-          }
-          className="pick-dashboard-card"
-        >
-          <div className="tile-row four">
-            <StatTile
-              label="Selected"
-              value={`${selectedProgress.picked}/${selectedProgress.total}`}
-              hint={locked ? "locked" : selectedProgress.complete ? "ready" : "picked"}
-              tone={progressTone(selectedProgress, locked)}
-            />
-            <StatTile
-              label="Need picks"
-              value={missingOpenPicks}
-              hint="open fights"
-              tone={missingOpenPicks > 0 ? "warn" : "win"}
-            />
-            <StatTile label="Open cards" value={openCards.length} hint="editable" />
-            <StatTile
-              label="Lock state"
-              value={lockLabel(selectedCard)}
-              hint={selectedCard?.event_date}
-              tone={locked ? "neutral" : "gold"}
-            />
-          </div>
-        </SectionCard>
+        <div className="pick-queue-strip">
+          <span>
+            <strong>{openCards.length}</strong> open card{openCards.length === 1 ? "" : "s"}
+          </span>
+          <span className="strip-sep" aria-hidden="true">·</span>
+          <span className={missingOpenPicks > 0 ? "strip-warn" : ""}>
+            <strong>{missingOpenPicks}</strong> pick{missingOpenPicks === 1 ? "" : "s"} needed
+          </span>
+          {nextNeedsPick && missingOpenPicks > 0 && (
+            <>
+              <span className="strip-sep" aria-hidden="true">·</span>
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => {
+                  setSelectedId(nextNeedsPick.event_id);
+                  reflectRoute?.("picks", nextNeedsPick.event_id);
+                }}
+              >
+                next: {nextNeedsPick.event_name}
+              </button>
+            </>
+          )}
+        </div>
       )}
 
       {cards.length > 0 && (
@@ -542,6 +512,25 @@ export default function MyPicks() {
             {detailLoading && <SkeletonRows rows={5} height={128} />}
 
             {!detailLoading && detail && (
+              <div className="segmented event-detail-tabs" aria-label="Card detail">
+                {[
+                  { value: "fights", label: "Fights" },
+                  { value: "standings", label: "Standings" },
+                ].map((tab) => (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    className={detailTab === tab.value ? "active" : ""}
+                    aria-pressed={detailTab === tab.value}
+                    onClick={() => setDetailTab(tab.value)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!detailLoading && detail && detailTab === "fights" && (
               <SectionCard
                 eyebrow={detail.event_date}
                 title={detail.event_name}
@@ -551,16 +540,6 @@ export default function MyPicks() {
                     : `Tap a fighter to pick the winner. ${pickedCount}/${detail.fights.length} picked.`
                 }
               >
-                <div className="pick-card-status">
-                  <Tag tone={progressTone(selectedProgress, locked)}>
-                    {selectedProgress.picked}/{selectedProgress.total} picked
-                  </Tag>
-                  <Tag tone={locked ? "neutral" : "gold"}>{lockLabel(detail)}</Tag>
-                  {!locked && selectedProgress.missing > 0 && (
-                    <Tag tone="warn">{selectedProgress.missing} still open</Tag>
-                  )}
-                  {!locked && selectedProgress.complete && <Tag tone="win">Card ready</Tag>}
-                </div>
                 <div className="fight-list pick-fight-list">
                   {detail.fights.map((fight) => {
                     const pick = picks[fight.fight_url];
@@ -681,7 +660,7 @@ export default function MyPicks() {
               </SectionCard>
             )}
 
-            {!detailLoading && detail && (
+            {!detailLoading && detail && detailTab === "standings" && (
               <SectionCard
                 eyebrow="Card standings"
                 title="Per-card leaderboard"
@@ -762,12 +741,13 @@ export default function MyPicks() {
       )}
 
       {trackedPicks.length > 0 && (
-        <SectionCard
-          eyebrow="Pick tracker"
-          title="Locked & resolved picks"
-          description="Locked picks are waiting for results. Scored and void picks update once official results are in."
-          className="pick-history-card"
-        >
+        <details className="card pick-history-card pick-history-disclosure">
+          <summary>
+            <span className="card-title">Locked &amp; resolved picks ({trackedPicks.length})</span>
+            <span className="dim-note">
+              Locked picks await results; scored and void picks update once official results are in.
+            </span>
+          </summary>
           <div className="pick-history-list">
             {trackedPicks.map((pick) => {
               const status = pickStatusInfo(pick, pick.locked, false);
@@ -817,7 +797,7 @@ export default function MyPicks() {
               );
             })}
           </div>
-        </SectionCard>
+        </details>
       )}
     </div>
   );

@@ -353,3 +353,66 @@
     padding-inline: 10px;
   }
 }
+
+/* ---------- P5 de-cram: queue strip, detail tabs, collapsed tracker ---------- */
+
+.pick-queue-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--dim);
+  font-size: var(--fs-sm);
+}
+
+.pick-queue-strip strong {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.pick-queue-strip .strip-sep {
+  color: var(--faint);
+}
+
+.pick-queue-strip .strip-warn strong {
+  color: var(--amber);
+}
+
+.event-detail-tabs {
+  align-self: flex-start;
+}
+
+.pick-history-disclosure summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2) var(--sp-3);
+  list-style: none;
+}
+
+.pick-history-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.pick-history-disclosure summary::before {
+  content: "▸";
+  color: var(--faint);
+  font-size: var(--fs-sm);
+}
+
+.pick-history-disclosure[open] summary::before {
+  content: "▾";
+}
+
+.pick-history-disclosure summary .dim-note {
+  margin-top: 0;
+}
+
+.pick-history-disclosure[open] summary {
+  margin-bottom: var(--sp-3);
+}
