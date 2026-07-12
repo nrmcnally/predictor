@@ -1,0 +1,225 @@
+/* ---------- events (future / recent) ---------- */
+
+.cards-layout {
+  display: grid;
+  grid-template-columns: 316px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  top: 76px;
+}
+
+.event-filter.segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  background: color-mix(in srgb, var(--ink3) 55%, transparent);
+}
+
+.event-filter.segmented button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.event-filter.segmented span {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--faint);
+}
+
+.event-filter.segmented button.active span {
+  color: var(--text);
+}
+
+.event-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--dim);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.event-item strong {
+  color: var(--text);
+  font-size: var(--fs-md);
+  line-height: 1.3;
+}
+
+.event-item .tag { margin-top: 7px; width: fit-content; }
+.event-item .tag-row { margin-top: 7px; }
+
+.event-item:hover { border-color: var(--line-strong); }
+
+.event-item.active {
+  border-color: color-mix(in srgb, var(--action) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--action) 8%, transparent), var(--surface));
+}
+
+.event-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.fight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fight-row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.fight-row.has-prediction:hover { border-color: var(--line-strong); }
+.fight-row.expanded { border-color: color-mix(in srgb, var(--accent-gold) 40%, transparent); }
+
+.fight-row.result-correct { border-left: 3px solid var(--green); }
+.fight-row.result-incorrect { border-left: 3px solid var(--red); }
+.fight-row.result-waiting { border-left: 3px solid var(--faint); }
+.fight-row.result-no-prediction { border-left: 3px solid var(--line-strong); }
+.fight-row.no-prediction { opacity: 0.75; }
+.fight-row.market-split {
+  border-color: color-mix(in srgb, var(--amber) 45%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 9%, transparent), transparent 38%),
+    var(--surface);
+}
+
+.fight-row.market-agrees {
+  border-color: color-mix(in srgb, var(--green) 22%, transparent);
+}
+
+/* Resolved market outliers (Recent Cards): the model called it AGAINST the market
+   favorite. Green wash = the model's side won; red wash = the market was right.
+   Same gradient treatment as the amber .market-split on upcoming cards. */
+.fight-row.market-beat {
+  border-color: color-mix(in srgb, var(--green) 45%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--green) 11%, transparent), transparent 38%),
+    var(--surface);
+}
+.fight-row.market-lost {
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--red) 10%, transparent), transparent 38%),
+    var(--surface);
+}
+
+.market-signal {
+  font-weight: 800;
+}
+
+.fight-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.fight-row-main[role="button"] { cursor: pointer; }
+
+.fight-row-left {
+  min-width: 0;
+}
+
+.fight-row-left .tag-row { margin-top: 8px; }
+
+.fight-row-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.pick-label {
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.fight-row-pick strong {
+  font-size: var(--fs-md);
+  color: var(--accent-gold);
+}
+
+.fight-row-pick.none .pick-label { color: var(--red); }
+
+.pick-confidence {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--dim);
+}
+
+.actual-result {
+  font-size: var(--fs-sm);
+  color: var(--dim);
+  margin-top: 4px;
+}
+
+.actual-result strong { color: var(--text); }
+
+.odds-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding: 8px 18px 12px;
+  border-top: 1px dashed var(--line);
+  font-size: var(--fs-sm);
+  color: var(--dim);
+}
+
+.odds-line strong { color: var(--text); }
+.odds-line.muted { color: var(--faint); }
+
+.fight-row-detail {
+  padding: 16px 18px 20px;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--ink3) 50%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fight-row-detail .card {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.note-card { padding: 14px 18px; }
+.note-card .dim-note { margin-top: 0; }

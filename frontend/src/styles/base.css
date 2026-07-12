@@ -1,0 +1,88 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg0);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--action) 30%, transparent);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 99px;
+  border: 2px solid var(--bg0);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- focus system (W4) ----------
+   One ring everywhere: keyboard focus is obvious, mouse clicks stay quiet.
+   Never suppress outline on individual controls — this pair is the policy. */
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--action-strong);
+  outline-offset: 2px;
+}
+
+/* The main landmark takes programmatic focus on tab change; a ring around the
+   entire content area is noise, not signal. */
+main:focus-visible {
+  outline: none;
+}
+
+/* Hidden until keyboard-focused; first tab stop on the page. */
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 300;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--action);
+  color: var(--on-action);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  transform: translateY(-250%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}

@@ -1,0 +1,70 @@
+/* ---------- responsive ---------- */
+
+@media (max-width: 1460px) {
+  .tile-row.six { grid-template-columns: repeat(3, 1fr); }
+  .tile-row.five { grid-template-columns: repeat(3, 1fr); }
+  .calibration-list { grid-template-columns: 1fr; }
+  .results-grid { grid-template-columns: 1fr; }
+  .insight-columns { grid-template-columns: 1fr; }
+  .profile-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .leaderboard-row { grid-template-columns: 48px 1fr auto; }
+  .leaderboard-stats { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+@media (max-width: 1200px) {
+  .cards-layout { grid-template-columns: 1fr; }
+  .event-list { position: static; flex-direction: row; overflow-x: auto; padding-bottom: 6px; }
+  .event-filter.segmented { min-width: 270px; }
+  .event-item { min-width: 230px; }
+  .two-col { grid-template-columns: 1fr; }
+  .quality-grid { grid-template-columns: 1fr; }
+  .method-grid { grid-template-columns: 1fr; }
+  .stage-form { grid-template-columns: 1fr; }
+  .stage-center { order: 3; }
+  .stage-title { font-size: 46px; }
+  .matchup-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .profile-hero { flex-direction: column; align-items: flex-start; }
+  .profile-hero-actions { flex-direction: row; }
+  .method-summary-grid { grid-template-columns: 1fr; }
+  .history-row { grid-template-columns: 1fr; gap: 6px; }
+}
+
+@media (max-width: 1000px) {
+  .nav-toggle { display: inline-flex; }
+
+  .sidebar {
+    position: fixed;
+    top: 57px;
+    left: 0;
+    bottom: 0;
+    z-index: 70;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    background: var(--bg1);
+    height: auto;
+  }
+
+  .sidebar.open { transform: none; }
+
+  .nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 57px 0 0 0;
+    z-index: 65;
+    border: none;
+    background: rgba(0, 0, 0, 0.55);
+    cursor: pointer;
+  }
+
+  .main-content { padding: 18px 16px 60px; }
+  .tile-row.three, .tile-row.four, .tile-row.five, .tile-row.six { grid-template-columns: repeat(2, 1fr); }
+  .stage-content { padding: 26px 18px 22px; }
+  .stage.stage-compact .stage-content { padding: 22px 16px 20px; }
+  .stage.stage-compact .stage-title { font-size: 38px; }
+  .matchup-strip { grid-template-columns: 1fr; }
+  .profile-summary { grid-template-columns: 1fr; }
+  .profile-search { min-width: 0; flex-basis: 100%; }
+  .kv-grid { grid-template-columns: 1fr; }
+  .fight-row-main { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .fight-row-pick { align-items: flex-start; text-align: left; }
+}

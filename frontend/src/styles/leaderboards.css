@@ -1,0 +1,207 @@
+/* ---------- leaderboards ---------- */
+
+.controls-card { padding: 16px 18px; }
+
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.control label {
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.control.small input { width: 110px; }
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.segmented button {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--dim);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.segmented button.active {
+  background: var(--red-soft);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--red);
+}
+
+.round-toggle.segmented {
+  height: 24px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ink3) 50%, transparent);
+}
+
+.round-toggle.segmented button {
+  min-width: 32px;
+  padding: 0 8px;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+}
+
+.round-toggle.segmented button:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.round-toggle.segmented button.active {
+  background: var(--gold-soft);
+  color: var(--accent-gold);
+  box-shadow: inset 0 -2px 0 var(--accent-gold);
+}
+
+.event-control-card {
+  padding: 16px 18px;
+}
+
+.event-control-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.event-control-grid div,
+.event-time-input {
+  display: grid;
+  gap: 4px;
+}
+
+.event-control-grid span,
+.event-time-input span {
+  color: var(--faint);
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.event-control-grid strong {
+  color: var(--text);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+
+.event-control-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.event-time-input input {
+  min-height: 36px;
+  min-width: 210px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--ink3) 58%, transparent);
+  color: var(--text);
+  padding: 8px 10px;
+  font-family: var(--font-body);
+}
+
+.lock-mode-control {
+  height: 36px;
+}
+
+@media (max-width: 860px) {
+  .event-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-control-form,
+  .event-time-input,
+  .event-time-input input,
+  .lock-mode-control {
+    width: 100%;
+  }
+
+  .lock-mode-control button {
+    flex: 1 1 0;
+  }
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 64px 1.4fr auto 2fr;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.rank-medal {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: var(--fs-title-md);
+  color: var(--faint);
+  text-align: center;
+}
+
+.leaderboard-row.podium-1 { border-color: color-mix(in srgb, var(--accent-gold) 45%, transparent); }
+.leaderboard-row.podium-1 .rank-medal { color: var(--accent-gold); }
+.leaderboard-row.podium-2 .rank-medal { color: var(--medal-silver); }
+.leaderboard-row.podium-3 .rank-medal { color: var(--medal-bronze); }
+
+.leaderboard-fighter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--fs-md);
+}
+
+.leaderboard-fighter .muted { font-size: var(--fs-sm); }
+
+.leaderboard-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+}
+
+.leaderboard-score strong { font-size: var(--fs-lg); }
+
+.leaderboard-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}

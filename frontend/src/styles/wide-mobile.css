@@ -1,0 +1,50 @@
+/* ---------- W1: wide screens actually use the width ---------- */
+
+@media (min-width: 1500px) {
+  .cards-layout {
+    grid-template-columns: 340px 1fr;
+    gap: 26px;
+  }
+  /* My Picks: two fights side by side; separators become cards */
+  .pick-fight-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .pick-fight-list .pick-fight,
+  .pick-fight-list .pick-fight:last-child {
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg1);
+  }
+  .view { gap: 22px; }
+}
+
+/* ---------- W3: mobile ---------- */
+
+@media (max-width: 640px) {
+  /* Status pills are developer jargon and overflow a phone topbar - the user
+     chip + brand are what matter. (W5 hides healthy pills everywhere.) */
+  .mode-pill { display: none; }
+  .user-chip .user-name {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Admin tables read as horizontal scrollers on phones. */
+  .data-table { display: block; overflow-x: auto; }
+}
+
+/* Touch targets: fingers, not cursors. */
+@media (pointer: coarse) {
+  .btn,
+  .nav-item,
+  .login-enter { min-height: 44px; }
+  .chip,
+  .pick-method,
+  .pick-clear { min-height: 38px; padding-top: 8px; padding-bottom: 8px; }
+  .user-logout { width: 32px; height: 32px; }
+}
