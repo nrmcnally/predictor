@@ -18,6 +18,16 @@ function methodSummaryTotal(summary = {}) {
   return Object.values(summary).reduce((total, value) => total + Number(value || 0), 0);
 }
 
+// Already shown in the hero tile row — hide from the stat snapshot.
+const HERO_STAT_KEYS = new Set([
+  "prior_elo",
+  "prior_peak_elo",
+  "prior_win_rate",
+  "height_inches",
+  "reach_inches",
+  "age_years",
+]);
+
 function buildProfileSummary(profile = {}, headline = {}, styleProfile = {}) {
   const form = profile.form_summary || {};
   const recentResults = Array.isArray(form.recent_results)
@@ -33,10 +43,8 @@ function buildProfileSummary(profile = {}, headline = {}, styleProfile = {}) {
     {
       label: "Style read",
       value: styleProfile.style_label || "Style unknown",
-      note:
-        styleProfile.note ||
-        styleProfile.tags?.slice(0, 3).join(" / ") ||
-        "Style profile is still building.",
+      // the full styleProfile.note already renders in the hero — tags only here
+      note: styleProfile.tags?.slice(0, 3).join(" / ") || "Style profile is still building.",
     },
     {
       label: "Current form",
@@ -54,7 +62,8 @@ function buildProfileSummary(profile = {}, headline = {}, styleProfile = {}) {
     },
     {
       label: "Model context",
-      value: headline.elo_formatted || "No Elo",
+      // Elo already headlines the stat tiles; lead with the standout ranking
+      value: topRanking ? `#${topRanking.rank} ${topRanking.category}` : "Unranked",
       note: topRanking?.description || "No top ranking flags among qualified fighters.",
     },
   ];
@@ -235,7 +244,7 @@ export default function FighterProfile() {
             <SectionCard
               eyebrow="Approach"
               title="Style scores"
-              description="Heuristic, data-derived from each fighter's striking / grappling / defense stats — not official UFC style labels."
+              description="Heuristic scores derived from striking / grappling / defense stats."
             >
               <div className="tile-row three">
                 <StatTile
@@ -250,11 +259,6 @@ export default function FighterProfile() {
                   label="Defense"
                   value={styleProfile.score_percentages?.defense}
                 />
-              </div>
-              <div className="tag-row">
-                {styleProfile.tags?.map((tag) => (
-                  <Tag key={tag}>{tag}</Tag>
-                ))}
               </div>
             </SectionCard>
           </div>
@@ -314,13 +318,15 @@ export default function FighterProfile() {
 
           <SectionCard eyebrow="Numbers" title="Stat snapshot">
             <div className="tile-row wrap">
-              {profile.profile_stats?.map((stat) => (
-                <StatTile
-                  key={stat.key}
-                  label={formatStatLabel(stat.key)}
-                  value={stat.formatted_value}
-                />
-              ))}
+              {profile.profile_stats
+                ?.filter((stat) => !HERO_STAT_KEYS.has(stat.key))
+                .map((stat) => (
+                  <StatTile
+                    key={stat.key}
+                    label={formatStatLabel(stat.key)}
+                    value={stat.formatted_value}
+                  />
+                ))}
             </div>
           </SectionCard>
 
