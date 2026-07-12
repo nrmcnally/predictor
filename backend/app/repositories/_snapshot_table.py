@@ -6,6 +6,7 @@ from typing import Any
 import pandas as pd
 
 from app.db import connection, schema
+from app.db.frame_contract import normalize_frame
 
 # Shared repository for a wide "replace-by-event_id" prediction-snapshot table
 # (typed columns from a canonical spec). Used by both saved_card_predictions and
@@ -15,6 +16,7 @@ from app.db import connection, schema
 class SnapshotTable:
     def __init__(self, table_name: str, columns: list[tuple[str, str]]):
         self.table = table_name
+        self.columns_spec = list(columns)
         self.column_names = [name for name, _ in columns]
         self.column_types = dict(columns)
 
@@ -62,7 +64,8 @@ class SnapshotTable:
         if not rows:
             return pd.DataFrame(columns=self.column_names)
 
-        return pd.DataFrame([dict(row) for row in rows], columns=self.column_names)
+        df = pd.DataFrame([dict(row) for row in rows], columns=self.column_names)
+        return normalize_frame(df, self.columns_spec)
 
     def replace_card(self, event_id: str, rows: list[dict[str, Any]]) -> int:
         """Atomically replace all rows for one event (delete + insert in one txn)."""

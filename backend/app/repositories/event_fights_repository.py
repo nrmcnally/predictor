@@ -6,6 +6,7 @@ from typing import Any
 import pandas as pd
 
 from app.db import connection, schema
+from app.db.frame_contract import normalize_frame
 
 COLUMN_NAMES = [name for name, _ in schema.EVENT_FIGHTS_COLUMNS]
 COLUMN_TYPES = dict(schema.EVENT_FIGHTS_COLUMNS)
@@ -47,7 +48,8 @@ def read_all_df() -> pd.DataFrame:
     if not rows:
         return pd.DataFrame(columns=COLUMN_NAMES)
 
-    return pd.DataFrame([dict(row) for row in rows], columns=COLUMN_NAMES)
+    df = pd.DataFrame([dict(row) for row in rows], columns=COLUMN_NAMES)
+    return normalize_frame(df, schema.EVENT_FIGHTS_COLUMNS)
 
 
 def replace_all(rows: list[dict[str, Any]]) -> int:

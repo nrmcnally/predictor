@@ -6,9 +6,25 @@ from typing import Any
 import pandas as pd
 
 from app.db import connection, schema
+from app.db.frame_contract import normalize_frame
 
 # Column order mirrors the legacy fight_odds_track.csv so existing consumers
 # (clv_evaluation_service) see an identical DataFrame shape.
+# Typed spec mirroring the fight_odds_track CREATE TABLE in schema.py; feeds
+# the frame contract on read.
+TRACK_COLUMNS_SPEC: list[tuple[str, str]] = [
+    ("fight_url", "TEXT"),
+    ("fighter_1", "TEXT"),
+    ("fighter_2", "TEXT"),
+    ("opening_fighter_1_probability", "REAL"),
+    ("opening_fighter_2_probability", "REAL"),
+    ("opening_captured_at", "TEXT"),
+    ("closing_fighter_1_probability", "REAL"),
+    ("closing_fighter_2_probability", "REAL"),
+    ("closing_captured_at", "TEXT"),
+    ("capture_count", "INTEGER"),
+]
+
 TRACK_COLUMNS = [
     "fight_url",
     "fighter_1",
@@ -47,7 +63,8 @@ def read_all_df() -> pd.DataFrame:
     if not rows:
         return pd.DataFrame(columns=TRACK_COLUMNS)
 
-    return pd.DataFrame([dict(row) for row in rows], columns=TRACK_COLUMNS)
+    df = pd.DataFrame([dict(row) for row in rows], columns=TRACK_COLUMNS)
+    return normalize_frame(df, TRACK_COLUMNS_SPEC)
 
 
 def record_capture(
