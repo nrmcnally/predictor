@@ -232,3 +232,20 @@ of every state color and delays everything else. Not recommended first.
 
 **Order:** W0 → W1 (users feel it) → W2+W8 (foundation) → W3 → W4+W6 → W5 → W7.
 W0+W1 together are the "wow, it looks better" release; ship them as one deploy.
+
+---
+
+## 2026-07-11 — Rework completed
+
+The remaining workstreams (W0 color tokens, W1 type/spacing scale, W3
+mobile) shipped as the P0–P6 rework series (commits bf8fecf..5d5c26b on
+threejs-playground), which went further than planned: "Pro" palette with
+a dual dark/light theme and topbar toggle, sentence-case heading system,
+~2,700 lines of dead prototype CSS deleted, index.css split into
+per-concern files under src/styles/ (import order is load-bearing — see
+the manifest comment), card variants consolidated onto .tile/.tile-lg,
+My Picks de-crammed (queue strip + Fights|Standings tabs + collapsed
+tracker), fighter profile deduped, breakpoints merged to
+640/900/1200/1460. Design-system rules now live in the tokens.css
+comments: colors only via tokens/color-mix, sizes via --fs-*, spacing
+via --sp-* for new rules.
