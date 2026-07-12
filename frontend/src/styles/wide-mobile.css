@@ -45,6 +45,8 @@
   .login-enter { min-height: 44px; }
   .chip,
   .pick-method,
-  .pick-clear { min-height: 38px; padding-top: 8px; padding-bottom: 8px; }
+  .pick-clear,
+  .segmented button { min-height: 38px; padding-top: 8px; padding-bottom: 8px; }
   .user-logout { width: 32px; height: 32px; }
+  .theme-toggle { width: 36px; height: 36px; }
 }

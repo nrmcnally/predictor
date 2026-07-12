@@ -29,7 +29,7 @@
   .history-row { grid-template-columns: 1fr; gap: 6px; }
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 900px) {
   .nav-toggle { display: inline-flex; }
 
   .sidebar {

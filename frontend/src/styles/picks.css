@@ -270,7 +270,7 @@
   gap: 6px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .pick-history-row {
     grid-template-columns: 1fr;
     align-items: flex-start;
@@ -342,7 +342,7 @@
   flex-wrap: wrap;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .user-leaderboard-controls,
   .user-lb-tabs {
     width: 100%;

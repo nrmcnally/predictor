@@ -128,7 +128,7 @@
   height: 36px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .event-control-grid {
     grid-template-columns: 1fr;
   }
