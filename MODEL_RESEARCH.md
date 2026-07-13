@@ -1,282 +1,642 @@
-# FIGHT IQ: System Description and Evidence-Based Improvement Roadmap
+# FightIQ Model Research and Evidence-Based Improvement Roadmap
 
-_A research-style review of the prediction engine as of model v1.2
-(2026-07-13), and a literature-grounded analysis of where its metrics can
-realistically be improved. Sources were gathered and adversarially verified
-2026-07-13; all system numbers are reproduced from the repo's own model
-registry and evaluation services._
+## A standalone review of the `threejs` prediction system
+
+**Status:** Current implementation audit and proposed research program
+**Repository:** `C:\Users\nrmcn\predictor\threejs`
+**Evidence snapshot:** July 13, 2026, commit `14bf2d4`
+**Model artifact:** calibrated winner model, version 1.2
+**Audience:** developers, model reviewers, and product owners
 
 ---
 
 ## Abstract
 
-FIGHT IQ predicts UFC fight outcomes with a Platt-calibrated logistic
-regression over ~126 leakage-controlled difference features, achieving **63.2%
-accuracy / 0.228 Brier / 0.649 log loss** on a chronological held-out test of
-1,718 fights (2023–2026). This places it squarely in the published band for
-leak-free MMA models (60–68%) but behind the betting market (~0.197 Brier on
-tracked cards). We review the system end to end, situate it against the
-literature, and identify the improvement avenues with the strongest evidence:
-(1) style-interaction features (a published ablation attributes +2.6–3.8
-accuracy points; the repo contains an orphaned implementation), (2) historical
-closing odds as an anchor/benchmark via the BestFightOdds archive, (3) judge
-scorecard and per-round data (already partially scraped) for round-level
-skill signals, (4) rating-system upgrades (Glicko-2/WHR) over vanilla Elo, and
-(5) evaluation upgrades — Shin-method de-vigging and closing-line-value as the
-primary scoreboard. We also document the field's reliability pathology (a
-withdrawn 80%-accuracy preprint; red-corner leakage in naive baselines) as a
-guardrail for interpreting our own results.
+FightIQ is a UFC analytics application whose production prediction engine estimates fight winners from strictly pre-fight differences between two fighter snapshots. The checked-in winner artifact is a calibrated logistic-regression pipeline. It reports 63.15% accuracy, 0.674 ROC AUC, 0.649 log loss, and 0.228 Brier score on a chronological held-out set of 1,718 unique fights. The training table contains 17,174 mirrored rows representing 8,587 unique fights.
 
-## 1. The system as built
+This report audits the implemented data, feature, modeling, evaluation, and market-comparison paths; separates current behavior from proposals; and ranks improvements by local evidence. The most important correction to the earlier research direction is that FightIQ's own controlled experiments do **not** support shipping the existing style-interaction or cardio feature families. Explicit style interactions were neutral to negative across logistic regression, histogram gradient boosting, and XGBoost. Cardio differences also reduced held-out accuracy. Those components should remain experimental until a new, leakage-safe hypothesis wins the same walk-forward gate.
 
-### 1.1 Data
+The highest-value near-term work is operational and evaluative: make artifact provenance clean and reproducible, freeze prospective predictions, improve odds-history coverage, monitor calibration by cohort, and build an exact-line fight-duration target before making any model-versus-market over/under claim. The present method model estimates P(Decision); it does not estimate P(Over 1.5), P(Over 2.5), or P(Over 4.5). The Future Cards UI should preserve that distinction.
 
-All fight data derives from UFCStats: completed events, per-fight results
-(winner, method, round, time), per-fighter fight stats (knockdowns,
-significant strikes by target — head/body/leg — and position —
-distance/clinch/ground, takedowns, submission attempts, control time), and
-**per-round** versions of the same. Fighter profiles supply height, weight,
-reach, stance, and DOB. Odds come from the-odds-api (h2h + rounds totals,
-de-vigged by plain normalization) and are stored for display/evaluation, with
-opening/closing tracked per fight for CLV.
+---
 
-Scale: 8,587 usable fights (1994–2026) → 17,174 training rows (each fight
-mirrored in both orientations for exact symmetry); 2,694 fighters with current
-snapshots. This is the entire labeled history of the sport at box-score
-granularity — a permanently small-data regime.
+## 1. Research questions and evidence policy
 
-### 1.2 Features (~110 per fighter, strictly pre-fight)
+This review asks five practical questions:
 
-Snapshots are built by walking fights chronologically and computing every
-feature from prior history only: record/experience with Bayesian shrinkage
-(rate = (s + prior·w)/(n + w)), per-15-minute volume averages for/against,
-recent-form windows (last 3/5), recency-decayed variants (0.72 decay per
-fight), **opponent-adjusted differentials** (output relative to what that
-opponent's pre-fight history typically allowed), hand-weighted style/path/
-vulnerability composites, Elo (K=32 × method multiplier: finish 1.25, split
-0.85) with peak/trend/strength-of-schedule aggregates, physicals, age, weight-
-class history, cardio (round-slope of output; currently excluded from the
-winner model after a walk-forward test showed no gain), and fight context
-(scheduled rounds, main-event, card position). The winner model consumes
-`diff_` columns only; the method model consumes orientation-invariant
-transforms (abs-diff/mean/max/min, 497 columns).
+1. What prediction system is actually running?
+2. Which data and features feed it, and where can leakage or identity errors enter?
+3. Which proposed improvements have already been tested locally?
+4. What evidence would justify a change to the production model?
+5. How should FightIQ support a line-specific fight-duration product safely?
 
-Leakage controls are unusually disciplined for the genre: chronological
-splits keyed by fight (mirrored rows stay together), pre-fight-only snapshot
-construction, opponent baselines computed pre-that-fight, and method excluded
-from features. Known soft spots (documented in the audit): physical/profile
-attributes are merged as career constants from today's profiles; division
-averages are computed over all-time data; `days_since_last_fight` for
-upcoming cards measures to the latest completed event rather than the bout
-date.
+Claims are classified as follows:
 
-### 1.3 Models
+| Label | Meaning |
+|---|---|
+| Current | Directly supported by checked-in code, data, tests, or model artifacts. |
+| Experimental | Code or results exist, but the component is not part of the production path. |
+| Proposed | Recommended future work with no claim that it is implemented. |
+| Legacy or stale | Documentation or code conflicts with the active path or newer local evidence. |
+| Uncertain | Evidence is incomplete or contradictory and should not be presented as fact. |
 
-Five candidate families (LR, RF, ExtraTrees, HistGB, XGBoost), each with a
-Platt-calibrated variant (isotonic variants are trained as shadow experiments
-but excluded from selection — correctly, as they overfit small calibration
-sets; see §4.3). Selection minimizes Brier on the chronological test. The live
-model is **calibrated logistic regression** — consistent with the literature's
-finding that at this data scale, regularized linear models on good features
-match or beat everything fancier. Serving predicts both orientations and
-normalizes. A separate two-headed **method model** (broad 4-class / detailed
-8-class random forests, deliberately unbalanced to keep probabilities honest)
-supplies method and distance probabilities. **Market shadow models** (market-
-only and model+market logistic regressions) exist for measurement only and
-never influence user-facing predictions.
+Repository metrics are reported as point-in-time evidence, not as universal performance promises. External research is used to choose experiments, not to override FightIQ's own held-out results.
 
-### 1.4 Evaluation surfaces
+---
 
-Retrospective: registry metrics on the 1,718-fight chronological test.
-Prospective: pre-event prediction snapshots scored against results (57 fights
-so far), Brier-based letter grading per card and cumulative, market-vs-model
-comparison with a disagreement ("edge") analysis, CLV tracking from
-opening/closing lines, and an on-demand walk-forward backtest harness with
-yearly retraining. This evaluation stack is more complete than most published
-work in the space.
+## 2. System under study
 
-### 1.5 Current numbers
+### 2.1 Product and runtime context
 
-| Metric | Value | Context |
+FightIQ combines:
+
+- a React/Vite frontend;
+- a Python backend API and service layer;
+- UFCStats ingestion and preprocessing;
+- SQLite and exported JSON/CSV artifacts;
+- serialized winner and method models;
+- an odds integration for head-to-head and rounds-total markets;
+- scheduled refresh, evaluation, and administrative workflows.
+
+The prediction path can be summarized as:
+
+```text
+UFCStats and profiles
+        |
+        v
+chronological pre-fight snapshots
+        |
+        v
+fighter A minus fighter B feature row
+        |
+        v
+calibrated logistic winner model
+        |
+        v
+winner probability + warnings + market comparison
+        |
+        v
+Future Cards and evaluation interfaces
+```
+
+Odds are a parallel input. They are not training features in the current production winner model. The UI compares model and de-vigged market probabilities after prediction.
+
+### 2.2 Point-in-time data inventory
+
+The audited local artifacts contained:
+
+| Artifact or table | Audited size | Interpretation |
+|---|---:|---|
+| Training matchup rows | 17,174 | Two orientations for each usable historical fight. |
+| Unique usable training fights | 8,587 | Effective labeled sample before train/test splitting. |
+| Held-out oriented test rows | 3,436 | Two rows per test fight. |
+| Held-out unique fights | 1,718 | Correct event-level test count. |
+| Current fighter feature rows | 2,694 | Latest feature snapshot per fighter. |
+| Current fighter columns | 134 | Identifiers, metadata, and engineered values. |
+| Winner numeric features | Approximately 126 | Checked feature list consumed by the winner pipeline. |
+| Method numeric features | 496 plus weight class | Wider orientation-invariant method feature representation. |
+
+The database and exported flat files were not perfectly synchronized in the snapshot. For example, the audit found 8,772 historical database fight rows versus 8,758 exported CSV rows, and different upcoming-event/fight counts across database and CSV views. These differences may be explainable by filtering or refresh timing, but the repository did not provide one automatically generated reconciliation report. Until such a report exists, count differences should be treated as an operational risk.
+
+### 2.3 Provenance warning
+
+The checked winner artifact records model version 1.2, recipe hash `d15652b351`, commit `14bf2d4`, and `git_dirty: true`. The recipe and commit are useful, but a dirty training worktree weakens exact reproducibility because uncommitted code or data could have influenced the artifact.
+
+Recommended rule: release artifacts must be trained from a clean commit, record dataset and feature-schema hashes, and fail release validation if provenance is incomplete.
+
+---
+
+## 3. Data and feature construction
+
+### 3.1 Historical sources
+
+Current source evidence centers on UFCStats event, fight, fighter-profile, and round-stat data. The system builds historical records, physical measurements, striking and grappling rates, time-normalized statistics, recent form, opponent adjustment, and rating features.
+
+Odds are fetched separately for product display and prospective evaluation. Their coverage depends on the external provider, event matching, market availability, and refresh success.
+
+### 3.2 Leakage control
+
+The feature builder walks fights chronologically and constructs a fighter's pre-fight state from prior bouts. This is the correct high-level design for avoiding post-fight contamination.
+
+The main leakage and integrity risks are nevertheless structural:
+
+- a future row accidentally joining to a current rather than as-of snapshot;
+- corrections to a fighter identity merging two people or splitting one career;
+- mirrored orientations crossing folds independently;
+- preprocessing, calibration, or feature selection fitted outside the training fold;
+- exported artifacts and database state coming from different refreshes;
+- outcome-derived columns surviving into an input schema under an innocent name.
+
+Validation must group both orientations of the same fight and preserve chronology. Every learned transformation must fit inside the training partition.
+
+### 3.3 Mirroring and symmetry
+
+FightIQ creates two oriented rows per fight: A versus B and B versus A. This encourages the winner probability to respect fighter-order symmetry.
+
+Consequences:
+
+- Row counts are not fight counts.
+- Both orientations must stay in the same train, validation, or test partition.
+- Event-level metrics should deduplicate by fight.
+- Symmetry tests should verify that swapping fighters approximately transforms `p` into `1 - p`.
+
+The current artifact's 3,436 test rows represent 1,718 unique fights. Reports and UI documentation must use the unique-fight count when describing sample size.
+
+### 3.4 Feature families
+
+Implemented feature families include:
+
+| Family | Examples | Primary risk |
 |---|---|---|
-| Test accuracy (1,718 fights) | 63.2% | Published band: 60–68% |
-| Test Brier | 0.228 | Market ≈ 0.197–0.21; coin flip 0.25 |
-| Test log loss / AUC | 0.649 / 0.674 | |
-| Method (broad) accuracy / log loss | 53.4% / 0.983 | 4 classes; top-2 82% |
-| Prospective (57 fights) | 66.7% acc, 0.223 Brier | small sample |
-| Market on same tracked fights | 70.6% acc, 0.197 Brier | grade A- vs model B- |
-| Disagreement record (14 fights) | model 36% vs market 64% | far below sample-size threshold |
-| CLV (12 fights with movement) | 50% beat-close, ~0 avg | uninformative yet |
+| Record and experience | fights, wins, losses, win rate, UFC sample | Sparse careers and era differences. |
+| Physical | age, height, reach, stance | Missing-value handling and stale profiles. |
+| Pace and volume | strikes, takedowns, attempts per time | Opponent and fight-duration confounding. |
+| Efficiency and defense | accuracy, absorption, takedown defense | Ratio instability at small sample sizes. |
+| Recent form | recent windows and recency-weighted values | High variance and arbitrary window choice. |
+| Opponent adjustment | performance relative to prior opponent baselines | Complex as-of joins and error propagation. |
+| Ratings | Elo, peak, trend, strength-of-schedule summaries | Hyperparameter sensitivity and cold starts. |
+| Context | weight class, scheduled rounds, event role | Schema drift and limited historical coverage. |
+| Composite style/path | hand-built offensive, defensive, or vulnerability summaries | Hidden assumptions and correlated inputs. |
 
-## 2. Related work and the honest ceiling
+The production winner pipeline consumes fighter-difference values plus categorical weight class. The method model uses orientation-invariant combinations such as absolute difference, mean, minimum, and maximum.
 
-- **Peer-reviewed state of the art.** Holmes, McHale & Żychaluk (Intl. J.
-  Forecasting 2023; Liverpool thesis 2022) simulate fights as Markov chains
-  over 4,678 fights: **61.77%** winner accuracy vs bookmakers' 61.16% on the
-  same 327-fight test — yet report +10–15% flat-stakes ROI in the result
-  market and up to +30% in the **method market**, because profit flows from
-  calibrated disagreement, not raw accuracy.
-- **Feature ablations.** Yin (MLISE 2024; 7,515 fights) reports 60.6–65.5%
-  across models and, critically, that removing **style-matchup factors** costs
-  2.6–3.8 accuracy points — the largest single documented feature effect.
-- **Serious practitioner ceiling.** The most transparent public stack
-  (mmamodel.ai: GBM ensemble, 45 features, chronological splits) tops out at
-  **67.6% / 0.598 log loss / ECE 0.015** and frames itself as a value-spotter,
-  not a market-beater.
-- **Market efficiency.** The only peer-reviewed MMA efficiency study (Miller &
-  Nichols, J. Econ. & Finance 2026) finds the moneyline market largely
-  efficient with no favorite-longshot bias; favorites win ~65–68%. Odds carry
-  more information than results themselves (Wunderlich & Memmert 2018).
-- **Reliability pathology.** An arXiv preprint claiming 80% accuracy / 90% ROI
-  (FightTracker) was withdrawn in 2026 after longer evaluation; naive models
-  inherit the ~62.6% red-corner win bias as fake skill (Stanford CS229 2019);
-  popular Kaggle writeups leak current career stats into historical fights.
-  **Any MMA claim above ~70% pre-fight accuracy has, on inspection, involved
-  leakage, tiny windows, or broken baselines.** FIGHT IQ's 63.2% under strict
-  chronology is exactly where an honest independent model should sit.
+### 3.5 Data-quality indicators
 
-## 3. Improvement avenues, ranked by evidence
+The product exposes warning badges for conditions such as low UFC sample, limited data, and weight-class changes. This is a good user-facing safeguard, but it does not quantify predictive uncertainty.
 
-### 3.1 Features (strongest evidence per unit effort)
+Proposed enhancement: define cohort-level reliability reports for debutants, one-fight samples, long layoffs, weight-class movers, replacement bouts, women's divisions, five-round bouts, and eras. Display ranges or reliability labels only after those cohorts have enough prospective evidence.
 
-1. **Wire in the style-interaction features.** `app/features/
-   matchup_interactions.py` already implements six cross-terms (takedown-vs-
-   defense, KO-threat-vs-chin, sub-threat-vs-vulnerability, reach×distance,
-   southpaw edge) but is orphaned — nothing imports it. The MLISE ablation
-   (+2.6–3.8 pts for style factors) makes this the highest expected-value
-   change in the repo, and it's mostly plumbing. Validate via the walk-forward
-   harness.
-2. **Exploit the per-round data already being scraped.** Only round-level
-   sig-strike counts feed three cardio features today (and those are excluded
-   from the winner model). Round-by-round trajectories support pace/fade,
-   early-finish threat, and championship-round evidence features; judge-score
-   research (JudgeAI: ~83% round-winner prediction from round stats) shows the
-   rounds carry real signal.
-3. **Fix the documented small bugs:** `days_since_last_fight` to actual bout
-   date; scheduled-rounds inference for non-main-event five-rounders; consider
-   time-based (not fight-count) recency decay and Elo inactivity decay.
-4. **Unused columns:** reversals, attempted (not just landed) positional
-   strikes, event location (altitude/home proxies).
+---
 
-### 3.2 Data acquisition
+## 4. Current models and results
 
-1. **Historical closing odds — BestFightOdds archive (2007→).** The single
-   most informative feature in all sports-prediction literature, and the
-   proper benchmark. Even kept out of the headline model (to preserve the
-   market-blind comparison), a full odds history enables: an odds-anchored
-   shadow model trained on *years* instead of 51 snapshot rows, Shin-de-vigged
-   baselines, and CLV at scale. Open-source scrapers exist (ufc-scraper
-   documents a BFO odds table with opening/closing ranges).
-2. **Judge scorecards — MMADecisions;** UFC-DataLab ships an MIT-licensed
-   merged stats+scorecards dataset. Enables round-winner models (~83–85%
-   published), better decision-method labels, and "robbery-adjusted" results.
-3. **Pre-UFC records (Sherdog/Tapology).** Kills the debut blind spot — the
-   model's single largest reliability gap. Tapology's ToS prohibits scraping;
-   Sherdog has been scraped at 143k-fighter scale historically. Even a coarse
-   "regional record + level" feature would help the `very_limited` cohort.
-4. **Weigh-ins/short-notice/camp:** constructible from event coverage but only
-   anecdotal effect-size evidence; UFC PI's serial weight data (the good
-   stuff) is closed. Low priority.
+### 4.1 Winner model
 
-### 3.3 Modeling and calibration
+Current production behavior:
 
-1. **Stay tabular-classical.** Grinsztajn et al. (NeurIPS 2022, 45 datasets)
-   show tree ensembles beat neural nets at ~10k samples at every tuning
-   budget; the live LR choice is defensible and cheap to keep honest.
-2. **Market-anchored blend as a separate output.** The literature's standard
-   recipe: blend model log-odds with de-vigged market log-odds (Egidi et al.),
-   or express the model as *deviation from the market prior*. For betting
-   value the target is calibrated **disagreement** (Hubáček et al., IJF 2019:
-   decorrelation, not accuracy, generates profit). Keep the market-blind
-   headline; add a "fused" probability in the shadow layer once BFO history
-   exists.
-3. **Calibration under small n:** current Platt choice is right (the isotonic
-   shadow's log-loss 8.15 blow-up on 13 validation rows is the textbook
-   failure). Beta calibration (Kull et al. 2017) is a drop-in upgrade;
-   Venn–Abers predictors add validity-guaranteed intervals — attractive for
-   showing honest probability *ranges* in the UI.
-4. **Never rebalance classes** for probability outputs (van den Goorbergh
-   2022) — the method model's no-balancing choice is already correct.
-5. **Feature-count hygiene:** 126 features on 6k training fights invites
-   variance; stability selection with elastic net (Meinshausen & Bühlmann)
-   inside the chronological folds is the defensible pruning method (selection
-   outside CV is the classic small-sample inflation trap — Varma & Simon).
-6. **Rating upgrades:** tuned Glicko-2 (adds rating uncertainty — natural for
-   layoffs) or Whole-History Rating (Coulom 2008) over vanilla Elo; both are
-   best-evidenced for sparse opponent graphs like MMA's.
+- base estimator: logistic regression;
+- probability calibration: sigmoid/Platt-style calibration;
+- inputs: checked numeric fighter differences plus weight class;
+- evaluation: chronological held-out fights;
+- output: calibrated win probability.
 
-### 3.4 Method and distance (the friend hypothesis)
+Checked artifact results:
 
-The literature is thin — method/round modeling is an under-published niche,
-which cuts both ways: no proven recipes, but practitioner consensus holds that
-method/totals props are MMA's *least efficient* markets (wider vig, less sharp
-action), and no rigorous study of MMA totals efficiency exists to refute it.
-Base rates are strongly structured (≈53% of fights finish overall; heavyweight
-≈2/3 finish; women's divisions ≈65% decision) — a calibrated distance model
-that beats those base rates has a plausible, unmeasured market to disagree
-with. Holmes's +26–30% method-market ROI at 61% winner accuracy is the
-existence proof that this is where a modest model can matter. Concrete step:
-per-weight-class distance calibration curves on the Model record tab, and a
-totals-vs-model tracker mirroring the winner-market edge panel.
+| Metric | Value |
+|---|---:|
+| Unique held-out fights | 1,718 |
+| Accuracy | 0.6315 |
+| ROC AUC | 0.6739 |
+| Log loss | 0.6490 |
+| Brier score | 0.2280 |
 
-### 3.5 Evaluation
+These values indicate a useful but modest signal. They do not imply profitability, and they do not establish that performance is identical on future cards.
 
-1. **Adopt CLV as the primary scoreboard** once odds history is deep enough:
-   beating de-vigged closing probabilities predicts realized yield ~1:1
-   (Buchdahl, 88k odds pairs) and is the only metric immune to small-sample
-   luck. The plumbing (fight_odds_track) already exists.
-2. **Upgrade de-vigging from plain normalization to Shin or power methods**
-   (Štrumbelj 2014) — the choice matters most in high-vig markets, exactly
-   where the method/totals work lives. This is a ~30-line change in
-   odds_service.
-3. Keep the walk-forward harness as the gate for every feature change (it has
-   already correctly killed one feature family — cardio diffs).
+### 4.2 Calibration by confidence
 
-## 4. Prioritized roadmap
+The model is reasonably close to observed outcomes through much of the middle range, but the highest-confidence band is small and overconfident:
 
-| # | Change | Expected effect | Effort | Evidence |
-|---|---|---|---|---|
-| 1 | Wire matchup_interactions into training | +1–3 pts acc / Brier ↓ | S | peer-reviewed ablation |
-| 2 | BFO closing-odds history + Shin de-vig | benchmark + shadow models on real n; CLV at scale | M | strongest-predictor consensus |
-| 3 | Round-data features (pace/fade/threat) | modest Brier ↓ | M | round-signal studies |
-| 4 | Glicko-2 or WHR replacing Elo | modest, compounding | M | rating-system literature |
-| 5 | Beta calibration (+ Venn–Abers UI ranges) | calibration polish | S | Kull 2017 |
-| 6 | Stability-selection feature pruning | variance ↓, robustness | S–M | Meinshausen & Bühlmann |
-| 7 | Sherdog pre-UFC records | fixes debut blind spot | M–L | face-valid; no published ablation |
-| 8 | Method/distance calibration + totals tracker | tests the soft-market hypothesis | S | Holmes ROI; practitioner consensus |
-| 9 | Market-blend shadow output | value-spotting, not headline | S (after #2) | Egidi; Hubáček |
+| Confidence band | Oriented rows | Accuracy | Mean confidence | Gap: accuracy minus confidence |
+|---|---:|---:|---:|---:|
+| 0.50 to under 0.55 | 874 | 0.531 | 0.525 | +0.006 |
+| 0.55 to under 0.60 | 850 | 0.628 | 0.574 | +0.054 |
+| 0.60 to under 0.65 | 642 | 0.639 | 0.624 | +0.014 |
+| 0.65 to under 0.70 | 510 | 0.659 | 0.674 | -0.015 |
+| 0.70 to under 0.75 | 298 | 0.718 | 0.722 | -0.004 |
+| 0.75 to under 0.80 | 156 | 0.859 | 0.773 | +0.086 |
+| 0.80 and above | 106 | 0.736 | 0.846 | -0.110 |
 
-Ordering logic: #1 is free alpha sitting in the repo; #2 unlocks #9 and honest
-benchmarking; everything passes through the walk-forward gate before shipping.
+The bucket diagnostics are exploratory. Mirrored rows are dependent, and small upper bands have wide uncertainty. Prospective calibration should be scored on one frozen prediction per fight.
 
-## 5. Limitations
+### 4.3 Method model
 
-Prospective samples are still tiny (57 scored fights; 14 disagreements; 12 CLV
-points) — every live-performance conclusion here is provisional by the app's
-own small-sample standards. The literature itself is thin and skewed toward
-low-tier venues and practitioner writeups; effect sizes quoted (e.g., style
-ablation points) transfer imperfectly across feature sets. And the strongest
-structural fact doesn't change: this is a ~9k-fight sport with one-punch
-variance — the realistic goal is market-adjacent Brier with honest calibration
-and a real edge in undermeasured corners (method, distance, disagreements),
-not a crystal ball.
+The method model predicts broad outcome classes such as Decision, KO/TKO, and Submission. Its Decision class probability is exposed as contextual information on future cards.
 
-## References
+Critical semantic rule:
 
-- Holmes, McHale & Żychaluk — Markov-chain MMA prediction, Intl. J. Forecasting (2023); Liverpool thesis (2022).
-- Yin — MMA outcome prediction with style factors, MLISE (2024), IEEE.
-- Miller & Nichols — MMA market efficiency, J. Economics & Finance 50(1) (2026).
-- Wunderlich & Memmert — odds as forecasts, PLOS ONE (2018).
-- Hubáček, Šourek & Železný — exploiting betting markets via decorrelation, Intl. J. Forecasting (2019).
-- Egidi, Pauli & Torelli — combining historical data and bookmakers' odds (ASMBI).
-- Grinsztajn, Oyallon & Varoquaux — why tree-based models outperform on tabular data, NeurIPS (2022), arXiv:2207.08815.
-- Kull, Silva Filho & Flach — beta calibration (2017); Niculescu-Mizil & Caruana (2005).
-- van den Goorbergh et al. — the harm of class rebalancing for probability models, JAMIA (2022); Elor (2022), arXiv:2201.08528.
-- Varma & Simon (2006); Ambroise & McLachlan (2002) — selection-inside-CV.
-- Meinshausen & Bühlmann — stability selection (2010).
-- Coulom — Whole-History Rating (2008).
-- Štrumbelj — de-vigging methods (2014).
-- Buchdahl — CLV vs realized yield, football-data.co.uk.
-- FightTracker, arXiv:2312.11067 — WITHDRAWN (2026); cited as cautionary only.
-- McQuaide — Stanford CS229 (2019), red-corner bias.
-- Data: bestfightodds.com/archive; mmadecisions.com; github.com/komaksym/UFC-DataLab (MIT); ufc-scraper.readthedocs.io; Kaggle "Ultimate UFC Dataset" (mdabbert).
+> P(Decision) is not P(Over X rounds).
+
+A decision normally survives late enough to clear some totals, but a late finish can also go over, and five-round fights make the difference larger. The method model must not be used to calculate a line-specific over/under edge.
+
+---
+
+## 5. What local experiments already say
+
+Local controlled results should outrank attractive general claims from external studies.
+
+### 5.1 Explicit style-interaction terms
+
+**Status: Experimental, rejected by current evidence.**
+
+The repository contains a style-interaction module and roadmap text that once promoted wiring it into training. Newer local A/B results tested six explicit interaction terms across three model families:
+
+| Model family | Accuracy change | Brier direction | Decision |
+|---|---:|---|---|
+| Logistic regression | -0.10 percentage points | Flat to worse | Revert |
+| Histogram gradient boosting | -0.12 percentage points | Flat to worse | Revert |
+| XGBoost | -0.33 percentage points | Flat to worse | Revert |
+
+Conclusion: do not ship the existing interaction features. Their presence in code is not evidence of benefit. Any stale roadmap item calling them "free alpha" conflicts with the experiment record and should be corrected.
+
+Potential explanation: many interaction ideas may already be captured by correlated differential and composite features; explicit products can add variance in a small dataset.
+
+### 5.2 Cardio differences
+
+**Status: Experimental, excluded from the winner model.**
+
+The walk-forward test reported approximately -0.14 percentage points of accuracy and slightly worse Brier/log-loss behavior. Round-level data remain valuable, but the tested cardio summary did not earn production inclusion.
+
+Conclusion: retain the raw/as-of round evidence, redesign the hypothesis if warranted, and require a new ablation. Do not re-enable the old feature family by assumption.
+
+### 5.3 Tree-model bake-off
+
+**Status: Evaluated, not promoted.**
+
+The documented bake-off did not find a tree or ensemble combination that beat the logistic baseline on the production gate. This is plausible in a medium-width, small-sample tabular problem with many smooth, correlated inputs. Grinsztajn, Oyallon, and Varoquaux show why tree-based models are often strong on tabular data, but that is a reason to test them carefully, not a reason to replace a locally superior baseline [2].
+
+Conclusion: keep logistic regression as the champion until a challenger improves probability metrics across repeated chronological splits and key cohorts.
+
+### 5.4 Class rebalancing
+
+**Status: Not recommended for probability quality without specific evidence.**
+
+The target is naturally close to balanced after orientation, and rebalancing can damage probability calibration even when it changes classification sensitivity. van den Goorbergh and colleagues document this risk for probability models [4].
+
+Conclusion: optimize calibrated probability scores directly. If weights are tested, recalibrate and evaluate on the untouched natural distribution.
+
+---
+
+## 6. Market evidence and evaluation
+
+### 6.1 Current market use
+
+FightIQ converts American odds to implied probabilities and removes the two-sided overround by normalization when both sides are available. The application can then compare the winner model with the market.
+
+The difference between model and market is descriptive:
+
+```text
+model edge = model probability - de-vigged market probability
+```
+
+It is not expected return. Realized return also depends on the offered price, line movement, stake sizing, limits, and model error.
+
+### 6.2 Coverage limitations
+
+The audited local database contained only a small odds history, and the current upcoming-fight artifact had zero usable rounds-total quotes across 58 rows. Schema support therefore should not be confused with reliable live coverage.
+
+Before market-relative conclusions are trusted, FightIQ needs:
+
+- scheduled refresh that succeeds without a logged-in desktop session;
+- explicit freshness timestamps and provider status;
+- robust fighter/event matching diagnostics;
+- opening, snapshot, and closing quotes with source counts;
+- one immutable pre-event prediction record;
+- coverage and failure-rate dashboards.
+
+### 6.3 Evaluation hierarchy
+
+Recommended scoreboard:
+
+1. **Primary model quality:** event-level log loss and Brier score on frozen prospective predictions.
+2. **Secondary discrimination:** ROC AUC and accuracy, with thresholds declared in advance.
+3. **Calibration:** reliability curves, expected calibration error with bin sensitivity reported, and cohort tables.
+4. **Market comparison:** log loss/Brier versus a same-time de-vigged market quote on matched cases.
+5. **Pricing process:** closing-line value, but only when line snapshots and timestamps are reliable.
+6. **Realized return:** an operational outcome reported with uncertainty, not a model-selection objective on a small sample.
+
+The app's historical held-out test and prospective market evaluation answer different questions. Do not merge them into one headline number.
+
+### 6.4 De-vigging research
+
+Plain normalization is transparent and defensible for a two-sided first version. Alternative de-vig methods, including power and Shin-style approaches, can be tested once enough matched opening/closing data exist. The choice should be selected by out-of-sample forecast quality, especially for higher-margin prop markets, rather than adopted because it is more sophisticated.
+
+---
+
+## 7. Fight-duration research program
+
+### 7.1 Product question
+
+The product needs to answer a precise market question:
+
+> What is P(Over L rounds) for this fight, where L is the market line?
+
+That is a different target from winner and method classification.
+
+### 7.2 Current implementation boundary
+
+Current:
+
+- the odds schema supports `rounds_line`, Over odds, Under odds, and normalized probabilities;
+- aggregation keeps quotes at the selected same line;
+- the backend exposes P(Decision) from the method model;
+- no trained line-specific duration artifact exists in the audited repository.
+
+Implemented UI safeguard:
+
+- market totals are displayed separately from Decision probability;
+- no model edge is claimed when a duration prediction is absent;
+- a future prediction is compared only when its line exactly matches the market line;
+- a mismatch is labeled and produces no edge.
+
+### 7.3 Recommended target representation
+
+Create a canonical duration in elapsed scheduled-round units. For a finish:
+
+```text
+elapsed_rounds = completed_rounds + elapsed_seconds_in_current_round / round_length_seconds
+```
+
+For a decision, use the scheduled duration. Carefully encode unusual round lengths, technical decisions, overturned results, no contests, and missing time.
+
+For each valid line `L`:
+
+```text
+over_L = 1 if elapsed_rounds > L else 0
+under_L = 1 - over_L
+```
+
+Settlement rules must match the sportsbook market. The team should document how pushes or nonstandard outcomes are handled, although half-round lines normally avoid exact pushes.
+
+### 7.4 Modeling options
+
+Ranked from simplest to most ambitious:
+
+| Option | Description | Advantages | Risks |
+|---|---|---|---|
+| Line-specific logistic baseline | Add the line and scheduled rounds to a leakage-safe fight feature row and predict Over. | Easy to audit and calibrate. | Separate line populations may be small. |
+| Discrete-time hazard model | Estimate finish probability by interval and derive survival past any line. | One coherent model can answer multiple lines. | More complex labels, censoring, and calibration. |
+| Method-time joint model | Jointly model finish type and time. | Rich product outputs. | High variance and harder validation. |
+| Market-anchored residual model | Predict correction to a de-vigged market probability. | Can focus on disagreement. | Cannot operate without market; leakage and timestamp discipline are critical. |
+
+Recommended first champion: a regularized line-aware logistic baseline. Develop a discrete-time hazard challenger only after the data and settlement layer pass audit.
+
+### 7.5 Duration features to test
+
+Candidate features must be computed strictly pre-fight:
+
+- scheduled rounds and total line;
+- each fighter's prior finish and decision rates with shrinkage;
+- prior time-to-finish and time-survived summaries;
+- pace, absorption, knockdown, takedown, submission-attempt, and control rates;
+- opponent-adjusted finishing and survival measures;
+- round-specific pace and fade summaries redesigned from raw round data;
+- UFC sample size, layoffs, age, and weight-class move indicators;
+- division and gender cohorts where coverage supports them;
+- matchup differences and symmetric summaries selected inside validation.
+
+Do not assume the rejected winner-model cardio or interaction transforms will help duration. Duration has a different target, so they may be retested, but only under a new preregistered ablation.
+
+### 7.6 Validation design
+
+Minimum duration-model gate:
+
+1. One row per fight-line observation, grouped by fight and event.
+2. Strict chronological train/validation/test splits.
+3. All preprocessing and feature selection fitted inside each training fold.
+4. Brier, log loss, calibration slope/intercept, and reliability by line.
+5. Cohort reports for 1.5, 2.5, 3.5, and 4.5 where sample size permits.
+6. Comparison against a constant base rate, a simple historical-rate baseline, and same-time de-vigged market.
+7. Bootstrap confidence intervals at the unique-fight or event level.
+8. Prospective shadow period before any UI edge label is enabled.
+
+### 7.7 Proposed backend contract
+
+```json
+{
+  "duration_prediction": {
+    "line": 2.5,
+    "over_probability": 0.58,
+    "under_probability": 0.42,
+    "model_version": "duration-1.0.0",
+    "feature_schema_version": "duration-features-1",
+    "generated_at": "2026-07-13T18:00:00Z"
+  }
+}
+```
+
+Contract safeguards:
+
+- `line` is required and numeric;
+- probabilities are finite, in `[0,1]`, and sum to 1 within tolerance;
+- model and feature-schema versions are required;
+- stale or line-mismatched predictions are not compared with the market;
+- a missing prediction is a normal, explicitly labeled state.
+
+---
+
+## 8. Research opportunities ranked by evidence
+
+### Tier 1: measurement and reproducibility
+
+These changes are more likely to prevent false progress than a new algorithm.
+
+1. **Clean artifact provenance.** Require clean-commit training, dataset hash, feature-schema hash, dependency lock hash, seed, split definition, and command.
+2. **Repeated chronological evaluation.** Replace dependence on one split with several expanding-window or rolling-origin evaluations.
+3. **Frozen prospective registry.** Store predictions, data timestamp, model version, market timestamp, and later outcome immutably.
+4. **Cohort calibration monitoring.** Surface where headline probabilities are unreliable.
+5. **Data reconciliation checks.** Compare database, CSV, JSON, and serialized artifact counts during every refresh.
+
+Expected effect: higher confidence that measured improvements are real, even if headline accuracy does not immediately change.
+
+### Tier 2: strong model experiments
+
+1. **Regularization and stability analysis.** Examine coefficient stability across chronological folds; remove features only within nested evaluation. Stability-selection concepts can guide this work, but the production gate must remain probability performance.
+2. **Calibration challengers.** Compare sigmoid, isotonic, and beta calibration on untouched chronological folds. Beta calibration is a well-motivated challenger because standard logistic calibration can be too restrictive [3].
+3. **Rating uncertainty.** Test Glicko-2-style rating deviation or another time-aware uncertainty signal against current Elo features. Treat it as an ablation, not an automatic replacement.
+4. **Raw round-sequence hypotheses.** Redesign pace/fade features with shrinkage and missingness indicators; test separately for winner and duration targets.
+5. **Sparse-cohort handling.** Compare hierarchical or partial-pooling representations for debutants and low-sample fighters.
+
+### Tier 3: new data, subject to rights and reliability
+
+1. **Historical odds snapshots.** Acquire a permitted, timestamped source for opening and closing markets. Do not build a critical pipeline on scraping until terms and reliability are reviewed.
+2. **Judge scorecards.** Explore permitted scorecard data for round-level dominance and close-decision labels. Identity, event, and round joins require audit.
+3. **Pre-UFC records.** A licensed or permitted source could reduce debut blind spots. Competition-level normalization is the central modeling challenge.
+4. **Operational annotations.** Replacement timing, layoffs, and weight-class moves can be high value if provenance, timestamp, and review workflow are explicit.
+
+### Research ideas not currently justified
+
+- Shipping existing style interactions because a paper found interactions useful elsewhere.
+- Re-enabling cardio differences despite a losing local test.
+- Replacing the logistic champion with a more complex model that wins only accuracy or one split.
+- Using market odds as both a training feature and evaluation benchmark without time-aligned snapshots.
+- Treating P(Decision) as a totals model.
+- Reporting mirrored row counts as independent fights.
+
+---
+
+## 9. Experiment protocol
+
+Every model change should have a short experiment card:
+
+| Field | Required content |
+|---|---|
+| Hypothesis | Why the change should improve a named metric or cohort. |
+| Target | Winner, method, exact-line duration, or calibration. |
+| Data cutoff | Latest event allowed in training. |
+| Unit of analysis | Unique fight, fight-line, or event. |
+| Feature provenance | Exact schema and as-of guarantees. |
+| Baseline | Current champion artifact and simple reference model. |
+| Splits | Predeclared chronological windows. |
+| Primary metric | Normally log loss or Brier score. |
+| Secondary metrics | Accuracy, AUC, calibration, and cohort metrics. |
+| Decision rule | Minimum improvement and no-regression conditions. |
+| Risks | Leakage, coverage, identity, market timestamp, and multiple testing. |
+| Reproduction command | One command from a clean checkout. |
+
+Recommended promotion rule:
+
+- improve the primary probability metric across most chronological folds;
+- show no material calibration regression;
+- preserve fighter-order symmetry;
+- avoid serious regression in sparse-data cohorts;
+- pass schema, leakage, and artifact-provenance checks;
+- complete a prospective shadow period for market-facing outputs.
+
+Do not promote based only on a single accuracy-point increase. Because the dataset is small and many experiments may be tried, selection bias can create apparent winners.
+
+---
+
+## 10. Statistical and product safeguards
+
+### 10.1 Uncertainty
+
+Report confidence intervals or bootstrap distributions for metric differences. Resample at the unique-fight or event level, not the mirrored-row level.
+
+### 10.2 Calibration
+
+Calibration is part of the product contract because percentages are shown directly to users. Evaluate slope, intercept, reliability curves, and proper scoring rules. Kull, Silva Filho, and Flach provide the beta-calibration framework and show why common sigmoid assumptions can fail [3].
+
+### 10.3 Missingness
+
+Missing physical or fight-history values can encode meaningful cohort differences. Imputation and missingness indicators must be fitted inside training folds. Monitor missingness by source and refresh.
+
+### 10.4 Identity integrity
+
+One incorrect fighter merge can contaminate history, features, future matching, and odds evaluation. Maintain a canonical fighter ID, alias table, collision checks, and manual review queue. Never normalize names destructively without retaining the source value.
+
+### 10.5 Market timestamps
+
+Comparisons require a clearly defined information set. A prediction made Monday cannot be fairly compared with a closing line Friday unless the purpose is explicitly closing-line-value evaluation. UI edge displays should compare timestamps that a user can inspect.
+
+### 10.6 Product language
+
+Use:
+
+- "model probability";
+- "de-vigged market probability";
+- "model minus market";
+- "Decision probability";
+- "no line-specific duration model available."
+
+Avoid:
+
+- "guaranteed" or "lock" for a model pick;
+- "expected return" when only a probability gap is known;
+- "model over" when the value is actually P(Decision);
+- an edge calculation across different rounds lines.
+
+---
+
+## 11. Prioritized roadmap
+
+### Quick wins: one to two weeks
+
+| Priority | Work | Deliverable | Success check |
+|---|---|---|---|
+| P0 | Correct UI duration semantics | Separate market total, future duration prediction, and P(Decision) | Tests reject missing or mismatched model lines. |
+| P0 | Clean stale research claims | Documentation matches local A/B results | No guide recommends rejected interactions/cardio. |
+| P0 | Artifact provenance gate | Training metadata and clean-worktree check | Release fails on dirty or incomplete provenance. |
+| P0 | Refresh reconciliation | Machine-readable counts and freshness report | Database/export mismatches are explained or fail. |
+| P1 | Prospective prediction freeze | Immutable record before event start | Evaluation can reproduce the shown prediction. |
+| P1 | Cohort report | Calibration and coverage by sample/context | Sparse cohorts are visible in review. |
+
+### Medium term: two to eight weeks
+
+| Priority | Work | Deliverable | Success check |
+|---|---|---|---|
+| P1 | Duration dataset and settlement tests | One canonical elapsed-duration table | Manual sample and boundary cases agree. |
+| P1 | Line-aware logistic duration baseline | Versioned shadow artifact | Beats simple base-rate baseline; calibrated by line. |
+| P1 | Odds-history reliability | Opening/snapshot/closing store with diagnostics | Coverage and freshness targets are met. |
+| P2 | Repeated chronological model harness | Multi-window experiment report | Champion decisions are not split-specific. |
+| P2 | Calibration bake-off | Sigmoid/isotonic/beta comparison | Challenger improves proper scores without cohort harm. |
+| P2 | Rating uncertainty ablation | Glicko-2-style features versus Elo | Improvement survives nested chronological evaluation. |
+
+### Long term: two to six months
+
+| Priority | Work | Deliverable | Success check |
+|---|---|---|---|
+| P2 | Discrete-time duration challenger | Survival probability at arbitrary line | Coherent curves and better out-of-sample scores. |
+| P2 | Permitted new data | Versioned scorecard or pre-UFC source | Coverage, rights, identity, and as-of checks pass. |
+| P3 | Hierarchical sparse-fighter model | Uncertainty-aware cold-start predictions | Prospective low-sample cohort improves. |
+| P3 | Market-residual shadow model | Time-aligned market correction | Adds value against same-time market out of sample. |
+
+---
+
+## 12. Risks and open questions
+
+| Risk | Severity | Evidence | Recommended response |
+|---|---|---|---|
+| Stale roadmap promotes losing interaction features | High | Conflict with recorded three-model A/B | Remove promotion language; keep module experimental. |
+| P(Decision) confused with P(Over) | High | Current method output is not line-specific | Enforce UI/API semantic separation. |
+| Dirty artifact provenance | High | Winner metadata records `git_dirty: true` | Retrain release artifacts from a clean commit. |
+| Odds and totals coverage is sparse | High | Audited totals coverage 0/58 | Fix refresh, measure coverage, support unavailable state. |
+| Mirrored rows overstated as fights | Medium | 3,436 rows equal 1,718 fights | Standardize unique-fight reporting. |
+| Database/export count drift | Medium | Point-in-time discrepancies found | Add reconciliation manifest. |
+| Extreme confidence overcalibration | Medium | 84.6% mean confidence vs 73.6% accuracy in top band | Monitor, consider conservative calibration, show sample size. |
+| Multiple-experiment selection bias | Medium | Many plausible feature ideas, small dataset | Predeclare gates and use repeated chronological splits. |
+| External data rights and stability | Medium | Proposed sources are not current contracts | Review terms, licensing, retention, and failure behavior. |
+| Sparse/new fighter uncertainty | Medium | Low UFC sample is structurally common | Cohort calibration and uncertainty-aware models. |
+
+Open questions:
+
+1. What odds timestamp should the Future Cards edge represent: latest, first available, or a fixed pre-event window?
+2. Which totals lines have enough historical coverage to support separate calibration?
+3. How should unusual result methods and nonstandard round lengths settle in the duration dataset?
+4. What minimum prospective sample is required before a duration edge is user-facing?
+5. Should winner probabilities be clipped or conservatively transformed in the highest-confidence region until more evidence accumulates?
+
+---
+
+## 13. Recommended next experiment sequence
+
+1. Stabilize the daily data and odds refresh and add reconciliation output.
+2. Freeze future-card predictions with versions and timestamps.
+3. Build and hand-audit the canonical duration label table.
+4. Train a regularized line-aware duration baseline.
+5. Validate by chronological split, line, scheduled rounds, and data-quality cohort.
+6. Run it in shadow mode; do not expose an edge yet.
+7. Compare same-line model and market probabilities on frozen prospective cases.
+8. Enable the UI model panel only when the contract, calibration, and freshness gates pass.
+9. In parallel, improve the winner-model evaluation harness and artifact provenance.
+10. Revisit new feature families only through predeclared ablations.
+
+This sequence prioritizes trustworthy measurement. It also gives the over/under product a usable interface now without pretending the missing model already exists.
+
+---
+
+## 14. Limitations of this review
+
+- The audit is a snapshot of a local checkout, not an independent reproduction from a clean machine.
+- Counts can change after a refresh and some database/export differences may have legitimate filters.
+- The held-out artifact summarizes one configured split; repeated chronological distributions were not available as a checked release report.
+- External MMA modeling literature is limited and often uses different promotions, eras, targets, and leakage controls.
+- Market claims are constrained by sparse local odds history and must remain provisional.
+- No dedicated duration model was trained as part of this document revision.
+
+---
+
+## 15. References
+
+1. Holmes, L., McHale, I. G., and Zychaluk, K. (2023). "A Markov chain model for forecasting results of mixed martial arts contests." *International Journal of Forecasting*, 39(2), 623-640. [RePEc record and DOI](https://ideas.repec.org/a/eee/intfor/v39y2023i2p623-640.html).
+2. Grinsztajn, L., Oyallon, E., and Varoquaux, G. (2022). "Why do tree-based models still outperform deep learning on typical tabular data?" *NeurIPS 2022*. [Official proceedings](https://papers.nips.cc/paper_files/paper/2022/hash/0378c7692da36807bdec87ab043cdadc-Abstract-Datasets_and_Benchmarks.html).
+3. Kull, M., Silva Filho, T. M., and Flach, P. (2017). "Beta calibration: a well-founded and easily implemented improvement on logistic calibration for binary classifiers." *AISTATS 2017*. [PMLR paper](https://proceedings.mlr.press/v54/kull17a.html).
+4. van den Goorbergh, R., van Smeden, M., Timmerman, D., and Van Calster, B. (2022). "The harm of class imbalance corrections for risk prediction models: illustration and simulation using logistic regression." *Journal of the American Medical Informatics Association*. [DOI](https://doi.org/10.1093/jamia/ocac093).
+5. Glickman, M. E. (2012). "Example of the Glicko-2 system." [Official Glicko paper](http://www.glicko.net/glicko/glicko2.pdf).
+
+Repository evidence reviewed includes the model registry and metrics artifacts, training and feature-building code, `ROADMAP.md` experiment notes, odds service and schema code, future-card service/UI code, tests, SQLite/CSV/JSON datasets, and model metadata in `C:\Users\nrmcn\predictor\threejs`.
+
+---
+
+## Maintenance rule
+
+This report is standalone and should change with the implementation. Any pull request that changes the winner or method target, feature ordering, calibration, duration contract, odds normalization, model artifact, evaluation split, or displayed prediction semantics must update this Markdown file and regenerate `MODEL_RESEARCH.pdf`.

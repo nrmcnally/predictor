@@ -209,7 +209,36 @@ function summarizeMarkets(card, oddsRows) {
   );
 }
 
-function OddsLine({ fight, odds }) {
+function parseFiniteNumber(value) {
+  if (value === "" || value == null) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function formatProbabilityPercentage(value, fallback = "") {
+  const numeric = parseFiniteNumber(value);
+  return numeric != null ? `${(numeric * 100).toFixed(1)}%` : fallback;
+}
+
+function hasTotalsQuote(odds) {
+  const overProbability = parseFiniteNumber(odds?.over_market_probability);
+  const underProbability = parseFiniteNumber(odds?.under_market_probability);
+  return Boolean(
+    odds?.odds_available &&
+      odds.rounds_line !== "" &&
+      odds.rounds_line != null &&
+      (odds.over_market_percentage || overProbability != null) &&
+      (odds.under_market_percentage || underProbability != null)
+  );
+}
+
+function humanizeDurationReason(value) {
+  return String(value || "")
+    .replaceAll("_", " ")
+    .replace(/^./, (character) => character.toUpperCase());
+}
+
+function MoneylineSummary({ fight, odds }) {
   if (!odds || !odds.odds_available) {
     return <p className="odds-line muted">Market odds unavailable</p>;
   }
@@ -230,18 +259,6 @@ function OddsLine({ fight, odds }) {
         {fight.fighter_2}: {formatAmericanOdds(odds.fighter_2_odds_american)} ·{" "}
         {odds.fighter_2_market_percentage || "N/A"}
       </span>
-      {odds.rounds_line !== "" && odds.rounds_line != null && (
-        <span>
-          Rounds O/U <strong>{odds.rounds_line}</strong>: Ov{" "}
-          {odds.over_market_percentage || "N/A"} / Un{" "}
-          {odds.under_market_percentage || "N/A"}
-        </span>
-      )}
-      {fight.model_distance_percentage && (
-        <span>
-          Model distance: <strong>{fight.model_distance_percentage}</strong>
-        </span>
-      )}
       {odds.odds_bookmaker && (
         <span className="muted">
           {odds.odds_bookmaker}
@@ -255,6 +272,232 @@ function OddsLine({ fight, odds }) {
         </span>
       )}
     </p>
+  );
+}
+
+function probabilityFromFields(probability, percentage) {
+  const numericProbability = parseFiniteNumber(probability);
+  if (numericProbability != null) return numericProbability;
+  const numericPercentage = parseFloat(String(percentage || "").replace("%", ""));
+  return Number.isFinite(numericPercentage) ? numericPercentage / 100 : null;
+}
+
+function getDurationView(fight, odds) {
+  const totalsAvailable = hasTotalsQuote(odds);
+  const marketLine = totalsAvailable ? parseFiniteNumber(odds.rounds_line) : null;
+  const durationPrediction = fight?.duration_prediction || null;
+  const durationLineValue = durationPrediction?.line ?? durationPrediction?.rounds_line;
+  const durationLine = parseFiniteNumber(durationLineValue);
+  const modelOver = parseFiniteNumber(durationPrediction?.over_probability);
+  const modelUnder = parseFiniteNumber(durationPrediction?.under_probability);
+  const modelAvailable =
+    durationLine != null &&
+    durationLine > 0 &&
+    modelOver != null &&
+    modelOver >= 0 &&
+    modelOver <= 1 &&
+    modelUnder != null &&
+    modelUnder >= 0 &&
+    modelUnder <= 1 &&
+    Math.abs(modelOver + modelUnder - 1) < 0.01;
+  const linesMatch =
+    totalsAvailable && modelAvailable && Math.abs(marketLine - durationLine) < 0.000001;
+  const marketOver = probabilityFromFields(
+    odds?.over_market_probability,
+    odds?.over_market_percentage
+  );
+  const marketUnder = probabilityFromFields(
+    odds?.under_market_probability,
+    odds?.under_market_percentage
+  );
+  const comparableDelta =
+    linesMatch && marketOver != null ? modelOver - marketOver : null;
+  const modelPickSide = modelAvailable && modelOver >= modelUnder ? "Over" : "Under";
+  const modelPickProbability = modelPickSide === "Over" ? modelOver : modelUnder;
+  const decisionPercentage = fight?.model_distance_percentage || "";
+  const sourceLabel = odds?.odds_bookmaker || "Market consensus";
+  const totalsBooks = Number(odds?.totals_bookmakers_matched || 0);
+  const unavailableReason = humanizeDurationReason(
+    durationPrediction?.unavailable_reason || durationPrediction?.reason
+  );
+
+  return {
+    comparableDelta,
+    decisionPercentage,
+    durationLine,
+    linesMatch,
+    marketLine,
+    marketOver,
+    marketUnder,
+    modelAvailable,
+    modelOver,
+    modelPickProbability,
+    modelPickSide,
+    modelUnder,
+    sourceLabel,
+    totalsAvailable,
+    totalsBooks,
+    unavailableReason,
+  };
+}
+
+export function FightDurationSummary({ fight, odds }) {
+  const view = getDurationView(fight, odds);
+  const displayLine = view.modelAvailable ? view.durationLine : view.marketLine;
+  const chartOver = view.modelAvailable ? view.modelOver : view.marketOver;
+  const chartUnder = view.modelAvailable ? view.modelUnder : view.marketUnder;
+  const chartAvailable = chartOver != null && chartUnder != null;
+  const overWidth = chartAvailable ? Math.max(0, Math.min(100, chartOver * 100)) : 50;
+
+  return (
+    <section
+      className={`fight-duration-summary ${view.modelAvailable ? "has-model" : "model-unavailable"}`}
+      aria-label="Fight duration over under summary"
+    >
+      <div className="duration-compact-heading">
+        <span>Fight duration</span>
+        <strong>{displayLine != null ? `O/U ${displayLine}` : "O/U unavailable"}</strong>
+      </div>
+
+      <div className="duration-compact-pick">
+        {view.modelAvailable ? (
+          <>
+            <strong>{view.modelPickSide} {view.durationLine}</strong>
+            <b>{formatProbabilityPercentage(view.modelPickProbability, "N/A")}</b>
+          </>
+        ) : (
+          <>
+            <strong>Model pending</strong>
+            <small>No exact-line pick</small>
+          </>
+        )}
+      </div>
+
+      {chartAvailable && (
+        <>
+          <div
+            className="duration-probability-bar"
+            style={{ "--duration-over-width": `${overWidth}%` }}
+            aria-label={`${view.modelAvailable ? "FightIQ model" : "Market"}: Over ${formatProbabilityPercentage(chartOver)}, Under ${formatProbabilityPercentage(chartUnder)}`}
+          >
+            <span />
+          </div>
+          <div className="duration-compact-labels">
+            <span>O {formatProbabilityPercentage(chartOver, "N/A")}</span>
+            <small>{view.modelAvailable ? "FightIQ" : "Market"}</small>
+            <span>U {formatProbabilityPercentage(chartUnder, "N/A")}</span>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+export function FightDurationBreakdown({ fight, odds }) {
+  const {
+    comparableDelta,
+    decisionPercentage,
+    durationLine,
+    linesMatch,
+    marketLine,
+    modelAvailable,
+    modelOver,
+    modelPickProbability,
+    modelPickSide,
+    modelUnder,
+    sourceLabel,
+    totalsAvailable,
+    totalsBooks,
+    unavailableReason,
+  } = getDurationView(fight, odds);
+
+  return (
+    <section
+      className="fight-duration-breakdown"
+      aria-label="Fight duration details"
+    >
+      <div className="fight-duration-title-row">
+        <span className="fight-duration-eyebrow">Fight duration</span>
+        <span className="fight-duration-kind">Over / Under</span>
+      </div>
+
+      <div className={`duration-model-callout ${modelAvailable ? "" : "unavailable"}`}>
+        <span>FightIQ O/U prediction</span>
+        {modelAvailable ? (
+          <>
+            <div className="duration-model-pick">
+              <strong>{modelPickSide} {durationLine}</strong>
+              <b>{formatProbabilityPercentage(modelPickProbability, "N/A")}</b>
+            </div>
+            <div className="duration-model-split" aria-label={`Model total ${durationLine} rounds`}>
+              <span>
+                Model Over <strong>{formatProbabilityPercentage(modelOver, "N/A")}</strong>
+              </span>
+              <span>
+                Model Under <strong>{formatProbabilityPercentage(modelUnder, "N/A")}</strong>
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <strong>Not available yet</strong>
+            <small>Exact-line duration model not trained.</small>
+          </>
+        )}
+      </div>
+
+      {totalsAvailable ? (
+        <div className="duration-market-reference">
+          <div className="duration-market-heading">
+            <span>Market total</span>
+            <strong>{marketLine} rounds</strong>
+          </div>
+          <div className="duration-market-split">
+            <span>
+              Over <strong>
+                {odds.over_market_percentage ||
+                  formatProbabilityPercentage(odds.over_market_probability, "N/A")}
+              </strong>
+            </span>
+            <span>
+              Under <strong>
+                {odds.under_market_percentage ||
+                  formatProbabilityPercentage(odds.under_market_probability, "N/A")}
+              </strong>
+            </span>
+          </div>
+          <small>
+            {sourceLabel}{totalsBooks ? ` / ${totalsBooks} totals books` : ""}
+          </small>
+        </div>
+      ) : (
+        <p className="fight-duration-status">Rounds market unavailable.</p>
+      )}
+
+      {totalsAvailable && modelAvailable && !linesMatch && (
+        <p className="fight-duration-status warning">
+          Line mismatch: the model is for {durationLine} rounds and the market is {marketLine}.
+          Both are shown, but no edge is calculated.
+        </p>
+      )}
+      {comparableDelta != null && (
+        <div className="duration-edge">
+          <span>Model vs market</span>
+          <strong>{formatProbabilityPointDelta(comparableDelta)} on Over</strong>
+        </div>
+      )}
+      {unavailableReason && (
+        <p className="fight-duration-status">Duration model: {unavailableReason}.</p>
+      )}
+
+      {decisionPercentage && (
+        <div className="decision-context" title="Decision probability is not an Over / Under probability">
+          <span>Decision context</span>
+          <strong>{decisionPercentage}</strong>
+          <small>P(Decision), not O/U</small>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -699,9 +942,11 @@ export default function FutureCards() {
                           )}
                         </div>
 
+                        <FightDurationSummary fight={fight} odds={odds} />
+
                         {fight.prediction_available && prediction ? (
                           <div className="fight-row-pick">
-                            <span className="pick-label">Pick</span>
+                            <span className="pick-label">Winner prediction</span>
                             <strong>{prediction.predicted_winner}</strong>
                             <span className="pick-confidence">
                               {prediction.confidence_percentage}
@@ -709,7 +954,7 @@ export default function FutureCards() {
                           </div>
                         ) : (
                           <div className="fight-row-pick none">
-                            <span className="pick-label">No prediction</span>
+                            <span className="pick-label">No winner prediction</span>
                             <span className="muted">
                               {fight.error?.message ?? "Missing fighter data"}
                             </span>
@@ -717,7 +962,7 @@ export default function FutureCards() {
                         )}
                       </div>
 
-                      <OddsLine fight={fight} odds={odds} />
+                      <MoneylineSummary fight={fight} odds={odds} />
 
                       {expanded && prediction && (
                         <div className="fight-row-detail">
@@ -726,6 +971,7 @@ export default function FutureCards() {
                             imageLookup={imageLookup}
                             onFighterClick={openProfile}
                           />
+                          <FightDurationBreakdown fight={fight} odds={odds} />
                           <RiskFlagsCard prediction={prediction} />
                           <InsightsCard prediction={prediction} />
                         </div>
@@ -737,9 +983,9 @@ export default function FutureCards() {
 
               <SectionCard className="note-card">
                 <p className="dim-note">
-                  Method predictions are intentionally excluded here — they are noisier
-                  than winner predictions. Odds are comparison-only and never used as
-                  model features.
+                  Winner picks remain market-blind. Decision probability is method-model
+                  context, not a rounds-line prediction. A duration edge is shown only when
+                  a dedicated model and the market refer to the exact same total.
                 </p>
               </SectionCard>
             </>
