@@ -12,10 +12,14 @@ import math
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.services.odds_service import (  # noqa: E402
     aggregate_totals,
+    build_odds_row_for_fight,
+    build_totals_snapshot_rows,
     get_bookmaker_totals,
 )
 
@@ -24,6 +28,7 @@ def _book(key, line, over_price, under_price):
     return {
         "key": key,
         "title": key.title(),
+        "last_update": f"{key}-updated",
         "markets": [
             {
                 "key": "totals",
@@ -79,6 +84,53 @@ def test_consensus_line_wins_and_averages_only_matching_books():
 
 def test_aggregate_empty_is_none():
     assert aggregate_totals([]) is None
+
+
+def _event(books):
+    return {
+        "id": "odds-event-1",
+        "commence_time": "2026-07-20T00:00:00Z",
+        "home_team": "A Fighter",
+        "away_team": "B Fighter",
+        "bookmakers": books,
+    }
+
+
+def _fight():
+    return {
+        "event_name": "UFC Test",
+        "event_date": "July 19, 2026",
+        "event_url": "event-1",
+        "fight_url": "fight-1",
+        "fighter_1": "A Fighter",
+        "fighter_2": "B Fighter",
+        "weight_class": "Lightweight",
+    }
+
+
+def test_history_rows_keep_non_consensus_book_lines():
+    books = [
+        _book("draftkings", 2.5, -140, +110),
+        _book("fanduel", 1.5, -180, +145),
+    ]
+    rows = build_totals_snapshot_rows(
+        pd.DataFrame([_fight()]), [_event(books)], captured_at="capture-1"
+    )
+    assert len(rows) == 2
+    assert {row["rounds_line"] for row in rows} == {1.5, 2.5}
+    assert {row["bookmaker_last_update"] for row in rows} == {
+        "draftkings-updated",
+        "fanduel-updated",
+    }
+
+
+def test_totals_survive_when_event_has_no_h2h_quote():
+    row = build_odds_row_for_fight(
+        pd.Series(_fight()), [_event([_book("draftkings", 4.5, -110, -110)])]
+    )
+    assert row["odds_available"] is False
+    assert row["rounds_line"] == 4.5
+    assert row["totals_bookmakers_matched"] == 1
 
 
 if __name__ == "__main__":

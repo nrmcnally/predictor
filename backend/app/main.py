@@ -77,6 +77,7 @@ from app.services.fighter_profile_service import build_fighter_profile
 
 from app.services.model_market_evaluation_service import build_model_market_evaluation
 from app.services.model_snapshot_evaluation_service import build_model_snapshot_evaluation
+from app.services.duration_evaluation_service import build_duration_evaluation
 from app.services.clv_evaluation_service import build_clv_evaluation
 from app.services.data_quality_service import build_data_quality_summary
 
@@ -888,6 +889,11 @@ def model_vs_market_evaluation() -> dict[str, Any]:
 @app.get("/model-snapshot-evaluation", dependencies=[Depends(require_admin)])
 def model_snapshot_evaluation() -> dict[str, Any]:
     return build_model_snapshot_evaluation()
+
+
+@app.get("/duration-evaluation", dependencies=[Depends(require_admin)])
+def duration_evaluation() -> dict[str, Any]:
+    return build_duration_evaluation()
 
 
 @app.get("/clv-evaluation", dependencies=[Depends(require_admin)])

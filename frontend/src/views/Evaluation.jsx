@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   getClvEvaluation,
   getDataQualitySummary,
+  getDurationEvaluation,
   getMethodModelMetrics,
   getModelEvaluation,
   getModelMarketEvaluation,
@@ -653,7 +654,240 @@ function ProspectiveCalibration({ evaluation }) {
   );
 }
 
+function DurationMetricsTiles({ metrics, fightHint = "scored fights" }) {
+  if (!metrics) return null;
+
+  return (
+    <div className="tile-row five">
+      <StatTile
+        label="Pick accuracy"
+        value={formatPercent(metrics.accuracy)}
+        tone="gold"
+        hint={`${formatNumber(metrics.fight_count)} ${fightHint}`}
+      />
+      <StatTile label="Brier score" value={formatDecimal(metrics.brier_score)} />
+      <StatTile label="Log loss" value={formatDecimal(metrics.log_loss)} />
+      <StatTile label="ROC AUC" value={formatDecimal(metrics.roc_auc)} />
+      <StatTile label="Actual Overs" value={formatPercent(metrics.over_rate ?? metrics.actual_over_rate)} />
+    </div>
+  );
+}
+
+function DurationByLineTable({ rows }) {
+  if (!rows?.length) return null;
+
+  return (
+    <table className="data-table">
+      <thead>
+        <tr>
+          <th>Line</th>
+          <th>Fights</th>
+          <th>Accuracy</th>
+          <th>Brier</th>
+          <th>Log loss</th>
+          <th>ROC AUC</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.line}>
+            <td className="mono">O/U {row.line}</td>
+            <td className="mono">{formatNumber(row.fight_count)}</td>
+            <td className="mono">{formatPercent(row.accuracy)}</td>
+            <td className="mono">{formatDecimal(row.brier_score)}</td>
+            <td className="mono">{formatDecimal(row.log_loss)}</td>
+            <td className="mono">{formatDecimal(row.roc_auc)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function DurationResultsTable({ rows, emptyMessage }) {
+  if (!rows?.length) return <p className="dim-note">{emptyMessage}</p>;
+
+  return (
+    <table className="data-table duration-results-table">
+      <thead>
+        <tr>
+          <th>Fight</th>
+          <th>Line</th>
+          <th>Prediction</th>
+          <th>Result</th>
+          <th>Grade</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, index) => (
+          <tr key={`${row.fight_url || row.event_date}-${row.line ?? index}`}>
+            <td>
+              <strong>{row.fighter_1} vs {row.fighter_2}</strong>
+              <span className="duration-result-meta">
+                {row.event_name}{row.event_date ? ` · ${row.event_date}` : ""}
+              </span>
+            </td>
+            <td className="mono">O/U {row.line}</td>
+            <td>
+              <strong className="duration-side">{row.predicted_side}</strong>{" "}
+              <span className="mono">{formatPercent(row.predicted_probability)}</span>
+            </td>
+            <td className="duration-side">{row.actual_side}</td>
+            <td>
+              <Tag tone={row.correct ? "win" : "loss"}>
+                {row.correct ? "Correct" : "Wrong"}
+              </Tag>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+export function DurationEvaluationPanel({ payload, loading, error, onRefresh }) {
+  const historical = payload?.historical;
+  const prospective = payload?.prospective;
+  const readiness = payload?.readiness || {};
+
+  if (loading && !payload) return <Spinner label="Loading Over/Under evaluation…" />;
+
+  return (
+    <div className="duration-evaluation">
+      <ErrorNote message={error} />
+
+      <div className="duration-eval-status">
+        <div>
+          <span className="eyebrow">Semantic contract</span>
+          <strong>{payload?.semantic_contract || "A market-independent survival curve is queried at the exact line; P(Decision) is never substituted."}</strong>
+        </div>
+        <div className="duration-eval-readiness">
+          <Tag tone={historical?.available ? "win" : "warn"}>
+            Historical {historical?.available ? "ready" : "not trained"}
+          </Tag>
+          <Tag tone={prospective?.available ? "win" : "neutral"}>
+            Future results {formatNumber(readiness.settled_future_duration_predictions || 0)}
+          </Tag>
+          <button type="button" className="btn btn-secondary" onClick={onRefresh} disabled={loading}>
+            {loading ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
+      </div>
+
+      <SectionCard
+        eyebrow="Historical backtest"
+        title="Chronological 80/20 evaluation"
+        description="Unique fights are split chronologically before half-round interval expansion. The newest ~20% remains untouched while the survival model learns a coherent duration curve from the older ~80%."
+      >
+        {!historical?.available ? (
+          <div className="duration-eval-empty">
+            <Tag tone="warn">Not trained</Tag>
+            <p>{historical?.message || "No duration backtest artifact is installed."}</p>
+          </div>
+        ) : (
+          <>
+            <div className="duration-model-banner">
+              <div>
+                <span>Model</span>
+                <strong>{historical.model?.name || "Exact-line duration baseline"}</strong>
+              </div>
+              <Tag tone={historical.model?.promotion_status === "production" ? "win" : "warn"}>
+                {historical.model?.promotion_status === "production" ? "Production" : "Experimental"}
+              </Tag>
+            </div>
+            <DurationMetricsTiles
+              metrics={historical.metrics}
+              fightHint={
+                historical.metrics?.unique_fights
+                  ? `exact-line tests across ${formatNumber(historical.metrics.unique_fights)} holdout fights`
+                  : "exact-line holdout tests"
+              }
+            />
+            <p className="dim-note">
+              Train: {formatNumber(historical.split?.training_fights)} fights ({formatPercent(historical.split?.training_fraction)}) · Test: {formatNumber(historical.split?.test_fights)} fights ({formatPercent(historical.split?.test_fraction)}) · Holdout {historical.split?.test_date_min || "N/A"} → {historical.split?.test_date_max || "N/A"}
+            </p>
+            <p className="dim-note">
+              Market odds are excluded from model features. Every exact line is queried from the
+              same monotonic survival curve; observed monotonicity violations: {formatNumber(historical.survival_validation?.monotonicity_violations || 0)}.
+            </p>
+
+            {historical.base_rate_metrics && (
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Comparator</th>
+                      <th>Accuracy</th>
+                      <th>Brier</th>
+                      <th>Log loss</th>
+                      <th>ROC AUC</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Duration survival model</td>
+                      <td className="mono">{formatPercent(historical.metrics?.accuracy)}</td>
+                      <td className="mono">{formatDecimal(historical.metrics?.brier_score)}</td>
+                      <td className="mono">{formatDecimal(historical.metrics?.log_loss)}</td>
+                      <td className="mono">{formatDecimal(historical.metrics?.roc_auc)}</td>
+                    </tr>
+                    <tr>
+                      <td>Per-line training base rate</td>
+                      <td className="mono">{formatPercent(historical.base_rate_metrics.accuracy)}</td>
+                      <td className="mono">{formatDecimal(historical.base_rate_metrics.brier_score)}</td>
+                      <td className="mono">{formatDecimal(historical.base_rate_metrics.log_loss)}</td>
+                      <td className="mono">{formatDecimal(historical.base_rate_metrics.roc_auc)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <DurationByLineTable rows={historical.by_line} />
+            <h3 className="duration-eval-subtitle">Recent holdout fights</h3>
+            <DurationResultsTable
+              rows={historical.recent_results}
+              emptyMessage="No historical holdout rows were included in the artifact."
+            />
+          </>
+        )}
+      </SectionCard>
+
+      <SectionCard
+        eyebrow="Future card results"
+        title="Frozen prospective evaluation"
+        description="Scores only exact-line predictions saved before results arrived. This is separate from the historical 80/20 backtest and grows one completed card at a time."
+      >
+        <div className="tile-row four">
+          <StatTile label="Saved predictions" value={formatNumber(prospective?.saved_predictions || 0)} />
+          <StatTile label="Scored" value={formatNumber(prospective?.scored_predictions || 0)} tone={prospective?.scored_predictions ? "gold" : "default"} />
+          <StatTile label="Pending" value={formatNumber(prospective?.pending_predictions || 0)} />
+          <StatTile label="Invalid / excluded" value={formatNumber(Number(prospective?.invalid_predictions || 0) + Number(prospective?.excluded_results || 0))} />
+        </div>
+
+        {prospective?.available ? (
+          <>
+            <DurationMetricsTiles metrics={prospective.metrics} fightHint="settled future fights" />
+            <DurationByLineTable rows={prospective.by_line} />
+            <DurationResultsTable
+              rows={prospective.future_card_results}
+              emptyMessage="No settled future-card duration predictions yet."
+            />
+          </>
+        ) : (
+          <div className="duration-eval-empty">
+            <Tag tone="neutral">{prospective?.status === "collecting" ? "Collecting" : "Not collecting"}</Tag>
+            <p>{prospective?.message || "No frozen exact-line duration predictions have been saved yet."}</p>
+            <small>The winner and method snapshots do not count as Over/Under predictions.</small>
+          </div>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
 export default function Evaluation() {
+  const [evaluationTab, setEvaluationTab] = useState("winner");
   const [recentLimit, setRecentLimit] = useState(25);
 
   const [evaluation, setEvaluation] = useState(null);
@@ -662,6 +896,9 @@ export default function Evaluation() {
   const [snapshotEvaluation, setSnapshotEvaluation] = useState(null);
   const [clvEvaluation, setClvEvaluation] = useState(null);
   const [dataQuality, setDataQuality] = useState(null);
+  const [durationEvaluation, setDurationEvaluation] = useState(null);
+  const [durationLoading, setDurationLoading] = useState(false);
+  const [durationError, setDurationError] = useState("");
   const [showExperimentalModels, setShowExperimentalModels] = useState(false);
 
   const [walkForward, setWalkForward] = useState(null);
@@ -701,6 +938,20 @@ export default function Evaluation() {
     }
   }
 
+  async function loadDurationEvaluation() {
+    setDurationLoading(true);
+    setDurationError("");
+
+    try {
+      const data = await getDurationEvaluation();
+      setDurationEvaluation(data);
+    } catch (requestError) {
+      setDurationError(requestError.message);
+    } finally {
+      setDurationLoading(false);
+    }
+  }
+
   useEffect(() => {
     async function init() {
       await loadEvaluation();
@@ -712,6 +963,9 @@ export default function Evaluation() {
     getModelSnapshotEvaluation().then(setSnapshotEvaluation).catch(() => {});
     getClvEvaluation().then(setClvEvaluation).catch(() => {});
     getDataQualitySummary().then(setDataQuality).catch(() => {});
+    getDurationEvaluation()
+      .then(setDurationEvaluation)
+      .catch((requestError) => setDurationError(requestError.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -726,7 +980,7 @@ export default function Evaluation() {
           <h1 className="view-title">Evaluation</h1>
         </div>
 
-        <div className="eval-controls">
+        {evaluationTab === "winner" && <div className="eval-controls">
           <div className="control small">
             <label htmlFor="eval-limit">Recent limit</label>
             <input
@@ -746,8 +1000,39 @@ export default function Evaluation() {
           >
             {loading ? "Evaluating…" : "Re-run"}
           </button>
-        </div>
+        </div>}
       </header>
+
+      <div className="segmented view-tabs evaluation-tabs" role="tablist" aria-label="Evaluation type">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={evaluationTab === "winner"}
+          className={evaluationTab === "winner" ? "active" : ""}
+          onClick={() => setEvaluationTab("winner")}
+        >
+          Winner model
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={evaluationTab === "duration"}
+          className={evaluationTab === "duration" ? "active" : ""}
+          onClick={() => setEvaluationTab("duration")}
+        >
+          Over / under
+        </button>
+      </div>
+
+      {evaluationTab === "duration" ? (
+        <DurationEvaluationPanel
+          payload={durationEvaluation}
+          loading={durationLoading}
+          error={durationError}
+          onRefresh={loadDurationEvaluation}
+        />
+      ) : (
+        <>
 
       <ErrorNote message={error} />
 
@@ -995,6 +1280,8 @@ export default function Evaluation() {
           </p>
         </ModelComparisonTable>
       </SectionCard>
+        </>
+      )}
     </div>
   );
 }

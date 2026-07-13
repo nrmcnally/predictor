@@ -16,6 +16,7 @@ from app.repositories import (
     future_cards_repository,
     future_fight_odds_repository,
     odds_track_repository,
+    totals_odds_snapshots_repository,
 )
 
 
@@ -235,6 +236,7 @@ def get_bookmaker_totals(bookmaker: dict[str, Any]) -> dict[str, Any] | None:
     return {
         "bookmaker_key": clean_text(bookmaker.get("key", "")),
         "bookmaker_title": clean_text(bookmaker.get("title", "")),
+        "bookmaker_last_update": clean_text(bookmaker.get("last_update", "")),
         "rounds_line": line,
         "over_odds_american": over.get("price"),
         "under_odds_american": under.get("price"),
@@ -283,6 +285,29 @@ def choose_representative_bookmaker(matches: list[dict[str, Any]]) -> dict[str, 
                 return match
 
     return matches[0]
+
+
+def _find_best_odds_event(
+    fighter_1: str,
+    fighter_2: str,
+    odds_events: list[dict[str, Any]],
+) -> tuple[dict[str, Any] | None, float, float]:
+    best_event = None
+    best_score = 0.0
+    best_weaker_score = 0.0
+
+    for odds_event in odds_events:
+        is_match, score, weaker_score = odds_event_matches_fight(
+            odds_event=odds_event,
+            fighter_1=fighter_1,
+            fighter_2=fighter_2,
+        )
+        if is_match and score > best_score:
+            best_event = odds_event
+            best_score = score
+            best_weaker_score = weaker_score
+
+    return best_event, best_score, best_weaker_score
 
 
 def odds_event_matches_fight(
@@ -375,21 +400,9 @@ def build_odds_row_for_fight(
     fighter_1 = clean_text(fight_row.get("fighter_1", ""))
     fighter_2 = clean_text(fight_row.get("fighter_2", ""))
 
-    best_event = None
-    best_score = 0.0
-    best_weaker_score = 0.0
-
-    for odds_event in odds_events:
-        is_match, score, weaker_score = odds_event_matches_fight(
-            odds_event=odds_event,
-            fighter_1=fighter_1,
-            fighter_2=fighter_2,
-        )
-
-        if is_match and score > best_score:
-            best_event = odds_event
-            best_score = score
-            best_weaker_score = weaker_score
+    best_event, best_score, best_weaker_score = _find_best_odds_event(
+        fighter_1, fighter_2, odds_events
+    )
 
     low_confidence_match = bool(best_event) and best_weaker_score < LOW_CONFIDENCE_MATCH_THRESHOLD
 
@@ -455,9 +468,12 @@ def build_odds_row_for_fight(
         if bookmaker_match:
             bookmaker_matches.append(bookmaker_match)
 
+    totals = aggregate_totals(best_event.get("bookmakers", [])) or {}
+
     if not bookmaker_matches:
         return {
             **base_row,
+            **totals,
             "odds_event_id": clean_text(best_event.get("id", "")),
             "odds_commence_time": clean_text(best_event.get("commence_time", "")),
         }
@@ -478,8 +494,6 @@ def build_odds_row_for_fight(
     else:
         market_favorite = fighter_2
         market_favorite_probability = fighter_2_market_probability
-
-    totals = aggregate_totals(best_event.get("bookmakers", [])) or {}
 
     return {
         **base_row,
@@ -502,9 +516,61 @@ def build_odds_row_for_fight(
     }
 
 
+def build_totals_snapshot_rows(
+    upcoming_fights_df: pd.DataFrame,
+    odds_events: list[dict[str, Any]],
+    captured_at: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return every valid per-book rounds quote matched to an upcoming fight.
+
+    These rows intentionally retain non-consensus lines. The current-card table can
+    still select one modal line for display while this history remains suitable for
+    line movement and exact-book evaluation.
+    """
+    observed_at = captured_at or datetime.now().isoformat(timespec="seconds")
+    rows: list[dict[str, Any]] = []
+
+    for _, fight_row in upcoming_fights_df.iterrows():
+        fighter_1 = clean_text(fight_row.get("fighter_1", ""))
+        fighter_2 = clean_text(fight_row.get("fighter_2", ""))
+        best_event, match_score, weaker_score = _find_best_odds_event(
+            fighter_1, fighter_2, odds_events
+        )
+        if not best_event:
+            continue
+
+        for bookmaker in best_event.get("bookmakers", []):
+            quote = get_bookmaker_totals(bookmaker)
+            if not quote:
+                continue
+            rows.append(
+                {
+                    "captured_at": observed_at,
+                    "source": "the-odds-api",
+                    "odds_event_id": clean_text(best_event.get("id", "")),
+                    "odds_commence_time": clean_text(
+                        best_event.get("commence_time", "")
+                    ),
+                    "event_name": clean_text(fight_row.get("event_name", "")),
+                    "event_date": clean_text(fight_row.get("event_date", "")),
+                    "event_url": clean_text(fight_row.get("event_url", "")),
+                    "fight_url": _normalize_fight_url(fight_row.get("fight_url", "")),
+                    "fighter_1": fighter_1,
+                    "fighter_2": fighter_2,
+                    "weight_class": clean_text(fight_row.get("weight_class", "")),
+                    **quote,
+                    "odds_match_score": match_score,
+                    "odds_match_min_score": weaker_score,
+                }
+            )
+
+    return rows
+
+
 def refresh_future_fight_odds(api_key: str | None = None) -> dict[str, Any]:
     odds_events = fetch_current_mma_odds(api_key=api_key)
     upcoming_fights_df = load_upcoming_fights()
+    captured_at = datetime.now().isoformat(timespec="seconds")
 
     rows = []
 
@@ -520,6 +586,11 @@ def refresh_future_fight_odds(api_key: str | None = None) -> dict[str, Any]:
 
     future_fight_odds_repository.replace_all(odds_df.to_dict(orient="records"))
 
+    totals_rows = build_totals_snapshot_rows(
+        upcoming_fights_df, odds_events, captured_at=captured_at
+    )
+    totals_added = totals_odds_snapshots_repository.append_snapshots(totals_rows)
+
     # Capture the opening/closing line track for CLV.
     track_result = update_fight_odds_track()
 
@@ -528,6 +599,15 @@ def refresh_future_fight_odds(api_key: str | None = None) -> dict[str, Any]:
     return {
         "storage": "sqlite:future_fight_odds",
         "odds_track_fights": track_result.get("tracked_fights", 0),
+        "totals_quotes_received": len(totals_rows),
+        "totals_snapshots_added": totals_added,
+        "totals_snapshots_total": totals_odds_snapshots_repository.count(),
+        "totals_fights_matched": len(
+            {row["fight_url"] for row in totals_rows if row.get("fight_url")}
+        ),
+        "totals_lines_received": sorted(
+            {row["rounds_line"] for row in totals_rows if row.get("rounds_line") is not None}
+        ),
         "raw_odds_file": str(CURRENT_MMA_ODDS_JSON),
         "upcoming_fights": int(len(upcoming_fights_df)),
         "odds_events": int(len(odds_events)),

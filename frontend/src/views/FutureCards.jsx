@@ -286,6 +286,22 @@ function getDurationView(fight, odds) {
   const totalsAvailable = hasTotalsQuote(odds);
   const marketLine = totalsAvailable ? parseFiniteNumber(odds.rounds_line) : null;
   const durationPrediction = fight?.duration_prediction || null;
+  const durationCurve = Array.isArray(durationPrediction?.curve)
+    ? durationPrediction.curve
+        .map((point) => ({
+          line: parseFiniteNumber(point?.line),
+          overProbability: parseFiniteNumber(point?.over_probability),
+        }))
+        .filter(
+          (point) =>
+            point.line != null &&
+            point.line > 0 &&
+            point.overProbability != null &&
+            point.overProbability >= 0 &&
+            point.overProbability <= 1
+        )
+        .sort((left, right) => left.line - right.line)
+    : [];
   const durationLineValue = durationPrediction?.line ?? durationPrediction?.rounds_line;
   const durationLine = parseFiniteNumber(durationLineValue);
   const modelOver = parseFiniteNumber(durationPrediction?.over_probability);
@@ -324,6 +340,7 @@ function getDurationView(fight, odds) {
   return {
     comparableDelta,
     decisionPercentage,
+    durationCurve,
     durationLine,
     linesMatch,
     marketLine,
@@ -341,8 +358,82 @@ function getDurationView(fight, odds) {
   };
 }
 
+export function DurationSurvivalCurve({ rows, marketLine }) {
+  if (!rows?.length) return null;
+
+  const width = 320;
+  const height = 112;
+  const left = 22;
+  const right = 10;
+  const top = 18;
+  const bottom = 28;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const xFor = (_, index) =>
+    rows.length === 1 ? left + plotWidth / 2 : left + (index / (rows.length - 1)) * plotWidth;
+  const yFor = (probability) => top + (1 - probability) * plotHeight;
+  const points = rows
+    .map((row, index) => `${xFor(row, index)},${yFor(row.overProbability)}`)
+    .join(" ");
+
+  return (
+    <figure className="duration-survival-insight" aria-label="FightIQ duration survival curve">
+      <figcaption>
+        <div>
+          <span>Duration curve</span>
+          <strong>Chance the fight continues past each line</strong>
+        </div>
+        <small>FightIQ model insight</small>
+      </figcaption>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Probability of going over each round line">
+        <line
+          className="duration-survival-midline"
+          x1={left}
+          x2={width - right}
+          y1={yFor(0.5)}
+          y2={yFor(0.5)}
+        />
+        <polyline className="duration-survival-path" points={points} />
+        {rows.map((row, index) => {
+          const selected = marketLine != null && Math.abs(row.line - marketLine) < 0.000001;
+          return (
+            <g
+              key={row.line}
+              className={selected ? "duration-survival-point selected" : "duration-survival-point"}
+            >
+              <circle cx={xFor(row, index)} cy={yFor(row.overProbability)} r={selected ? 5 : 4} />
+              <text
+                className="duration-survival-probability"
+                x={xFor(row, index)}
+                y={Math.max(11, yFor(row.overProbability) - 9)}
+                textAnchor="middle"
+              >
+                {Math.round(row.overProbability * 100)}%
+              </text>
+              <text
+                className="duration-survival-line-label"
+                x={xFor(row, index)}
+                y={height - 7}
+                textAnchor="middle"
+              >
+                {row.line}R
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <p>
+        {marketLine != null
+          ? "The highlighted point is the current market line. The curve is predicted before comparing FightIQ with market prices."
+          : "No market O/U is available yet. This remains FightIQ’s independent duration forecast; a market marker will appear when a line is posted."}
+      </p>
+    </figure>
+  );
+}
+
 export function FightDurationSummary({ fight, odds }) {
   const view = getDurationView(fight, odds);
+  const curveAvailable = view.durationCurve.length > 0;
   const displayLine = view.modelAvailable ? view.durationLine : view.marketLine;
   const chartOver = view.modelAvailable ? view.modelOver : view.marketOver;
   const chartUnder = view.modelAvailable ? view.modelUnder : view.marketUnder;
@@ -351,7 +442,9 @@ export function FightDurationSummary({ fight, odds }) {
 
   return (
     <section
-      className={`fight-duration-summary ${view.modelAvailable ? "has-model" : "model-unavailable"}`}
+      className={`fight-duration-summary ${
+        view.modelAvailable ? "has-model" : curveAvailable ? "curve-ready" : "model-unavailable"
+      }`}
       aria-label="Fight duration over under summary"
     >
       <div className="duration-compact-heading">
@@ -364,6 +457,11 @@ export function FightDurationSummary({ fight, odds }) {
           <>
             <strong>{view.modelPickSide} {view.durationLine}</strong>
             <b>{formatProbabilityPercentage(view.modelPickProbability, "N/A")}</b>
+          </>
+        ) : curveAvailable ? (
+          <>
+            <strong>Curve ready</strong>
+            <small>{view.totalsAvailable ? "No exact-line pick" : "Awaiting market O/U"}</small>
           </>
         ) : (
           <>
@@ -397,6 +495,7 @@ export function FightDurationBreakdown({ fight, odds }) {
   const {
     comparableDelta,
     decisionPercentage,
+    durationCurve,
     durationLine,
     linesMatch,
     marketLine,
@@ -421,7 +520,11 @@ export function FightDurationBreakdown({ fight, odds }) {
         <span className="fight-duration-kind">Over / Under</span>
       </div>
 
-      <div className={`duration-model-callout ${modelAvailable ? "" : "unavailable"}`}>
+      <div
+        className={`duration-model-callout ${
+          modelAvailable ? "" : durationCurve.length > 0 ? "curve-only" : "unavailable"
+        }`}
+      >
         <span>FightIQ O/U prediction</span>
         {modelAvailable ? (
           <>
@@ -438,6 +541,15 @@ export function FightDurationBreakdown({ fight, odds }) {
               </span>
             </div>
           </>
+        ) : durationCurve.length > 0 ? (
+          <>
+            <strong>Duration curve ready</strong>
+            <small>
+              {totalsAvailable
+                ? "The market line is not supported for an exact comparison."
+                : "No market O/U is posted yet; the independent forecast is shown below."}
+            </small>
+          </>
         ) : (
           <>
             <strong>Not available yet</strong>
@@ -445,6 +557,10 @@ export function FightDurationBreakdown({ fight, odds }) {
           </>
         )}
       </div>
+
+      {durationCurve.length > 0 && (
+        <DurationSurvivalCurve rows={durationCurve} marketLine={marketLine} />
+      )}
 
       {totalsAvailable ? (
         <div className="duration-market-reference">

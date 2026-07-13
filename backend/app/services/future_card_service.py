@@ -13,9 +13,10 @@ from app.services.fight_context_override_service import (
     upsert_scheduled_rounds_override,
 )
 from app.services.event_lock_service import build_event_lock_state
+from app.services.duration_prediction_service import predict_duration_data
 from app.services.method_prediction_service import predict_method_data
 from app.services.prediction_service import FighterNotFoundError, predict_fight_data
-from app.repositories import future_cards_repository
+from app.repositories import future_cards_repository, future_fight_odds_repository
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -31,6 +32,31 @@ def clean_text(value: Any) -> str:
         return ""
 
     return " ".join(str(value).split())
+
+
+def normalize_fight_url(value: Any) -> str:
+    normalized = clean_text(value)
+    normalized = normalized.replace("https://www.", "https://")
+    normalized = normalized.replace("http://www.", "http://")
+    return normalized.rstrip("/")
+
+
+def load_future_totals_line_lookup() -> dict[str, float]:
+    """Current consensus total by fight; the line is a post-model query only."""
+    odds_df = future_fight_odds_repository.read_all_df()
+    if odds_df.empty or "fight_url" not in odds_df.columns or "rounds_line" not in odds_df.columns:
+        return {}
+
+    lookup: dict[str, float] = {}
+    for _, row in odds_df.iterrows():
+        fight_url = normalize_fight_url(row.get("fight_url", ""))
+        try:
+            line = float(row.get("rounds_line"))
+        except (TypeError, ValueError):
+            continue
+        if fight_url and pd.notna(line) and line > 0:
+            lookup[fight_url] = line
+    return lookup
 
 
 def refresh_upcoming_cards() -> dict[str, int]:
@@ -205,6 +231,7 @@ def _model_distance_probability(
 
 def get_future_card_predictions(event_id: str) -> dict[str, Any]:
     card = get_future_card(event_id)
+    totals_line_lookup = load_future_totals_line_lookup()
 
     predicted_fights = []
 
@@ -224,6 +251,13 @@ def get_future_card_predictions(event_id: str) -> dict[str, Any]:
             distance_probability = _model_distance_probability(
                 fighter_1, fighter_2, weight_class
             )
+            duration_prediction = predict_duration_data(
+                fighter_a=fighter_1,
+                fighter_b=fighter_2,
+                weight_class=weight_class,
+                fight_context=fight.get("fight_context"),
+                market_line=totals_line_lookup.get(normalize_fight_url(fight["fight_url"])),
+            )
 
             predicted_fights.append(
                 {
@@ -236,6 +270,7 @@ def get_future_card_predictions(event_id: str) -> dict[str, Any]:
                         if distance_probability is not None
                         else ""
                     ),
+                    "duration_prediction": duration_prediction,
                     "error": None,
                 }
             )

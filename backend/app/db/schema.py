@@ -50,6 +50,24 @@ SAVED_CARD_COLUMNS: list[tuple[str, str]] = [
     ("round_override_saved", "INTEGER"),
     ("round_override_source", "TEXT"),
     ("round_override_updated_at", "TEXT"),
+    # Exact-line duration prediction snapshot. Null until a dedicated duration
+    # model is available; P(Decision) must never be written into these columns.
+    ("duration_line", "REAL"),
+    ("duration_over_probability", "REAL"),
+    ("duration_under_probability", "REAL"),
+    ("duration_model_version", "TEXT"),
+    ("duration_model_type", "TEXT"),
+    ("duration_feature_schema_version", "TEXT"),
+    ("duration_generated_at", "TEXT"),
+    # Same-time rounds market snapshot used for line-matched comparison.
+    ("rounds_line", "REAL"),
+    ("over_odds_american", "REAL"),
+    ("under_odds_american", "REAL"),
+    ("over_market_probability", "REAL"),
+    ("under_market_probability", "REAL"),
+    ("over_market_percentage", "TEXT"),
+    ("under_market_percentage", "TEXT"),
+    ("totals_bookmakers_matched", "INTEGER"),
     ("model_version", "TEXT"),
     ("model_recipe_hash", "TEXT"),
     ("model_trained_at", "TEXT"),
@@ -187,6 +205,34 @@ FUTURE_FIGHT_ODDS_COLUMNS: list[tuple[str, str]] = [
     ("totals_bookmakers_matched", "INTEGER"),
 ]
 
+# totals_odds_snapshots — append-only, per-book observations of the actual rounds
+# market. Unlike future_fight_odds, this table is never full-replaced: it preserves
+# alternate bookmaker lines and line movement for later settlement/evaluation.
+TOTALS_ODDS_SNAPSHOT_COLUMNS: list[tuple[str, str]] = [
+    ("snapshot_key", "TEXT"),
+    ("captured_at", "TEXT"),
+    ("source", "TEXT"),
+    ("odds_event_id", "TEXT"),
+    ("odds_commence_time", "TEXT"),
+    ("event_name", "TEXT"),
+    ("event_date", "TEXT"),
+    ("event_url", "TEXT"),
+    ("fight_url", "TEXT"),
+    ("fighter_1", "TEXT"),
+    ("fighter_2", "TEXT"),
+    ("weight_class", "TEXT"),
+    ("bookmaker_key", "TEXT"),
+    ("bookmaker_title", "TEXT"),
+    ("bookmaker_last_update", "TEXT"),
+    ("rounds_line", "REAL"),
+    ("over_odds_american", "REAL"),
+    ("under_odds_american", "REAL"),
+    ("over_market_probability", "REAL"),
+    ("under_market_probability", "REAL"),
+    ("odds_match_score", "REAL"),
+    ("odds_match_min_score", "REAL"),
+]
+
 
 # event_fights (completed results). fight_url is the natural key (one row per fight),
 # so it's the PRIMARY KEY — no surrogate id — which makes incremental upserts clean.
@@ -302,6 +348,15 @@ SCHEMA_STATEMENTS: list[str] = [
     create_table_sql("model_runs", MODEL_RUNS_COLUMNS),
     create_table_sql("future_fight_odds", FUTURE_FIGHT_ODDS_COLUMNS),
     "CREATE INDEX IF NOT EXISTS idx_future_fight_odds_fight_url ON future_fight_odds(fight_url)",
+    create_table_sql(
+        "totals_odds_snapshots",
+        TOTALS_ODDS_SNAPSHOT_COLUMNS,
+        primary_key="snapshot_key",
+    ),
+    "CREATE INDEX IF NOT EXISTS idx_totals_odds_snapshots_fight_time "
+    "ON totals_odds_snapshots(fight_url, captured_at)",
+    "CREATE INDEX IF NOT EXISTS idx_totals_odds_snapshots_event "
+    "ON totals_odds_snapshots(odds_event_id)",
     # users: accounts + roles. email is the unique login identifier (Phase 6).
     """
     CREATE TABLE IF NOT EXISTS users (
@@ -423,6 +478,7 @@ _SPEC_TABLES: list[tuple[str, list[tuple[str, str]]]] = [
     ("upcoming_fights", UPCOMING_FIGHTS_COLUMNS),
     ("model_runs", MODEL_RUNS_COLUMNS),
     ("future_fight_odds", FUTURE_FIGHT_ODDS_COLUMNS),
+    ("totals_odds_snapshots", TOTALS_ODDS_SNAPSHOT_COLUMNS),
     ("user_predictions", USER_PREDICTIONS_COLUMNS),
     ("event_controls", EVENT_CONTROLS_COLUMNS),
 ]

@@ -6,7 +6,8 @@ from pathlib import Path
 # Refreshing a deployed instance from a locally-built bundle must NOT touch the
 # tables that live on the server: accounts, picks, friendships, and admin lock
 # controls are created there and exist nowhere else. Everything the local Data Ops
-# pipeline produces is "shared" and gets replaced wholesale.
+# pipeline produces is "shared". Snapshot tables are replaced wholesale; append-only
+# observation tables are merged so deploying a bundle cannot erase server captures.
 SHARED_TABLES = [
     "event_fights",
     "upcoming_events",
@@ -16,7 +17,9 @@ SHARED_TABLES = [
     "saved_card_predictions",
     "saved_model_predictions",
     "model_runs",
+    "totals_odds_snapshots",
 ]
+APPEND_ONLY_SHARED_TABLES = {"totals_odds_snapshots"}
 PERSONAL_TABLES = ["users", "user_predictions", "friendships", "event_controls"]
 
 
@@ -64,11 +67,17 @@ def sync_shared_tables(live_db: Path | str, bundle_db: Path | str) -> dict[str, 
             if not shared_columns:
                 continue
             column_list = ", ".join(shared_columns)
-            conn.execute(f"DELETE FROM main.{table}")
-            cursor = conn.execute(
-                f"INSERT INTO main.{table} ({column_list}) "
-                f"SELECT {column_list} FROM bundle.{table}"
-            )
+            if table in APPEND_ONLY_SHARED_TABLES:
+                cursor = conn.execute(
+                    f"INSERT OR IGNORE INTO main.{table} ({column_list}) "
+                    f"SELECT {column_list} FROM bundle.{table}"
+                )
+            else:
+                conn.execute(f"DELETE FROM main.{table}")
+                cursor = conn.execute(
+                    f"INSERT INTO main.{table} ({column_list}) "
+                    f"SELECT {column_list} FROM bundle.{table}"
+                )
             replaced[table] = cursor.rowcount
 
         conn.commit()

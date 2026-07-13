@@ -675,6 +675,16 @@ export async function getMethodModelMetrics() {
   });
 }
 
+export async function getDurationEvaluation() {
+  if (USE_MOCK) {
+    return mock.getDurationEvaluation();
+  }
+
+  return request("/duration-evaluation", {
+    fallbackError: "Failed to load Over/Under evaluation.",
+  });
+}
+
 export async function getModelMarketEvaluation() {
   if (USE_MOCK) {
     return mock.getModelMarketEvaluation();

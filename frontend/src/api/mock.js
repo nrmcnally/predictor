@@ -589,6 +589,22 @@ export async function getFutureCardPredictions(eventId) {
 
       // P(goes the distance) — mirrors the live endpoint's method-model derived field.
       const distanceProbability = 0.28 + hashString(`${fighter1}-distance`) * 0.5;
+      const durationSeed = hashString(`${fighter1}-${fighter2}-duration`);
+      const durationLines = scheduledRounds === 5
+        ? [0.5, 1.5, 2.5, 3.5, 4.5]
+        : [0.5, 1.5, 2.5];
+      const durationCurve = durationLines.map((line) => {
+        const overProbability = Math.max(
+          0.04,
+          Math.min(0.96, 0.96 - line * (0.135 + durationSeed * 0.035))
+        );
+        return {
+          line,
+          over_probability: overProbability,
+          under_probability: 1 - overProbability,
+        };
+      });
+      const exactDuration = durationCurve[durationCurve.length - 1];
 
       return {
         ...base,
@@ -596,6 +612,21 @@ export async function getFutureCardPredictions(eventId) {
         prediction,
         model_distance_probability: distanceProbability,
         model_distance_percentage: percent(distanceProbability),
+        duration_prediction: {
+          available: true,
+          status: "ready",
+          line: exactDuration.line,
+          rounds_line: exactDuration.line,
+          over_probability: exactDuration.over_probability,
+          under_probability: exactDuration.under_probability,
+          curve: durationCurve,
+          model_type: "discrete_time_survival",
+          model_version: "duration-survival-demo",
+          promotion_status: "experimental",
+          market_inputs_used: false,
+          market_line_role: "query_only",
+          monotonic_by_construction: true,
+        },
       };
     })
   );
@@ -1387,6 +1418,98 @@ export function getMethodModelMetrics() {
         best_model_name: "xgboost",
         best_metrics: { accuracy: 0.391, log_loss: 1.684, macro_f1: 0.27 },
       },
+    },
+  });
+}
+
+export function getDurationEvaluation() {
+  return delay({
+    status: "ready",
+    semantic_contract:
+      "A market-independent survival curve is queried at the exact saved market line; P(Decision) is never substituted.",
+    readiness: {
+      historical_backtest_available: true,
+      future_duration_snapshots: 4,
+      settled_future_duration_predictions: 3,
+      saved_totals_snapshots: 4,
+    },
+    historical: {
+      available: true,
+      status: "experimental_backtest",
+      message:
+        "Demo of a chronological 80/20 historical evaluation of the duration survival model.",
+      model: {
+        name: "Discrete-time half-round survival baseline",
+        type: "discrete_time_survival",
+        version: "duration-survival-demo",
+        promotion_status: "experimental",
+        market_inputs_used: false,
+        market_line_role: "query_only",
+      },
+      split: {
+        strategy: "chronological_80_20_unique_fights_before_interval_expansion",
+        training_fights: 6400,
+        test_fights: 1600,
+        training_fraction: 0.8,
+        test_fraction: 0.2,
+        training_date_min: "1994-03-11",
+        training_date_max: "2022-12-17",
+        test_date_min: "2023-01-14",
+        test_date_max: "2026-06-27",
+      },
+      metrics: {
+        fight_count: 4380,
+        unique_fights: 1600,
+        accuracy: 0.638,
+        brier_score: 0.226,
+        log_loss: 0.645,
+        roc_auc: 0.662,
+        over_rate: 0.55,
+      },
+      base_rate_metrics: {
+        fight_count: 4380,
+        unique_fights: 1600,
+        accuracy: 0.55,
+        brier_score: 0.248,
+        log_loss: 0.689,
+        roc_auc: 0.5,
+      },
+      by_line: [
+        { line: 0.5, fight_count: 1600, accuracy: 0.81, brier_score: 0.142, log_loss: 0.447, roc_auc: 0.69 },
+        { line: 1.5, fight_count: 1595, accuracy: 0.67, brier_score: 0.212, log_loss: 0.61, roc_auc: 0.67 },
+        { line: 2.5, fight_count: 1450, accuracy: 0.635, brier_score: 0.227, log_loss: 0.647, roc_auc: 0.658 },
+        { line: 3.5, fight_count: 150, accuracy: 0.65, brier_score: 0.221, log_loss: 0.631, roc_auc: 0.675 },
+        { line: 4.5, fight_count: 145, accuracy: 0.667, brier_score: 0.218, log_loss: 0.624, roc_auc: 0.681 },
+      ],
+      survival_validation: { curves_checked: 1600, monotonicity_violations: 0 },
+      recent_results: [
+        { fight_url: "demo-duration-1", event_name: "UFC Demo 3", event_date: "2026-06-27", fighter_1: "Khamzat Chimaev", fighter_2: "Dricus Du Plessis", line: 4.5, predicted_side: "under", predicted_probability: 0.57, actual_side: "over", correct: false },
+        { fight_url: "demo-duration-2", event_name: "UFC Demo 2", event_date: "2026-06-20", fighter_1: "Islam Makhachev", fighter_2: "Shavkat Rakhmonov", line: 2.5, predicted_side: "over", predicted_probability: 0.61, actual_side: "over", correct: true },
+        { fight_url: "demo-duration-3", event_name: "UFC Demo 1", event_date: "2026-06-13", fighter_1: "Merab Dvalishvili", fighter_2: "Sean O'Malley", line: 2.5, predicted_side: "over", predicted_probability: 0.64, actual_side: "over", correct: true },
+      ],
+    },
+    prospective: {
+      available: true,
+      status: "ready",
+      message: "Demo frozen exact-line snapshots scored after results arrived.",
+      saved_predictions: 4,
+      scored_predictions: 3,
+      pending_predictions: 1,
+      invalid_predictions: 0,
+      excluded_results: 0,
+      metrics: {
+        fight_count: 3,
+        accuracy: 2 / 3,
+        brier_score: 0.231,
+        log_loss: 0.654,
+        roc_auc: 0.5,
+      },
+      by_line: [],
+      future_card_results: [
+        { fight_url: "demo-future-duration-1", event_name: "UFC Demo 3", event_date: "2026-06-27", fighter_1: "Khamzat Chimaev", fighter_2: "Dricus Du Plessis", line: 4.5, predicted_side: "under", predicted_probability: 0.57, actual_side: "over", correct: false, model_version: "duration-demo" },
+        { fight_url: "demo-future-duration-2", event_name: "UFC Demo 2", event_date: "2026-06-20", fighter_1: "Islam Makhachev", fighter_2: "Shavkat Rakhmonov", line: 2.5, predicted_side: "over", predicted_probability: 0.61, actual_side: "over", correct: true, model_version: "duration-demo" },
+        { fight_url: "demo-future-duration-3", event_name: "UFC Demo 1", event_date: "2026-06-13", fighter_1: "Merab Dvalishvili", fighter_2: "Sean O'Malley", line: 2.5, predicted_side: "over", predicted_probability: 0.64, actual_side: "over", correct: true, model_version: "duration-demo" },
+      ],
     },
   });
 }

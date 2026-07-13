@@ -289,6 +289,7 @@ def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
     for fight in card["fights"]:
         prediction_available = bool(fight.get("prediction_available"))
         prediction = fight.get("prediction") or {}
+        duration_prediction = fight.get("duration_prediction") or {}
         error = fight.get("error")
         odds_data = odds_lookup.get(normalize_fight_url(fight["fight_url"]), {})
 
@@ -311,6 +312,20 @@ def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
             "round_override_saved": fight.get("round_override_saved", False),
             "round_override_source": fight.get("round_override_source", ""),
             "round_override_updated_at": fight.get("round_override_updated_at", ""),
+
+            # Dedicated exact-line duration output only. The broad method model's
+            # P(Decision) is intentionally not used as an Over probability.
+            "duration_line": duration_prediction.get(
+                "line", duration_prediction.get("rounds_line")
+            ),
+            "duration_over_probability": duration_prediction.get("over_probability"),
+            "duration_under_probability": duration_prediction.get("under_probability"),
+            "duration_model_version": duration_prediction.get("model_version", ""),
+            "duration_model_type": duration_prediction.get("model_type", ""),
+            "duration_feature_schema_version": duration_prediction.get(
+                "feature_schema_version", ""
+            ),
+            "duration_generated_at": duration_prediction.get("generated_at", ""),
 
             "prediction_available": prediction_available,
             "error_json": json.dumps(error) if error else "",
@@ -349,6 +364,14 @@ def build_saved_prediction_rows_for_card(event_id: str) -> list[dict[str, Any]]:
             "market_favorite": odds_data.get("market_favorite", ""),
             "market_favorite_probability": odds_data.get("market_favorite_probability"),
             "market_favorite_percentage": odds_data.get("market_favorite_percentage", ""),
+            "rounds_line": odds_data.get("rounds_line"),
+            "over_odds_american": odds_data.get("over_odds_american"),
+            "under_odds_american": odds_data.get("under_odds_american"),
+            "over_market_probability": odds_data.get("over_market_probability"),
+            "under_market_probability": odds_data.get("under_market_probability"),
+            "over_market_percentage": odds_data.get("over_market_percentage", ""),
+            "under_market_percentage": odds_data.get("under_market_percentage", ""),
+            "totals_bookmakers_matched": odds_data.get("totals_bookmakers_matched"),
         }
 
         if prediction_available:
@@ -524,6 +547,14 @@ def load_future_odds_lookup() -> dict[str, dict[str, Any]]:
             "market_favorite": clean_text(row.get("market_favorite", "")),
             "market_favorite_probability": row.get("market_favorite_probability"),
             "market_favorite_percentage": clean_text(row.get("market_favorite_percentage", "")),
+            "rounds_line": row.get("rounds_line"),
+            "over_odds_american": row.get("over_odds_american"),
+            "under_odds_american": row.get("under_odds_american"),
+            "over_market_probability": row.get("over_market_probability"),
+            "under_market_probability": row.get("under_market_probability"),
+            "over_market_percentage": clean_text(row.get("over_market_percentage", "")),
+            "under_market_percentage": clean_text(row.get("under_market_percentage", "")),
+            "totals_bookmakers_matched": row.get("totals_bookmakers_matched"),
         }
 
     return odds_lookup

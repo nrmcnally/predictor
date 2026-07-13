@@ -11,6 +11,12 @@ const MARKET_TOTAL = {
   totals_bookmakers_matched: 4,
 };
 
+const DURATION_CURVE = [
+  { line: 0.5, over_probability: 0.88, under_probability: 0.12 },
+  { line: 1.5, over_probability: 0.7, under_probability: 0.3 },
+  { line: 2.5, over_probability: 0.54, under_probability: 0.46 },
+];
+
 test("keeps a compact market reference visible when the duration model is unavailable", () => {
   render(
     <FightDurationSummary
@@ -41,6 +47,7 @@ test("uses the compact infographic for an available FightIQ duration prediction"
           line: 2.5,
           over_probability: 0.54,
           under_probability: 0.46,
+          curve: DURATION_CURVE,
         },
       }}
       odds={MARKET_TOTAL}
@@ -52,6 +59,7 @@ test("uses the compact infographic for an available FightIQ duration prediction"
   expect(screen.getByText("O 54.0%")).toBeInTheDocument();
   expect(screen.getByText("U 46.0%")).toBeInTheDocument();
   expect(screen.getByText("54.0%")).toBeInTheDocument();
+  expect(screen.queryByText("Duration curve")).not.toBeInTheDocument();
 });
 
 test("puts full model-versus-market context in the expanded breakdown", () => {
@@ -63,6 +71,7 @@ test("puts full model-versus-market context in the expanded breakdown", () => {
           line: 2.5,
           over_probability: 0.54,
           under_probability: 0.46,
+          curve: DURATION_CURVE,
         },
       }}
       odds={MARKET_TOTAL}
@@ -78,6 +87,34 @@ test("puts full model-versus-market context in the expanded breakdown", () => {
   expect(screen.getByText("+4.0 pts on Over")).toBeInTheDocument();
   expect(screen.getByText("Decision context")).toBeInTheDocument();
   expect(screen.getByText("P(Decision), not O/U")).toBeInTheDocument();
+  expect(screen.getByText("Duration curve")).toBeInTheDocument();
+  expect(screen.getByText("Chance the fight continues past each line")).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Probability of going over each round line" })).toBeInTheDocument();
+  expect(screen.getByText(/highlighted point is the current market line/i)).toBeInTheDocument();
+});
+
+test("keeps the duration curve visible before a market line is posted", () => {
+  render(
+    <>
+      <FightDurationSummary
+        fight={{ duration_prediction: { status: "curve_only", curve: DURATION_CURVE } }}
+        odds={{}}
+      />
+      <FightDurationBreakdown
+        fight={{ duration_prediction: { status: "curve_only", curve: DURATION_CURVE } }}
+        odds={{}}
+      />
+    </>
+  );
+
+  expect(screen.getByText("Curve ready")).toBeInTheDocument();
+  expect(screen.getByText("Awaiting market O/U")).toBeInTheDocument();
+  expect(screen.getByText("Duration curve ready")).toBeInTheDocument();
+  expect(screen.getByText("Duration curve")).toBeInTheDocument();
+  expect(
+    screen.getByText(/No market O\/U is available yet.*independent duration forecast/i)
+  ).toBeInTheDocument();
+  expect(screen.queryByText("Exact-line duration model not trained.")).not.toBeInTheDocument();
 });
 
 test("shows both lines but hides the edge when model and market lines differ", () => {

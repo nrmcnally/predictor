@@ -125,6 +125,116 @@
   color: var(--dim);
 }
 
+.evaluation-tabs {
+  margin-bottom: 4px;
+}
+
+.duration-evaluation {
+  display: grid;
+  gap: 18px;
+}
+
+.duration-eval-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--mix-fg) 3%, var(--surface));
+}
+
+.duration-eval-status > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.duration-eval-status strong {
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.duration-eval-readiness {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.duration-model-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 30%, var(--line));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent-gold) 6%, transparent);
+}
+
+.duration-model-banner > div {
+  display: grid;
+  gap: 2px;
+}
+
+.duration-model-banner span:not(.tag) {
+  color: var(--faint);
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.duration-eval-empty {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--mix-fg) 2%, transparent);
+}
+
+.duration-eval-empty p {
+  margin: 0;
+  color: var(--dim);
+}
+
+.duration-eval-empty small,
+.duration-result-meta {
+  color: var(--faint);
+  font-size: var(--fs-xs);
+}
+
+.duration-eval-subtitle {
+  margin: 18px 0 8px;
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.duration-results-table td:first-child strong,
+.duration-result-meta {
+  display: block;
+}
+
+.duration-side {
+  text-transform: capitalize;
+}
+
+@media (max-width: 720px) {
+  .duration-eval-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .duration-eval-readiness {
+    justify-content: flex-start;
+  }
+}
+
 /* ---------- update / data ops ---------- */
 
 .stage-group-list {
