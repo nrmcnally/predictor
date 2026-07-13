@@ -636,3 +636,8 @@
   background: var(--red-soft);
   color: var(--text);
 }
+
+/* top-level section switcher inside a view (Card results: Cards | Model record) */
+.view-tabs {
+  align-self: flex-start;
+}

@@ -32,13 +32,53 @@ const VERDICT_SHORT = {
 // are mostly noise, so show a "need N more" placeholder instead (ROADMAP §8b #11).
 const MIN_GRADED_FIGHTS = 10;
 
-function ReportCard({ grading, eyebrow }) {
+function ReportCard({ grading, eyebrow, compact = false }) {
   if (!grading || !grading.scored_fights) {
     return null;
   }
 
   const verdict = grading.verdict || {};
   const skill = grading.brier_skill_vs_market;
+
+  if (compact) {
+    // Per-card header: the four numbers that answer "how did this card go" —
+    // the deep cuts (expected wins, log loss) live on the Model record tab.
+    return (
+      <div className="tile-row four">
+        <StatTile
+          label="Engine grade"
+          value={grading.engine_grade}
+          tone={grading.engine_grade_tone}
+          hint={`Brier ${fmtNum(grading.model_brier)}`}
+        />
+        <StatTile
+          label="Market grade"
+          value={grading.market_grade === "N/A" ? "—" : grading.market_grade}
+          tone={grading.market_grade_tone}
+          hint={
+            grading.market_brier != null
+              ? `Brier ${fmtNum(grading.market_brier)}`
+              : "no odds saved"
+          }
+        />
+        <StatTile
+          label="vs Market"
+          value={VERDICT_SHORT[verdict.code] || verdict.label || "—"}
+          tone={verdict.tone}
+          hint={
+            skill != null
+              ? `${skill >= 0 ? "+" : ""}${(skill * 100).toFixed(1)}% Brier edge`
+              : undefined
+          }
+        />
+        <StatTile
+          label="Accuracy"
+          value={`${grading.actual_correct}/${grading.scored_fights}`}
+          hint={grading.accuracy_percentage}
+        />
+      </div>
+    );
+  }
 
   return (
     <SectionCard eyebrow={eyebrow} title={null} className="report-card">
@@ -276,6 +316,8 @@ export default function RecentCards() {
   const [selectedCard, setSelectedCard] = useState(null);
   const [expandedFightId, setExpandedFightId] = useState("");
   const [statusFilter, setStatusFilter] = useState("review");
+  // "cards" (browse + per-card detail) | "record" (all-time report + market edge)
+  const [viewTab, setViewTab] = useState("cards");
 
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -409,7 +451,7 @@ export default function RecentCards() {
       <header className="view-head">
         <div>
           <p className="eyebrow">Prediction tracking</p>
-          <h1 className="view-title">Recent cards</h1>
+          <h1 className="view-title">Card results</h1>
         </div>
         {currentModel?.model_version && (
           <Tag tone="neutral">
@@ -421,30 +463,59 @@ export default function RecentCards() {
 
       <ErrorNote message={error} />
 
-      {overall && overall.scored_fights > 0 && overall.scored_fights < MIN_GRADED_FIGHTS && (
-        <SectionCard eyebrow="Overall report card" title={null} className="report-card">
-          <p className="dim-note">
-            Need {MIN_GRADED_FIGHTS - overall.scored_fights} more graded fight
-            {MIN_GRADED_FIGHTS - overall.scored_fights === 1 ? "" : "s"} before the overall
-            grade, market edge, and CLV verdicts are meaningful ({overall.scored_fights}/
-            {MIN_GRADED_FIGHTS} so far). A handful of fights is mostly noise.
-          </p>
-        </SectionCard>
+      <div className="segmented view-tabs" aria-label="Card results sections">
+        {[
+          { value: "cards", label: "Cards" },
+          { value: "record", label: "Model record" },
+        ].map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            className={viewTab === tab.value ? "active" : ""}
+            aria-pressed={viewTab === tab.value}
+            onClick={() => setViewTab(tab.value)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {viewTab === "record" && (
+        <>
+          {overall && overall.scored_fights > 0 && overall.scored_fights < MIN_GRADED_FIGHTS && (
+            <SectionCard eyebrow="Overall report card" title={null} className="report-card">
+              <p className="dim-note">
+                Need {MIN_GRADED_FIGHTS - overall.scored_fights} more graded fight
+                {MIN_GRADED_FIGHTS - overall.scored_fights === 1 ? "" : "s"} before the overall
+                grade, market edge, and CLV verdicts are meaningful ({overall.scored_fights}/
+                {MIN_GRADED_FIGHTS} so far). A handful of fights is mostly noise.
+              </p>
+            </SectionCard>
+          )}
+
+          {overall && overall.scored_fights >= MIN_GRADED_FIGHTS && (
+            <ReportCard
+              grading={overall}
+              eyebrow={`Overall report card · ${overall.graded_card_count || 0} cards, ${
+                overall.scored_fights
+              } graded fights`}
+            />
+          )}
+
+          {overall?.edge && overall.scored_fights >= MIN_GRADED_FIGHTS && (
+            <EdgePanel edge={overall.edge} />
+          )}
+
+          {(!overall || !overall.scored_fights) && (
+            <EmptyState
+              title="No graded fights yet"
+              message="The model record builds as cards complete and results are scored."
+            />
+          )}
+        </>
       )}
 
-      {overall && overall.scored_fights >= MIN_GRADED_FIGHTS && (
-        <ReportCard
-          grading={overall}
-          eyebrow={`Overall report card · ${overall.graded_card_count || 0} cards, ${
-            overall.scored_fights
-          } graded fights`}
-        />
-      )}
-
-      {overall?.edge && overall.scored_fights >= MIN_GRADED_FIGHTS && (
-        <EdgePanel edge={overall.edge} />
-      )}
-
+      {viewTab === "cards" && (
       <div className="cards-layout">
         <aside className="event-list">
           <div className="event-filter segmented">
@@ -509,42 +580,37 @@ export default function RecentCards() {
 
           {!detailLoading && selectedCard && (
             <>
-              <ReportCard grading={selectedCard.grading} eyebrow="This card" />
+              <ReportCard grading={selectedCard.grading} compact />
 
-              {selectedCard.snapshot_generation && (
-                <p className="dim-note">
-                  Predicted by{" "}
-                  {selectedCard.snapshot_model_version
-                    ? `model ${selectedCard.snapshot_version_estimated ? "~v" : "v"}${
-                        selectedCard.snapshot_model_version
-                      }${
-                        selectedCard.snapshot_version_estimated
-                          ? " (estimated from save date)"
-                          : ""
-                      }`
-                    : "an unversioned snapshot"}
-                  {" — "}
-                  {selectedCard.snapshot_generation === "current"
-                    ? "the same generation as the live model."
-                    : selectedCard.snapshot_generation === "older"
-                      ? `an older generation than the live model${
-                          currentModel?.model_version ? ` (v${currentModel.model_version})` : ""
-                        }, so this grade reflects a past version.`
-                      : "this snapshot predates version tracking."}
-                </p>
+              {!selectedCard.grading?.scored_fights && summary.total > 0 && (
+                <div className="tile-row four">
+                  <StatTile label="Fights" value={summary.total} />
+                  <StatTile label="Waiting" value={summary.waiting} />
+                </div>
               )}
 
-              <div className="tile-row five">
-                <StatTile label="Fights" value={summary.total} />
-                <StatTile label="Correct" value={summary.correct} tone="win" />
-                <StatTile label="Wrong" value={summary.wrong} tone="loss" />
-                <StatTile label="Waiting" value={summary.waiting} />
-                <StatTile
-                  label="Model vs market"
-                  value={`${summary.accuracy} / ${summary.marketAccuracy}`}
-                  hint="accuracy"
-                />
-              </div>
+              {(summary.waiting > 0 || selectedCard.snapshot_generation) && (
+              <p className="dim-note snapshot-note">
+                {summary.waiting > 0
+                  ? `${summary.waiting} fight${summary.waiting === 1 ? "" : "s"} still waiting for results. `
+                  : ""}
+                {selectedCard.snapshot_generation
+                  ? `Predicted by ${
+                      selectedCard.snapshot_model_version
+                        ? `model ${selectedCard.snapshot_version_estimated ? "~v" : "v"}${selectedCard.snapshot_model_version}`
+                        : "an unversioned snapshot"
+                    }${
+                      selectedCard.snapshot_generation === "older"
+                        ? ` — older than the live model${
+                            currentModel?.model_version ? ` (v${currentModel.model_version})` : ""
+                          }`
+                        : selectedCard.snapshot_generation === "current"
+                          ? " — same generation as the live model"
+                          : ""
+                    }.`
+                  : ""}
+              </p>
+              )}
 
               <div className="fight-list">
                 {selectedCard.fights?.map((fight) => {
@@ -738,6 +804,7 @@ export default function RecentCards() {
           )}
         </section>
       </div>
+      )}
     </div>
   );
 }

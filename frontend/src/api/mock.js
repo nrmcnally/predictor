@@ -1075,6 +1075,24 @@ function buildRecentCardDetail(card) {
   const scored = fights.filter((fight) => fight.actual_result_available);
   const correct = scored.filter((fight) => fight.prediction_correct).length;
 
+  const grading = scored.length
+    ? {
+        scored_fights: scored.length,
+        actual_correct: correct,
+        accuracy_percentage: percent(correct / scored.length),
+        engine_grade: correct / scored.length >= 0.75 ? "A-" : "B",
+        engine_grade_tone: correct / scored.length >= 0.75 ? "win" : "neutral",
+        model_brier: 0.198,
+        market_grade: "B+",
+        market_grade_tone: "neutral",
+        market_brier: 0.212,
+        brier_skill_vs_market: 0.041,
+        verdict: { code: "beat", label: "Ahead of market", tone: "win" },
+        expected_correct_display: (scored.length * 0.62).toFixed(1),
+        model_log_loss: 0.581,
+      }
+    : null;
+
   return {
     event_id: card.event_id,
     event_name: card.event_name,
@@ -1084,19 +1102,65 @@ function buildRecentCardDetail(card) {
     fight_count: fights.length,
     actual_result_count: scored.length,
     accuracy_percentage: scored.length ? percent(correct / scored.length) : "",
+    grading,
+    snapshot_generation: "current",
+    snapshot_model_version: 7,
+    snapshot_version_estimated: false,
     fights,
   };
 }
 
 export function getRecentCards() {
-  return delay(
-    RECENT_CARDS.map((card) => {
-      const detail = buildRecentCardDetail(card);
-      const { fights, ...summary } = detail;
-      void fights;
-      return summary;
-    })
-  );
+  const cards = RECENT_CARDS.map((card) => {
+    const detail = buildRecentCardDetail(card);
+    const { fights, ...summary } = detail;
+    void fights;
+    return summary;
+  });
+
+  const graded = cards.filter((card) => card.grading);
+  const scoredFights = graded.reduce((sum, card) => sum + card.grading.scored_fights, 0);
+  const correctFights = graded.reduce((sum, card) => sum + card.grading.actual_correct, 0);
+
+  // Mirrors /recent-cards: { cards, overall, current_model } — overall drives
+  // the Model record tab (grades + market-edge panel).
+  const overall = scoredFights
+    ? {
+        scored_fights: scoredFights,
+        actual_correct: correctFights,
+        accuracy_percentage: percent(correctFights / scoredFights),
+        graded_card_count: graded.length,
+        engine_grade: "B+",
+        engine_grade_tone: "win",
+        model_brier: 0.203,
+        market_grade: "B",
+        market_grade_tone: "neutral",
+        market_brier: 0.214,
+        brier_skill_vs_market: 0.051,
+        verdict: { code: "beat", label: "Ahead of market", tone: "win" },
+        expected_correct_display: (scoredFights * 0.61).toFixed(1),
+        model_log_loss: 0.592,
+        edge: {
+          comparable_fights: scoredFights,
+          disagreement_count: 3,
+          disagreement_rate_percentage: percent(3 / scoredFights),
+          small_sample: true,
+          disagree: {
+            count: 3,
+            model_won_count: 2,
+            model_brier: 0.185,
+            market_brier: 0.24,
+            verdict: { code: "beat", label: "Ahead of market", tone: "win" },
+          },
+        },
+      }
+    : null;
+
+  return delay({
+    cards,
+    overall,
+    current_model: { model_version: 7, recipe_hash: "mock0rec" },
+  });
 }
 
 export function getRecentCardDetail(eventId) {

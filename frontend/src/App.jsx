@@ -76,7 +76,7 @@ const NAV_GROUPS = [
       { value: "lab", label: "Fight lab", icon: IconLab },
       { value: "fighters", label: "Fighters", icon: IconFighter },
       { value: "future", label: "Future cards", icon: IconCalendar },
-      { value: "recent", label: "Recent cards", icon: IconHistory },
+      { value: "recent", label: "Card results", icon: IconHistory },
     ],
   },
   {

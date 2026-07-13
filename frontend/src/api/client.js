@@ -515,8 +515,7 @@ export async function getFutureFightOdds() {
 
 export async function getRecentCards(includeWaiting = true) {
   if (USE_MOCK) {
-    const cards = await mock.getRecentCards();
-    return { cards, overall: null };
+    return mock.getRecentCards();
   }
 
   // Returns { card_count, overall, cards } so the UI can show a cumulative grade.
