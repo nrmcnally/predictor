@@ -112,7 +112,9 @@ def test_fights_come_back_in_card_order_not_alphabetical(tmp_path=None):
     for row in upcoming:
         fight = {**_fight(row["fight_url"], row["fighter_1"], row["fighter_2"]),
                  "event_id": "evt2", "event_date": "December 31, 2099"}
+        # Both users pick: upcoming compare only includes fights both picked.
         user_predictions_repository.upsert(a["id"], fight, row["fighter_1"], None)
+        user_predictions_repository.upsert(b["id"], fight, row["fighter_2"], None)
 
     cmp = friends_compare_service.build_compare(a["id"], b["id"])
 
@@ -142,6 +144,42 @@ def test_only_shared_picks_count(tmp_path=None):
 
     cmp = friends_compare_service.build_compare(a["id"], b["id"])
     assert cmp["shared"] == 1
+
+
+def test_upcoming_only_shows_fights_both_picked_and_skips_past_events(tmp_path=None):
+    """One-sided picks stay out of the head-to-head, and an 'open' pick whose
+    event day has passed (a cancelled/changed bout waiting to be voided) must
+    not show as an upcoming fight."""
+    _use_temp_db(tmp_path or tempfile.mkdtemp())
+    a = auth_service.register_user("ada2@example.com", "password123", "Ada")
+    b = auth_service.register_user("boz2@example.com", "password123", "Boz")
+    _befriend(a, b)
+
+    future_fight = {**_fight(UP + "both", "Ann Both", "Bea Both"),
+                    "event_id": "evt-f", "event_date": "December 31, 2099"}
+    solo_fight = {**_fight(UP + "solo", "Cal Solo", "Dee Solo"),
+                  "event_id": "evt-f", "event_date": "December 31, 2099"}
+    cancelled = {**_fight(UP + "cancelled", "Eve Gone", "Fay Gone"),
+                 "event_id": "evt-past", "event_date": "January 1, 2020"}
+
+    user_predictions_repository.upsert(a["id"], future_fight, "Ann Both", None)
+    user_predictions_repository.upsert(b["id"], future_fight, "Bea Both", None)
+    user_predictions_repository.upsert(a["id"], solo_fight, "Cal Solo", None)
+    user_predictions_repository.upsert(a["id"], cancelled, "Eve Gone", None)
+    user_predictions_repository.upsert(b["id"], cancelled, "Eve Gone", None)
+
+    cmp = friends_compare_service.build_compare(a["id"], b["id"])
+
+    upcoming_keys = [
+        f["fight_key"] for card in cmp["upcoming"] for f in card["fights"]
+    ]
+    assert any("both" in k for k in upcoming_keys)
+    assert not any("solo" in k for k in upcoming_keys)
+    assert not any("cancelled" in k for k in upcoming_keys)
+    fight = cmp["upcoming"][0]["fights"][0]
+    assert fight["their_pick"] == "Bea Both"
+    assert fight["their_pick_hidden"] is False
+    assert fight["agree"] is False
 
 
 def test_cannot_compare_with_non_friend(tmp_path=None):

@@ -866,10 +866,10 @@ export function getFriendCompare(userId) {
           event_name: "UFC Fight Night: Aspinall vs. Gane",
           event_date: "July 11, 2026",
           your_picked: 1,
-          their_hidden: 1,
+          their_hidden: 0,
           fights: [
             { fighter_1: "Tom Aspinall", fighter_2: "Ciryl Gane", weight_class: "Heavyweight", your_pick: "Tom Aspinall", your_method: "ko_tko", their_pick: "Tom Aspinall", their_method: null, their_pick_hidden: false, agree: true },
-            { fighter_1: "Alex Pereira", fighter_2: "Magomed Ankalaev", weight_class: "Light Heavyweight", your_pick: null, your_method: null, their_pick: null, their_method: null, their_pick_hidden: true, agree: null },
+            { fighter_1: "Alex Pereira", fighter_2: "Magomed Ankalaev", weight_class: "Light Heavyweight", your_pick: "Magomed Ankalaev", your_method: null, their_pick: "Alex Pereira", their_method: null, their_pick_hidden: false, agree: false },
           ],
         },
       ],

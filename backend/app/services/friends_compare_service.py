@@ -11,7 +11,6 @@ from app.repositories import (
     user_predictions_repository,
     users_repository,
 )
-from app.services import event_lock_service
 from app.services.friends_service import _display_name
 from app.services.predictions_scoring_service import _fight_key, score_user_pending
 from app.services.predictions_service import _parse_event_date
@@ -58,54 +57,45 @@ def _bout_order_lookup() -> dict[str, int]:
 
 
 def _build_upcoming(me_id: Any, other_id: Any) -> list[dict[str, Any]]:
-    """Head-to-head on UPCOMING picks. Anti-copying rule: a friend's pick on a fight
-    is revealed only once YOU have picked that fight yourself (or the event has
-    locked) — you commit first, then you see theirs."""
+    """Head-to-head on UPCOMING picks — only fights BOTH of you picked (you
+    commit first, then you compare; one-sided picks aren't a comparison).
+    Past-dated events are excluded: a pick still 'open' after its event day is
+    a cancelled or changed bout waiting to be voided, not an upcoming fight."""
     mine = _open_by_key(me_id)
     theirs = _open_by_key(other_id)
-
-    lock_cache: dict[tuple[str, str], bool] = {}
-
-    def _locked(row: dict[str, Any]) -> bool:
-        key = (str(row.get("event_id") or ""), str(row.get("event_date") or ""))
-        if key not in lock_cache:
-            lock_cache[key] = bool(event_lock_service.build_event_lock_state(row)["locked"])
-        return lock_cache[key]
+    today = date.today()
 
     cards: dict[str, dict[str, Any]] = {}
-    for key in set(mine) | set(theirs):
-        my_pick = mine.get(key)
-        their_pick = theirs.get(key)
-        reference = my_pick or their_pick
-        reveal = my_pick is not None or _locked(reference)
+    for key in set(mine) & set(theirs):
+        my_pick = mine[key]
+        their_pick = theirs[key]
 
-        card_key = str(reference.get("event_id") or reference.get("event_date") or "")
+        event_day = _parse_event_date(my_pick.get("event_date"))
+        if event_day is not None and event_day < today:
+            continue  # cancelled/changed bout limbo — scoring will void it
+
+        card_key = str(my_pick.get("event_id") or my_pick.get("event_date") or "")
         card = cards.setdefault(
             card_key,
             {
-                "event_id": reference.get("event_id"),
-                "event_name": reference.get("event_name"),
-                "event_date": reference.get("event_date"),
+                "event_id": my_pick.get("event_id"),
+                "event_name": my_pick.get("event_name"),
+                "event_date": my_pick.get("event_date"),
                 "fights": [],
             },
         )
         card["fights"].append(
             {
                 "fight_key": key,
-                "fighter_1": reference.get("fighter_1"),
-                "fighter_2": reference.get("fighter_2"),
-                "weight_class": reference.get("weight_class"),
-                "your_pick": my_pick.get("picked_fighter") if my_pick else None,
-                "your_method": my_pick.get("picked_method") if my_pick else None,
-                "their_pick": their_pick.get("picked_fighter") if their_pick and reveal else None,
-                "their_method": their_pick.get("picked_method") if their_pick and reveal else None,
-                # They have a pick you can't see yet — pick this fight to reveal it.
-                "their_pick_hidden": their_pick is not None and not reveal,
-                "agree": (
-                    my_pick.get("picked_fighter") == their_pick.get("picked_fighter")
-                    if my_pick and their_pick and reveal
-                    else None
-                ),
+                "fighter_1": my_pick.get("fighter_1"),
+                "fighter_2": my_pick.get("fighter_2"),
+                "weight_class": my_pick.get("weight_class"),
+                "your_pick": my_pick.get("picked_fighter"),
+                "your_method": my_pick.get("picked_method"),
+                "their_pick": their_pick.get("picked_fighter"),
+                "their_method": their_pick.get("picked_method"),
+                "their_pick_hidden": False,  # both picked => always revealed
+                "agree": my_pick.get("picked_fighter") == their_pick.get("picked_fighter"),
             }
         )
 
@@ -116,8 +106,8 @@ def _build_upcoming(me_id: Any, other_id: Any) -> list[dict[str, Any]]:
     for card in ordered:
         # Card order (main event first), matching My Picks — not alphabetical.
         card["fights"].sort(key=lambda f: bout_order.get(f["fight_key"], 10**9))
-        card["your_picked"] = sum(1 for f in card["fights"] if f["your_pick"])
-        card["their_hidden"] = sum(1 for f in card["fights"] if f["their_pick_hidden"])
+        card["your_picked"] = len(card["fights"])
+        card["their_hidden"] = 0
     return ordered
 
 

@@ -253,16 +253,13 @@ export default function Friends() {
               {!compareLoading && compare?.upcoming?.length > 0 && (
                 <div className="compare-upcoming">
                   <p className="compare-section-label">
-                    Upcoming picks — theirs unlock once you've picked that fight
+                    Upcoming picks — fights you've both called
                   </p>
                   {compare.upcoming.map((card) => (
                     <div className="compare-card" key={`up-${card.event_id}`}>
                       <div className="compare-card-head static">
                         <span className="compare-card-name">{card.event_name}</span>
                         <span className="compare-card-score">
-                          {card.their_hidden > 0 && (
-                            <Tag>{card.their_hidden} hidden</Tag>
-                          )}
                           <span className="muted">{card.event_date}</span>
                         </span>
                       </div>
@@ -284,19 +281,11 @@ export default function Friends() {
                                   name={fight.your_pick || "—"}
                                   state={fight.your_pick ? "neutral" : "none"}
                                 />
-                                {fight.their_pick_hidden ? (
-                                  <PickChip
-                                    who={compareFor.display_name}
-                                    name="🔒 pick to reveal"
-                                    state="hidden"
-                                  />
-                                ) : (
-                                  <PickChip
-                                    who={compareFor.display_name}
-                                    name={fight.their_pick || "—"}
-                                    state={fight.their_pick ? "neutral" : "none"}
-                                  />
-                                )}
+                                <PickChip
+                                  who={compareFor.display_name}
+                                  name={fight.their_pick || "—"}
+                                  state={fight.their_pick ? "neutral" : "none"}
+                                />
                               </div>
                             </div>
                           </div>
