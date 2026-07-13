@@ -184,7 +184,10 @@ def _seed_two_fight_card():
     ])
 
 
-def test_upcoming_compare_hides_friend_pick_until_committed(tmp_path=None):
+def test_upcoming_compare_shows_only_mutually_picked_fights(tmp_path=None):
+    """Since the both-picked rule (2026-07-13), one-sided picks don't appear at
+    all — which also guarantees a friend's pick can never leak before you have
+    committed your own (the fight simply isn't in the payload)."""
     db_connection.set_db_path(Path(tmp_path or tempfile.mkdtemp()) / "app.db")
     me = auth_service.register_user("me@example.com", "password123", "Me")
     pal = auth_service.register_user("pal@example.com", "password123", "Pal")
@@ -202,14 +205,13 @@ def test_upcoming_compare_hides_friend_pick_until_committed(tmp_path=None):
     assert len(upcoming) == 1
     fights = {f["fighter_1"]: f for f in upcoming[0]["fights"]}
 
-    # Fight 0: I committed -> their pick revealed, agreement computed.
+    # Fight 0: both committed -> compared, agreement computed.
     assert fights["A0"]["their_pick"] == "A0"
     assert fights["A0"]["agree"] is True
-    # Fight 1: I haven't picked -> hidden flag; their pick/method never leak.
-    assert fights["A1"]["their_pick"] is None
-    assert fights["A1"]["their_method"] is None
-    assert fights["A1"]["their_pick_hidden"] is True
-    assert upcoming[0]["their_hidden"] == 1
+    assert fights["A0"]["their_pick_hidden"] is False
+    # Fight 1: only Pal picked -> not in the comparison at all (no leak).
+    assert "A1" not in fights
+    assert upcoming[0]["their_hidden"] == 0
 
 
 if __name__ == "__main__":
