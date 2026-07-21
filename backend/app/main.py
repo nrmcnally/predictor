@@ -71,7 +71,7 @@ from app.services.leaderboard_service import (
 )
 
 from app.services.model_evaluation_service import get_model_evaluation
-from app.services.walk_forward_evaluation_service import run_walk_forward_evaluation
+from app.services.walk_forward_evaluation_service import get_walk_forward_evaluation
 
 from app.services.fighter_profile_service import build_fighter_profile
 
@@ -80,6 +80,7 @@ from app.services.model_snapshot_evaluation_service import build_model_snapshot_
 from app.services.duration_evaluation_service import build_duration_evaluation
 from app.services.clv_evaluation_service import build_clv_evaluation
 from app.services.data_quality_service import build_data_quality_summary
+from app.services.data_operations_health_service import build_data_operations_health
 
 from app.auth.dependencies import get_current_user, require_admin
 from app.services.auth_service import (
@@ -758,6 +759,11 @@ def latest_update_report() -> dict[str, Any]:
     return get_latest_update_report()
 
 
+@app.get("/admin/data-health", dependencies=[Depends(require_admin)])
+def data_operations_health() -> dict[str, Any]:
+    return build_data_operations_health()
+
+
 @app.post("/future-cards/{event_id}/save-predictions", dependencies=[Depends(require_admin)])
 def save_future_card_predictions(event_id: str) -> dict[str, Any]:
     return save_predictions_for_card(event_id)
@@ -820,11 +826,10 @@ def walk_forward_evaluation(
     min_test_fights: int = 150,
     min_train_fights: int = 1000,
 ) -> dict[str, Any]:
-    return run_walk_forward_evaluation(
-        n_folds=n_folds,
-        min_test_fights=min_test_fights,
-        min_train_fights=min_train_fights,
-    )
+    # The query parameters remain for client compatibility. Production serves the
+    # frozen local backtest so it never needs the large training CSV or retrains in
+    # a request process.
+    return get_walk_forward_evaluation()
 
 
 @app.post("/predict-method")

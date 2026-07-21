@@ -2,21 +2,21 @@
 
 ## A standalone review of the `threejs` prediction system
 
-**Status:** Current implementation audit and proposed research program
+**Status:** Current implementation audit, experimental duration baseline, and proposed research program
 **Repository:** `C:\Users\nrmcn\predictor\threejs`
-**Evidence snapshot:** July 13, 2026, commit `14bf2d4`
-**Model artifact:** calibrated winner model, version 1.2
+**Evidence snapshot:** July 21, 2026, current `threejs` implementation after duration release `60d9c84` plus the audited evaluation-hardening working set
+**Model artifact:** logistic-regression winner model, version 1.3; frozen evaluation plus full-history production refit
 **Audience:** developers, model reviewers, and product owners
 
 ---
 
 ## Abstract
 
-FightIQ is a UFC analytics application whose production prediction engine estimates fight winners from strictly pre-fight differences between two fighter snapshots. The checked-in winner artifact is a calibrated logistic-regression pipeline. It reports 63.15% accuracy, 0.674 ROC AUC, 0.649 log loss, and 0.228 Brier score on a chronological held-out set of 1,718 unique fights. The training table contains 17,174 mirrored rows representing 8,587 unique fights.
+FightIQ is a UFC analytics application whose production prediction engine estimates fight winners from strictly pre-fight differences between two fighter snapshots. The selected recipe is uncalibrated logistic regression. Its frozen candidate report shows 63.55% accuracy, 0.676 ROC AUC, 0.649 log loss, and 0.228 Brier score on a chronological held-out set of 1,720 unique fights. The training table contains 17,198 mirrored rows representing 8,599 unique fights. After those metrics are frozen, model 1.3 refits the locked recipe on all eligible history for serving; that full-history artifact is never scored on the now-seen holdout.
 
 This report audits the implemented data, feature, modeling, evaluation, and market-comparison paths; separates current behavior from proposals; and ranks improvements by local evidence. The most important correction to the earlier research direction is that FightIQ's own controlled experiments do **not** support shipping the existing style-interaction or cardio feature families. Explicit style interactions were neutral to negative across logistic regression, histogram gradient boosting, and XGBoost. Cardio differences also reduced held-out accuracy. Those components should remain experimental until a new, leakage-safe hypothesis wins the same walk-forward gate.
 
-The highest-value near-term work is operational and evaluative: make artifact provenance clean and reproducible, freeze prospective predictions, improve odds-history coverage, monitor calibration by cohort, and build an exact-line fight-duration target before making any model-versus-market over/under claim. The present method model estimates P(Decision); it does not estimate P(Over 1.5), P(Over 2.5), or P(Over 4.5). The Future Cards UI should preserve that distinction.
+The highest-value near-term work is now operational and evaluative: freeze the duration baseline, collect prospective exact-line results, monitor refresh/totals health, improve artifact provenance, and measure winner reliability by data-depth cohort. FightIQ now has an experimental discrete-time survival model that estimates P(Over 0.5/1.5/2.5/3.5/4.5 where supported). The separate method model still estimates P(Decision), and the Future Cards UI correctly preserves that distinction.
 
 ---
 
@@ -70,7 +70,7 @@ chronological pre-fight snapshots
 fighter A minus fighter B feature row
         |
         v
-calibrated logistic winner model
+selected logistic winner recipe
         |
         v
 winner probability + warnings + market comparison
@@ -87,10 +87,10 @@ The audited local artifacts contained:
 
 | Artifact or table | Audited size | Interpretation |
 |---|---:|---|
-| Training matchup rows | 17,174 | Two orientations for each usable historical fight. |
-| Unique usable training fights | 8,587 | Effective labeled sample before train/test splitting. |
-| Held-out oriented test rows | 3,436 | Two rows per test fight. |
-| Held-out unique fights | 1,718 | Correct event-level test count. |
+| Training matchup rows | 17,198 | Two orientations for each usable historical fight. |
+| Unique usable training fights | 8,599 | Effective labeled sample before train/test splitting. |
+| Held-out oriented test rows | 3,440 | Two rows per test fight. |
+| Held-out unique fights | 1,720 | Correct event-level test count. |
 | Current fighter feature rows | 2,694 | Latest feature snapshot per fighter. |
 | Current fighter columns | 134 | Identifiers, metadata, and engineered values. |
 | Winner numeric features | Approximately 126 | Checked feature list consumed by the winner pipeline. |
@@ -100,7 +100,7 @@ The database and exported flat files were not perfectly synchronized in the snap
 
 ### 2.3 Provenance warning
 
-The checked winner artifact records model version 1.2, recipe hash `d15652b351`, commit `14bf2d4`, and `git_dirty: true`. The recipe and commit are useful, but a dirty training worktree weakens exact reproducibility because uncommitted code or data could have influenced the artifact.
+The current winner artifacts record model version 1.3 with distinct training protocols and hashes: `683f0e4d08` for the chronological candidate evaluation and `d318130478` for the full-history production refit. Both record commit `60d9c84` and `git_dirty: true`. These hashes prevent evaluation and production roles from being conflated, but a dirty training worktree still weakens exact reproducibility because uncommitted code or data could have influenced the artifacts.
 
 Recommended rule: release artifacts must be trained from a clean commit, record dataset and feature-schema hashes, and fail release validation if provenance is incomplete.
 
@@ -140,7 +140,7 @@ Consequences:
 - Event-level metrics should deduplicate by fight.
 - Symmetry tests should verify that swapping fighters approximately transforms `p` into `1 - p`.
 
-The current artifact's 3,436 test rows represent 1,718 unique fights. Reports and UI documentation must use the unique-fight count when describing sample size.
+The frozen evaluation artifact's 3,440 test rows represent 1,720 unique fights. Reports and UI documentation must use the unique-fight count when describing sample size. The separately labeled production artifact is refit on all 8,599 fights and must not be scored on that now-seen holdout.
 
 ### 3.4 Feature families
 
@@ -175,38 +175,36 @@ Proposed enhancement: define cohort-level reliability reports for debutants, one
 Current production behavior:
 
 - base estimator: logistic regression;
-- probability calibration: sigmoid/Platt-style calibration;
+- probability calibration: none for the selected recipe; calibrated candidates remain evaluated alternatives;
 - inputs: checked numeric fighter differences plus weight class;
 - evaluation: chronological held-out fights;
-- output: calibrated win probability.
+- output: winner probability from the selected logistic recipe.
 
 Checked artifact results:
 
 | Metric | Value |
 |---|---:|
-| Unique held-out fights | 1,718 |
-| Accuracy | 0.6315 |
-| ROC AUC | 0.6739 |
-| Log loss | 0.6490 |
-| Brier score | 0.2280 |
+| Unique held-out fights | 1,720 |
+| Accuracy | 0.6355 |
+| ROC AUC | 0.6756 |
+| Log loss | 0.6492 |
+| Brier score | 0.2276 |
 
 These values indicate a useful but modest signal. They do not imply profitability, and they do not establish that performance is identical on future cards.
 
 ### 4.2 Calibration by confidence
 
-The model is reasonably close to observed outcomes through much of the middle range, but the highest-confidence band is small and overconfident:
+The frozen report is reasonably close to observed outcomes through much of the middle range, but it is underconfident from 0.55-0.65 and overconfident in the highest band:
 
-| Confidence band | Oriented rows | Accuracy | Mean confidence | Gap: accuracy minus confidence |
+| Confidence band | Unique fights | Accuracy | Mean confidence | Gap: accuracy minus confidence |
 |---|---:|---:|---:|---:|
-| 0.50 to under 0.55 | 874 | 0.531 | 0.525 | +0.006 |
-| 0.55 to under 0.60 | 850 | 0.628 | 0.574 | +0.054 |
-| 0.60 to under 0.65 | 642 | 0.639 | 0.624 | +0.014 |
-| 0.65 to under 0.70 | 510 | 0.659 | 0.674 | -0.015 |
-| 0.70 to under 0.75 | 298 | 0.718 | 0.722 | -0.004 |
-| 0.75 to under 0.80 | 156 | 0.859 | 0.773 | +0.086 |
-| 0.80 and above | 106 | 0.736 | 0.846 | -0.110 |
+| 0.50 to under 0.55 | 359 | 0.529 | 0.525 | +0.004 |
+| 0.55 to under 0.60 | 360 | 0.606 | 0.575 | +0.031 |
+| 0.60 to under 0.65 | 306 | 0.637 | 0.623 | +0.014 |
+| 0.65 to under 0.70 | 263 | 0.658 | 0.675 | -0.017 |
+| 0.70 and above | 432 | 0.734 | 0.772 | -0.038 |
 
-The bucket diagnostics are exploratory. Mirrored rows are dependent, and small upper bands have wide uncertainty. Prospective calibration should be scored on one frozen prediction per fight.
+These fight-deduplicated bucket diagnostics are still exploratory, and subgroup intervals remain important. Prospective calibration should be scored on one frozen prediction per fight.
 
 ### 4.3 Method model
 
@@ -282,12 +280,12 @@ It is not expected return. Realized return also depends on the offered price, li
 
 ### 6.2 Coverage limitations
 
-The audited local database contained only a small odds history, and the current upcoming-fight artifact had zero usable rounds-total quotes across 58 rows. Schema support therefore should not be confused with reliable live coverage.
+The audited local database still contains only a small odds history. The latest append-only totals snapshot contains 32 per-book quotes across 8 fights, 4 bookmakers, and lines 1.5, 2.5, and 3.5; many later fights correctly remain in a no-market state. This establishes that the ingestion path works, but it is not enough coverage for strong market-performance conclusions.
 
 Before market-relative conclusions are trusted, FightIQ needs:
 
-- scheduled refresh that succeeds without a logged-in desktop session;
-- explicit freshness timestamps and provider status;
+- continued verification across restarts and offline intervals; the current Interactive task catches up after the user next logs on but does not run while that account is signed out;
+- monitoring of the implemented heartbeat, freshness timestamps, provider status, and quota;
 - robust fighter/event matching diagnostics;
 - opening, snapshot, and closing quotes with source counts;
 - one immutable pre-event prediction record;
@@ -327,9 +325,12 @@ That is a different target from winner and method classification.
 Current:
 
 - the odds schema supports `rounds_line`, Over odds, Under odds, and normalized probabilities;
-- aggregation keeps quotes at the selected same line;
-- the backend exposes P(Decision) from the method model;
-- no trained line-specific duration artifact exists in the audited repository.
+- aggregation keeps quotes at the selected same line while `totals_odds_snapshots` retains every per-book line and price append-only;
+- `duration_model.joblib` is an experimental discrete-time half-round survival artifact, version `duration-survival-0.2.0`, feature schema `duration-survival-features-2`;
+- market odds and the bookmaker-selected line are not model inputs; the fitted curve is queried at the line after prediction;
+- the broad method model still exposes P(Decision) as separately labeled context;
+- Future Cards shows a compact exact-line prediction when available and the full curve in the expanded breakdown even before a market total is posted;
+- frozen exact-line snapshots are graded against completed results by `duration_evaluation_service.py`, and the incremental pipeline runs this grader immediately after result ingestion.
 
 Implemented UI safeguard:
 
@@ -338,9 +339,9 @@ Implemented UI safeguard:
 - a future prediction is compared only when its line exactly matches the market line;
 - a mismatch is labeled and produces no edge.
 
-### 7.3 Recommended target representation
+### 7.3 Implemented target and settlement representation
 
-Create a canonical duration in elapsed scheduled-round units. For a finish:
+`duration_settlement.py` resolves a canonical elapsed fight time. For a finish:
 
 ```text
 elapsed_rounds = completed_rounds + elapsed_seconds_in_current_round / round_length_seconds
@@ -355,7 +356,7 @@ over_L = 1 if elapsed_rounds > L else 0
 under_L = 1 - over_L
 ```
 
-Settlement rules must match the sportsbook market. The team should document how pushes or nonstandard outcomes are handled, although half-round lines normally avoid exact pushes.
+The same settlement service is used by training/evaluation tests and prospective grading. Decisions resolve to the scheduled limit; draws, no contests, overturned results, disqualifications, unsupported schedules, invalid clocks, and impossible finish times are excluded with reason codes. Half-round query lines avoid normal equality pushes, while the settlement function still defines the equality boundary explicitly.
 
 ### 7.4 Modeling options
 
@@ -368,7 +369,7 @@ Ranked from simplest to most ambitious:
 | Method-time joint model | Jointly model finish type and time. | Rich product outputs. | High variance and harder validation. |
 | Market-anchored residual model | Predict correction to a de-vigged market probability. | Can focus on disagreement. | Cannot operate without market; leakage and timestamp discipline are critical. |
 
-Recommended first champion: a regularized line-aware logistic baseline. Develop a discrete-time hazard challenger only after the data and settlement layer pass audit.
+Implemented experimental baseline: a regularized discrete-time hazard model at half-round intervals. This choice produces a monotone survival curve by construction and operates before a house line exists. It is not production-approved; a simpler line-aware classifier remains a useful challenger under identical chronological folds.
 
 ### 7.5 Duration features to test
 
@@ -388,7 +389,7 @@ Do not assume the rejected winner-model cardio or interaction transforms will he
 
 ### 7.6 Validation design
 
-Minimum duration-model gate:
+Current historical gate and remaining promotion requirements:
 
 1. One row per fight-line observation, grouped by fight and event.
 2. Strict chronological train/validation/test splits.
@@ -397,18 +398,29 @@ Minimum duration-model gate:
 5. Cohort reports for 1.5, 2.5, 3.5, and 4.5 where sample size permits.
 6. Comparison against a constant base rate, a simple historical-rate baseline, and same-time de-vigged market.
 7. Bootstrap confidence intervals at the unique-fight or event level.
-8. Prospective shadow period before any UI edge label is enabled.
+8. Prospective shadow period before any betting or recommendation language is enabled.
 
-### 7.7 Proposed backend contract
+The installed historical artifact uses a chronological 80/20 unique-fight split before interval expansion: 6,816 training fights and 1,709 test fights. Across 5,443 exact-line test observations it reports 72.86% accuracy, 0.1754 Brier score, 0.5229 log loss, and 0.7514 ROC AUC, versus 69.59% accuracy and 0.1912 Brier for the same-line training base-rate baseline. There were zero monotonicity violations by construction. These are historical experimental results, not proof of live market value.
+
+### 7.7 Current backend contract
 
 ```json
 {
   "duration_prediction": {
+    "status": "ready",
     "line": 2.5,
     "over_probability": 0.58,
     "under_probability": 0.42,
-    "model_version": "duration-1.0.0",
-    "feature_schema_version": "duration-features-1",
+    "curve": [
+      {"line": 0.5, "over_probability": 0.89, "under_probability": 0.11},
+      {"line": 1.5, "over_probability": 0.71, "under_probability": 0.29},
+      {"line": 2.5, "over_probability": 0.58, "under_probability": 0.42}
+    ],
+    "model_version": "duration-survival-0.2.0",
+    "feature_schema_version": "duration-survival-features-2",
+    "promotion_status": "experimental",
+    "market_inputs_used": false,
+    "market_line_role": "query_only",
     "generated_at": "2026-07-13T18:00:00Z"
   }
 }
@@ -431,8 +443,8 @@ Contract safeguards:
 These changes are more likely to prevent false progress than a new algorithm.
 
 1. **Clean artifact provenance.** Require clean-commit training, dataset hash, feature-schema hash, dependency lock hash, seed, split definition, and command.
-2. **Repeated chronological evaluation.** Replace dependence on one split with several expanding-window or rolling-origin evaluations.
-3. **Frozen prospective registry.** Store predictions, data timestamp, model version, market timestamp, and later outcome immutably.
+2. **Repeated chronological evaluation.** Winner evaluation now includes a frozen eight-fold expanding-window report; extend the same discipline to method/duration challengers and cohort comparisons.
+3. **Frozen prospective registry.** Winner and duration snapshots retain prediction/model/market timestamps and later outcomes; harden database immutability and lifecycle tests.
 4. **Cohort calibration monitoring.** Surface where headline probabilities are unreliable.
 5. **Data reconciliation checks.** Compare database, CSV, JSON, and serialized artifact counts during every refresh.
 
@@ -543,21 +555,21 @@ Avoid:
 
 | Priority | Work | Deliverable | Success check |
 |---|---|---|---|
-| P0 | Correct UI duration semantics | Separate market total, future duration prediction, and P(Decision) | Tests reject missing or mismatched model lines. |
-| P0 | Clean stale research claims | Documentation matches local A/B results | No guide recommends rejected interactions/cardio. |
+| Done | Correct UI duration semantics | Compact exact-line prediction plus expanded curve; P(Decision) remains context | Tests reject missing/mismatched lines and preserve curve-only state. |
+| Done | Clean stale research claims | Documentation matches local A/B results | No guide recommends rejected interactions/cardio. |
 | P0 | Artifact provenance gate | Training metadata and clean-worktree check | Release fails on dirty or incomplete provenance. |
-| P0 | Refresh reconciliation | Machine-readable counts and freshness report | Database/export mismatches are explained or fail. |
-| P1 | Prospective prediction freeze | Immutable record before event start | Evaluation can reproduce the shown prediction. |
+| Done | Refresh/totals health foundation | Persisted refresh heartbeat, degraded-stage alerts, coverage/quota/snapshot indicators | Hosted Data Ops shows stale/failure state without reading logs. |
+| Active | Prospective prediction freeze | Seven exact-line rows settled; six correct, all seven Over; automatic post-result grading | Evaluation reproduces the frozen prediction and reports zero uplift over the always-Over baseline. |
 | P1 | Cohort report | Calibration and coverage by sample/context | Sparse cohorts are visible in review. |
 
 ### Medium term: two to eight weeks
 
 | Priority | Work | Deliverable | Success check |
 |---|---|---|---|
-| P1 | Duration dataset and settlement tests | One canonical elapsed-duration table | Manual sample and boundary cases agree. |
-| P1 | Line-aware logistic duration baseline | Versioned shadow artifact | Beats simple base-rate baseline; calibrated by line. |
-| P1 | Odds-history reliability | Opening/snapshot/closing store with diagnostics | Coverage and freshness targets are met. |
-| P2 | Repeated chronological model harness | Multi-window experiment report | Champion decisions are not split-specific. |
+| Done | Duration dataset and settlement tests | Canonical elapsed-duration resolver and tested exclusions | Boundary fixtures and training/evaluation share semantics. |
+| Experimental | Discrete-time survival baseline | Versioned `duration-survival-0.2.0` artifact and 80/20 report | Beats same-line base-rate proper scores historically; await live sample. |
+| Active | Odds-history reliability | 32 append-only per-book quotes across 8 fights at snapshot | Continue daily capture; add closing-line and line-movement reporting. |
+| Done (winner) | Repeated chronological model harness | Frozen eight-fold expanding-window winner report | Champion monitoring includes fold distribution and relative-to-Elo drift. Extend to other model families as they change. |
 | P2 | Calibration bake-off | Sigmoid/isotonic/beta comparison | Challenger improves proper scores without cohort harm. |
 | P2 | Rating uncertainty ablation | Glicko-2-style features versus Elo | Improvement survives nested chronological evaluation. |
 
@@ -565,7 +577,7 @@ Avoid:
 
 | Priority | Work | Deliverable | Success check |
 |---|---|---|---|
-| P2 | Discrete-time duration challenger | Survival probability at arbitrary line | Coherent curves and better out-of-sample scores. |
+| Active | Prospective duration validation | At least 75-100 settled exact-line observations, including a useful five-round cohort | Calibration/proper scores and exclusions reviewed before promotion. |
 | P2 | Permitted new data | Versioned scorecard or pre-UFC source | Coverage, rights, identity, and as-of checks pass. |
 | P3 | Hierarchical sparse-fighter model | Uncertainty-aware cold-start predictions | Prospective low-sample cohort improves. |
 | P3 | Market-residual shadow model | Time-aligned market correction | Adds value against same-time market out of sample. |
@@ -579,10 +591,10 @@ Avoid:
 | Stale roadmap promotes losing interaction features | High | Conflict with recorded three-model A/B | Remove promotion language; keep module experimental. |
 | P(Decision) confused with P(Over) | High | Current method output is not line-specific | Enforce UI/API semantic separation. |
 | Dirty artifact provenance | High | Winner metadata records `git_dirty: true` | Retrain release artifacts from a clean commit. |
-| Odds and totals coverage is sparse | High | Audited totals coverage 0/58 | Fix refresh, measure coverage, support unavailable state. |
-| Mirrored rows overstated as fights | Medium | 3,436 rows equal 1,718 fights | Standardize unique-fight reporting. |
+| Odds and totals coverage is sparse | High | 32 per-book quotes cover 8 current fights; many cards have no posted total | Keep unavailable state, daily encrypted refresh, coverage/freshness alerts, and prospective capture. |
+| Mirrored rows overstated as fights | Medium | 3,440 rows equal 1,720 fights in the frozen holdout | Standardize unique-fight reporting. |
 | Database/export count drift | Medium | Point-in-time discrepancies found | Add reconciliation manifest. |
-| Extreme confidence overcalibration | Medium | 84.6% mean confidence vs 73.6% accuracy in top band | Monitor, consider conservative calibration, show sample size. |
+| High-confidence overcalibration | Medium | 77.2% mean confidence vs 73.4% accuracy across 432 held-out fights at 0.70+ | Monitor, compare calibration challengers, and show interval/sample size. |
 | Multiple-experiment selection bias | Medium | Many plausible feature ideas, small dataset | Predeclare gates and use repeated chronological splits. |
 | External data rights and stability | Medium | Proposed sources are not current contracts | Review terms, licensing, retention, and failure behavior. |
 | Sparse/new fighter uncertainty | Medium | Low UFC sample is structurally common | Cohort calibration and uncertainty-aware models. |
@@ -590,27 +602,27 @@ Avoid:
 Open questions:
 
 1. What odds timestamp should the Future Cards edge represent: latest, first available, or a fixed pre-event window?
-2. Which totals lines have enough historical coverage to support separate calibration?
-3. How should unusual result methods and nonstandard round lengths settle in the duration dataset?
-4. What minimum prospective sample is required before a duration edge is user-facing?
+2. Which totals lines accumulate enough *prospective market* coverage for a meaningful model-versus-market comparison?
+3. Should unusual promotions/round formats remain excluded or receive a separately versioned settlement contract?
+4. The working review gate is 75-100 settled exact-line UFC observations plus adequate five-round coverage; should formal power analysis require more?
 5. Should winner probabilities be clipped or conservatively transformed in the highest-confidence region until more evidence accumulates?
 
 ---
 
 ## 13. Recommended next experiment sequence
 
-1. Stabilize the daily data and odds refresh and add reconciliation output.
-2. Freeze future-card predictions with versions and timestamps.
-3. Build and hand-audit the canonical duration label table.
-4. Train a regularized line-aware duration baseline.
-5. Validate by chronological split, line, scheduled rounds, and data-quality cohort.
-6. Run it in shadow mode; do not expose an edge yet.
-7. Compare same-line model and market probabilities on frozen prospective cases.
-8. Enable the UI model panel only when the contract, calibration, and freshness gates pass.
-9. In parallel, improve the winner-model evaluation harness and artifact provenance.
-10. Revisit new feature families only through predeclared ablations.
+1. Freeze `duration-survival-0.2.0`; do not tune it after each event.
+2. Run the encrypted daily odds/data refresh and watch the hosted heartbeat, quota, coverage, and stale-snapshot alerts.
+3. Preserve exact-line predictions before events and let the incremental pipeline grade them after official results arrive.
+4. Review after a predeclared 75-100 settled exact-line observations, with line and scheduled-round cohorts reported separately.
+5. Compare Brier, log loss, calibration, accuracy, and same-time market probabilities; publish coverage and exclusions.
+6. Keep Future Cards language neutral and the model experimental until the prospective gate passes.
+7. In parallel, add winner reliability/abstention analysis for low-history and missing-data cohorts.
+8. Use the frozen eight-fold winner report as the gate before choosing new features or algorithms; add cohort stability and abstention analysis on top of it.
+9. Improve artifact provenance and atomic deployment generations.
+10. Revisit feature families only through predeclared ablations.
 
-This sequence prioritizes trustworthy measurement. It also gives the over/under product a usable interface now without pretending the missing model already exists.
+This sequence prioritizes trustworthy measurement. It preserves a useful experimental over/under interface without pretending that seven same-side prospective results prove market value.
 
 ---
 
@@ -618,10 +630,10 @@ This sequence prioritizes trustworthy measurement. It also gives the over/under 
 
 - The audit is a snapshot of a local checkout, not an independent reproduction from a clean machine.
 - Counts can change after a refresh and some database/export differences may have legitimate filters.
-- The held-out artifact summarizes one configured split; repeated chronological distributions were not available as a checked release report.
+- The frozen winner report includes one untouched holdout and an eight-fold expanding-window distribution, but it is not an independent external reproduction.
 - External MMA modeling literature is limited and often uses different promotions, eras, targets, and leakage controls.
 - Market claims are constrained by sparse local odds history and must remain provisional.
-- No dedicated duration model was trained as part of this document revision.
+- The duration model is an experimental local baseline with one historical split and only seven settled prospective predictions; all seven selected Over, so the 6/7 result has no uplift over the always-Over baseline and is not independent reproduction.
 
 ---
 

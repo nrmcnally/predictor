@@ -110,10 +110,20 @@ test("renders historical holdout metrics and settled future-card results separat
           metrics: {
             fight_count: 1,
             accuracy: 1,
+            accuracy_ci95_lower: 0.21,
+            accuracy_ci95_upper: 1,
             brier_score: 0.16,
             log_loss: 0.51,
             roc_auc: null,
             actual_over_rate: 1,
+            predicted_over_rate: 1,
+            majority_baseline_accuracy: 1,
+            accuracy_above_majority: 0,
+            evidence: {
+              level: "very_early",
+              label: "Very early",
+              message: "Too few frozen future predictions for a stable performance claim.",
+            },
           },
           by_line: [],
           future_card_results: [
@@ -144,4 +154,6 @@ test("renders historical holdout metrics and settled future-card results separat
   expect(screen.getAllByText("O/U 2.5").length).toBeGreaterThan(0);
   expect(screen.getByText("One vs Two")).toBeInTheDocument();
   expect(screen.getByText("Correct")).toBeInTheDocument();
+  expect(screen.getByText("Very early")).toBeInTheDocument();
+  expect(screen.getByText(/currently matches the always-Over baseline/)).toBeInTheDocument();
 });

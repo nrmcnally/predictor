@@ -1700,6 +1700,7 @@ let mockUpdateState = {
 const MOCK_STAGES = [
   "Refresh completed events",
   "Add newly completed fights",
+  "Settle duration predictions",
   "Score user predictions",
   "Scrape missing fight details",
   "Refresh fighter profiles",
@@ -1799,5 +1800,46 @@ export function getLatestUpdateReport() {
               : { rows_processed: 120 + index * 48 },
       })),
     },
+  });
+}
+
+export function getDataOperationsHealth() {
+  return delay({
+    status: "healthy",
+    generated_at: new Date().toISOString(),
+    refresh: {
+      available: true,
+      finished_at: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+      age_hours: 3,
+      success: true,
+      duration_seconds: 1346,
+      failed_stages: [],
+      degraded_stages: [],
+    },
+    odds: {
+      refresh_available: true,
+      error_code: "",
+      message: "Future fight odds and totals snapshots refreshed.",
+      provider_requests_remaining: 496,
+      h2h_coverage: { covered: 19, total: 63, ratio: 0.302, percentage: "30.2%" },
+      totals_coverage: { covered: 8, total: 63, ratio: 0.127, percentage: "12.7%" },
+      low_confidence_matches: 0,
+    },
+    totals_history: {
+      snapshot_rows: 32,
+      unique_fights: 8,
+      bookmakers: 4,
+      lines: [1.5, 2.5, 3.5],
+      latest_captured_at: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+      age_hours: 3,
+    },
+    duration_evaluation: {
+      status: "collecting",
+      saved_predictions: 8,
+      scored_predictions: 0,
+      pending_predictions: 8,
+      invalid_predictions: 0,
+    },
+    alerts: [],
   });
 }

@@ -749,6 +749,16 @@ export async function getLatestUpdateReport() {
   });
 }
 
+export async function getDataOperationsHealth() {
+  if (USE_MOCK) {
+    return mock.getDataOperationsHealth();
+  }
+
+  return request("/admin/data-health", {
+    fallbackError: "Failed to load data operations health.",
+  });
+}
+
 export async function startIncrementalUpdate() {
   if (USE_MOCK) {
     return mock.startIncrementalUpdate();

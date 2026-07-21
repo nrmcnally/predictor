@@ -59,6 +59,34 @@ function gapTone(gap) {
   return "loss";
 }
 
+function evidenceTone(level) {
+  if (level === "established") return "win";
+  if (["moderate", "early", "limited"].includes(level)) return "warn";
+  return "neutral";
+}
+
+function EvidenceNotice({ evidence, children }) {
+  if (!evidence && !children) return null;
+  return (
+    <p className="dim-note">
+      {evidence && <Tag tone={evidenceTone(evidence.level)}>{evidence.label}</Tag>}{" "}
+      {children || evidence?.message}
+    </p>
+  );
+}
+
+function accuracyInterval(metrics) {
+  if (
+    metrics?.accuracy_ci95_lower === null ||
+    metrics?.accuracy_ci95_lower === undefined ||
+    metrics?.accuracy_ci95_upper === null ||
+    metrics?.accuracy_ci95_upper === undefined
+  ) {
+    return "95% interval unavailable";
+  }
+  return `95% interval ${formatPercent(metrics.accuracy_ci95_lower)} to ${formatPercent(metrics.accuracy_ci95_upper)}`;
+}
+
 function SummaryTable({ rows, nameLabel = "Group" }) {
   if (!rows?.length) {
     return <p className="dim-note">No data available.</p>;
@@ -325,6 +353,7 @@ function MethodMetricsCard({ payload }) {
               <p className="muted">
                 Best model: <strong>{formatModelName(section.best_model_name)}</strong>
               </p>
+              <EvidenceNotice evidence={section.evidence} />
               <div className="kv-grid">
                 {Object.entries(section.best_metrics || {}).map(([key, value]) => (
                   <div className="kv-row" key={key}>
@@ -336,6 +365,22 @@ function MethodMetricsCard({ payload }) {
                     </strong>
                   </div>
                 ))}
+                {section.majority_baseline && (
+                  <>
+                    <div className="kv-row">
+                      <span>majority baseline</span>
+                      <strong className="mono">
+                        {formatPercent(section.majority_baseline.accuracy)}
+                      </strong>
+                    </div>
+                    <div className="kv-row">
+                      <span>accuracy above baseline</span>
+                      <strong className="mono">
+                        {signedPoints(section.majority_baseline.model_accuracy_uplift)}
+                      </strong>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -506,20 +551,17 @@ function WalkForwardCard({ payload, loading, error, hasRun, onRun }) {
 
       {!hasRun && !loading && (
         <p className="dim-note">
-          Retrains the production model type ({"“"}
-          {metadata?.model_type || "winner model"}
-          {"”"}) once per recent year on an expanding window and scores each year
-          out-of-sample. This trains throwaway models, so it can take a few seconds.
+          Loading the frozen expanding-window report generated with the current model recipe.
         </p>
       )}
 
       <div style={{ marginBottom: "1rem" }}>
         <button type="button" className="btn btn-primary" onClick={onRun} disabled={loading}>
-          {loading ? "Backtesting…" : hasRun ? "Re-run backtest" : "Run backtest"}
+          {loading ? "Loading…" : hasRun ? "Refresh report" : "Load report"}
         </button>
       </div>
 
-      {loading && <Spinner label="Retraining across folds…" />}
+      {loading && <Spinner label="Loading walk-forward report…" />}
 
       {payload && payload.available === false && (
         <p className="dim-note">{payload.message || "Not enough history for folds yet."}</p>
@@ -527,6 +569,7 @@ function WalkForwardCard({ payload, loading, error, hasRun, onRun }) {
 
       {aggregate && folds.length > 0 && (
         <>
+          <EvidenceNotice evidence={payload?.evidence} />
           <div className="tile-row six">
             <StatTile
               label="Mean accuracy"
@@ -594,6 +637,15 @@ function WalkForwardCard({ payload, loading, error, hasRun, onRun }) {
           </table>
 
           {metadata?.metric_note && <p className="dim-note">{metadata.metric_note}</p>}
+          {payload?.drift && (
+            <EvidenceNotice
+              evidence={{
+                level: payload.drift.status === "watch" ? "limited" : "established",
+                label: payload.drift.label,
+                message: payload.drift.message,
+              }}
+            />
+          )}
         </>
       )}
     </>
@@ -658,17 +710,23 @@ function DurationMetricsTiles({ metrics, fightHint = "scored fights" }) {
   if (!metrics) return null;
 
   return (
-    <div className="tile-row five">
+    <div className="tile-row six">
       <StatTile
         label="Pick accuracy"
         value={formatPercent(metrics.accuracy)}
         tone="gold"
-        hint={`${formatNumber(metrics.fight_count)} ${fightHint}`}
+        hint={`${formatNumber(metrics.fight_count)} ${fightHint}; ${accuracyInterval(metrics)}`}
       />
       <StatTile label="Brier score" value={formatDecimal(metrics.brier_score)} />
       <StatTile label="Log loss" value={formatDecimal(metrics.log_loss)} />
       <StatTile label="ROC AUC" value={formatDecimal(metrics.roc_auc)} />
       <StatTile label="Actual Overs" value={formatPercent(metrics.over_rate ?? metrics.actual_over_rate)} />
+      <StatTile
+        label="vs majority"
+        value={signedPoints(metrics.accuracy_above_majority)}
+        tone={metrics.accuracy_above_majority > 0 ? "gold" : undefined}
+        hint={`Always-pick majority: ${formatPercent(metrics.majority_baseline_accuracy)}`}
+      />
     </div>
   );
 }
@@ -683,6 +741,8 @@ function DurationByLineTable({ rows }) {
           <th>Line</th>
           <th>Fights</th>
           <th>Accuracy</th>
+          <th>Majority</th>
+          <th>Uplift</th>
           <th>Brier</th>
           <th>Log loss</th>
           <th>ROC AUC</th>
@@ -694,6 +754,8 @@ function DurationByLineTable({ rows }) {
             <td className="mono">O/U {row.line}</td>
             <td className="mono">{formatNumber(row.fight_count)}</td>
             <td className="mono">{formatPercent(row.accuracy)}</td>
+            <td className="mono">{formatPercent(row.majority_baseline_accuracy)}</td>
+            <td className="mono">{signedPoints(row.accuracy_above_majority)}</td>
             <td className="mono">{formatDecimal(row.brier_score)}</td>
             <td className="mono">{formatDecimal(row.log_loss)}</td>
             <td className="mono">{formatDecimal(row.roc_auc)}</td>
@@ -803,6 +865,7 @@ export function DurationEvaluationPanel({ payload, loading, error, onRefresh }) 
                   : "exact-line holdout tests"
               }
             />
+            <EvidenceNotice evidence={historical.metrics?.evidence} />
             <p className="dim-note">
               Train: {formatNumber(historical.split?.training_fights)} fights ({formatPercent(historical.split?.training_fraction)}) · Test: {formatNumber(historical.split?.test_fights)} fights ({formatPercent(historical.split?.test_fraction)}) · Holdout {historical.split?.test_date_min || "N/A"} → {historical.split?.test_date_max || "N/A"}
             </p>
@@ -868,6 +931,11 @@ export function DurationEvaluationPanel({ payload, loading, error, onRefresh }) 
         {prospective?.available ? (
           <>
             <DurationMetricsTiles metrics={prospective.metrics} fightHint="settled future fights" />
+            <EvidenceNotice evidence={prospective.metrics?.evidence}>
+              {prospective.metrics?.predicted_over_rate === 1
+                ? "Every settled prediction so far selected Over, so its accuracy currently matches the always-Over baseline. More varied results are required before judging skill."
+                : prospective.metrics?.evidence?.message}
+            </EvidenceNotice>
             <DurationByLineTable rows={prospective.by_line} />
             <DurationResultsTable
               rows={prospective.future_card_results}
@@ -954,7 +1022,7 @@ export default function Evaluation() {
 
   useEffect(() => {
     async function init() {
-      await loadEvaluation();
+      await Promise.all([loadEvaluation(), loadWalkForward()]);
     }
 
     init();
@@ -1038,14 +1106,19 @@ export default function Evaluation() {
 
       {loading && !evaluation && <Spinner label="Scoring the holdout set…" />}
 
+      {evaluation?.available === false && (
+        <ErrorNote message={evaluation.message || "Winner evaluation is unavailable."} />
+      )}
+
       {overall && (
         <>
+          <EvidenceNotice evidence={evaluation?.evidence} />
           <div className="tile-row six">
             <StatTile
               label="Fight accuracy"
               value={overall.accuracy_percentage || "N/A"}
               tone="gold"
-              hint={`${formatNumber(overall.fight_count)} holdout fights`}
+              hint={`${formatNumber(overall.fight_count)} holdout fights; ${accuracyInterval(overall)}`}
             />
             <StatTile
               label="Avg confidence"
@@ -1064,6 +1137,12 @@ export default function Evaluation() {
               }
             />
           </div>
+
+          <p className="dim-note">
+            Random-pick baseline: {formatPercent(overall.random_baseline_accuracy)} · accuracy
+            above random: {signedPoints(overall.accuracy_above_random)}. The separately refit
+            production model is never scored on this frozen holdout.
+          </p>
 
           {metadata?.metric_note && <p className="dim-note">{metadata.metric_note}</p>}
 

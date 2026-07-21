@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   checkHealth,
+  getDataOperationsHealth,
   getLatestUpdateReport,
   getUpdateStatus,
   startIncrementalUpdate,
@@ -62,9 +63,25 @@ function groupStages(stages = []) {
   return groups;
 }
 
+function formatAgeHours(value) {
+  const hours = Number(value);
+  if (!Number.isFinite(hours)) return "Unknown";
+  if (hours < 1) return "Less than 1 hour ago";
+  if (hours < 24) return `${Math.round(hours)} hours ago`;
+  const days = hours / 24;
+  return `${days.toFixed(days < 3 ? 1 : 0)} days ago`;
+}
+
+function healthTone(status) {
+  if (status === "healthy") return "win";
+  if (status === "attention") return "warn";
+  return "loss";
+}
+
 export default function UpdateData() {
   const [status, setStatus] = useState(null);
   const [latestReport, setLatestReport] = useState(null);
+  const [dataHealth, setDataHealth] = useState(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
   const [hosted, setHosted] = useState(false);
@@ -108,6 +125,7 @@ export default function UpdateData() {
 
       if (!data.running) {
         loadReport();
+        loadHealth();
       }
     } catch (requestError) {
       setError(requestError.message);
@@ -123,10 +141,19 @@ export default function UpdateData() {
     }
   }
 
+  async function loadHealth() {
+    try {
+      setDataHealth(await getDataOperationsHealth());
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
   useEffect(() => {
     async function init() {
       await loadStatus();
       await loadReport();
+      await loadHealth();
     }
 
     init();
@@ -214,6 +241,97 @@ export default function UpdateData() {
       )}
 
       <ErrorNote message={error} />
+
+      <SectionCard
+        eyebrow="Daily safeguards"
+        title="Refresh and totals health"
+        description="A persisted heartbeat, current market coverage, append-only totals history, and automatic grading of frozen duration predictions."
+        actions={
+          dataHealth ? (
+            <Tag tone={healthTone(dataHealth.status)}>
+              {dataHealth.status === "healthy"
+                ? "Healthy"
+                : dataHealth.status === "attention"
+                  ? "Needs attention"
+                  : "Action required"}
+            </Tag>
+          ) : null
+        }
+      >
+        {!dataHealth ? (
+          <p className="dim-note">Loading operational healthâ€¦</p>
+        ) : (
+          <>
+            <div className="tile-row four">
+              <StatTile
+                label="Last refresh"
+                value={formatAgeHours(dataHealth.refresh?.age_hours)}
+                hint={dataHealth.refresh?.success ? "completed successfully" : "check alerts"}
+                tone={dataHealth.refresh?.success ? "win" : "loss"}
+              />
+              <StatTile
+                label="Odds refresh"
+                value={dataHealth.odds?.refresh_available ? "Successful" : "Needs attention"}
+                hint={
+                  dataHealth.odds?.provider_requests_remaining === null ||
+                  dataHealth.odds?.provider_requests_remaining === undefined
+                    ? "quota unavailable"
+                    : `${formatNumber(dataHealth.odds.provider_requests_remaining)} requests left`
+                }
+                tone={dataHealth.odds?.refresh_available ? "win" : "warn"}
+              />
+              <StatTile
+                label="Current totals"
+                value={`${formatNumber(dataHealth.odds?.totals_coverage?.covered)} / ${formatNumber(
+                  dataHealth.odds?.totals_coverage?.total
+                )}`}
+                hint="upcoming fights with a market O/U"
+              />
+              <StatTile
+                label="Prospective O/U"
+                value={`${formatNumber(
+                  dataHealth.duration_evaluation?.scored_predictions
+                )} settled`}
+                hint={`${formatNumber(
+                  dataHealth.duration_evaluation?.pending_predictions
+                )} pending frozen predictions`}
+              />
+            </div>
+
+            <MeterBar
+              value={(Number(dataHealth.odds?.totals_coverage?.ratio) || 0) * 100}
+              tone="gold"
+              label="Current totals market coverage"
+              trail={dataHealth.odds?.totals_coverage?.percentage || "0.0%"}
+            />
+
+            <p className="dim-note">
+              Totals history: {formatNumber(dataHealth.totals_history?.snapshot_rows)} quotes
+              across {formatNumber(dataHealth.totals_history?.unique_fights)} fights and{" "}
+              {formatNumber(dataHealth.totals_history?.bookmakers)} books
+              {dataHealth.totals_history?.lines?.length
+                ? ` Â· lines ${dataHealth.totals_history.lines.join(", ")}`
+                : ""}
+              . Market coverage is informational; a fight can legitimately have no posted total yet.
+            </p>
+
+            {dataHealth.alerts?.length > 0 && (
+              <div className="stage-list" aria-label="Data operations alerts">
+                {dataHealth.alerts.map((alert) => (
+                  <div className="stage-block" key={alert.code}>
+                    <div className="stage-row">
+                      <Tag tone={alert.severity === "critical" ? "loss" : "warn"}>
+                        {alert.severity}
+                      </Tag>
+                      <span className="stage-name">{alert.message}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </SectionCard>
 
       <SectionCard
         eyebrow="Data refresh"

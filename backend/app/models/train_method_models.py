@@ -374,6 +374,16 @@ def train_for_target(
     train_date_max = train_df["event_date_parsed"].max()
     test_date_min = test_df["event_date_parsed"].min()
     test_date_max = test_df["event_date_parsed"].max()
+    test_counts = test_df[target_column].value_counts()
+    majority_class = str(test_counts.index[0]) if not test_counts.empty else ""
+    majority_accuracy = (
+        float(test_counts.iloc[0] / test_counts.sum()) if not test_counts.empty else None
+    )
+    accuracy_uplift = (
+        float(best_metrics["accuracy"] - majority_accuracy)
+        if majority_accuracy is not None
+        else None
+    )
 
     return {
         "target_column": target_column,
@@ -387,6 +397,20 @@ def train_for_target(
         "test_date_min": format_date(test_date_min),
         "test_date_max": format_date(test_date_max),
         "best_metrics": best_metrics,
+        "majority_baseline": {
+            "class": majority_class,
+            "accuracy": majority_accuracy,
+            "model_accuracy_uplift": accuracy_uplift,
+        },
+        "evidence": {
+            "level": "established" if len(test_df) >= 500 else "moderate",
+            "label": (
+                "Established historical sample"
+                if len(test_df) >= 500
+                else "Moderate historical sample"
+            ),
+            "message": "Chronological holdout; compare accuracy with the majority-class baseline.",
+        },
     }
 
 

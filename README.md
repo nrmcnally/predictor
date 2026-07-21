@@ -9,7 +9,7 @@ The app includes a FastAPI backend, a React/Vite frontend, an incremental data u
 ## Features
 
 - Single-fight winner prediction with calibrated win probabilities
-- Manner-of-ending prediction for single fights
+- Manner-of-ending prediction for single fights and clearly labeled P(Decision) context in expanded future-card breakdowns
   - Broad method probabilities: Decision, KO/TKO, Submission, Other
   - Detailed method probabilities such as unanimous decision, punch-based KO/TKO, choke submission, split/majority decision, and more
 - “Why this prediction?” matchup insight panel
@@ -22,7 +22,7 @@ The app includes a FastAPI backend, a React/Vite frontend, an incremental data u
   - Striking differential
   - Takedown differential
   - Age / career-stage edge
-- Future Cards tab with known upcoming UFC cards and winner predictions
+- Future Cards tab with known upcoming UFC cards, winner predictions, compact duration calls, and expanded duration curves
 - Optional betting-odds comparison for future fights
   - Shows current American odds when available
   - Shows no-vig market-implied probabilities
@@ -50,6 +50,9 @@ The app includes a FastAPI backend, a React/Vite frontend, an incremental data u
   - Favorite-threshold performance
   - Most confident correct and wrong predictions
   - Method model metrics
+  - Frozen chronological winner holdout and walk-forward reports
+  - Historical and prospective Over/Under evaluation with line-specific baselines
+  - Confidence intervals, baseline uplift, evidence labels, and drift warnings
 - Incremental update pipeline
 - Model retraining from the UI or command line
 - DOB restore / backup support for age features
@@ -522,7 +525,7 @@ No prediction
 
 This usually means one or both fighters are missing from the historical feature data.
 
-Method predictions are not shown here because they are less accurate and would make card-level predictions too noisy.
+The quick-glance card keeps the winner pick primary and shows a compact fight-duration call. Expanding a fight reveals the full duration curve and a separately labeled method-model P(Decision) value; that context is not treated as an exact-line Over/Under prediction.
 
 ## Recent Cards
 
@@ -573,6 +576,10 @@ Includes:
 - Most confident correct picks
 - Most confident wrong picks
 - Broad and detailed method model metrics
+- Historical and frozen prospective Over/Under metrics, including exact line and settlement provenance
+- Simple baselines, uplift, confidence intervals, evidence labels, and walk-forward drift status
+
+The production winner model is refit on all eligible history after recipe selection. The winner holdout and walk-forward panels use frozen, portable evaluation artifacts created before that refit, so hosted results remain honest without shipping the development training table.
 
 Historical betting-odds evaluation is only available for fights where odds were saved locally before the event. The app does not currently include paid historical odds data.
 
@@ -598,7 +605,7 @@ instead of making a weaker low-quality prediction.
 
 The “Why this prediction?” panel is rule-based. It does not claim to be the exact internal reasoning of the machine-learning model. It explains the matchup using the same pre-fight edge data returned by the backend.
 
-The method/manner-of-ending model is less accurate than the winner model. It is currently shown only in the Single Fight view to avoid cluttering Future Cards and Recent Cards.
+The method/manner-of-ending model is less accurate than the winner model. Future Cards exposes only a clearly labeled P(Decision) context value in the expanded breakdown; the compact duration call and curve come from the separate duration model.
 
 Betting odds are comparison-only data. They are not used as model features and are not used to train the winner model or method model.
 

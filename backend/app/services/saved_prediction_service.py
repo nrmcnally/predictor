@@ -405,6 +405,11 @@ def save_predictions_for_card(event_id: str) -> dict[str, Any]:
     )
 
     prediction_available_count = int(new_df["prediction_available"].sum()) if not new_df.empty else 0
+    duration_prediction_available_count = (
+        int(pd.to_numeric(new_df["duration_line"], errors="coerce").notna().sum())
+        if not new_df.empty and "duration_line" in new_df.columns
+        else 0
+    )
     model_predictions_storage = model_prediction_result.get(
         "storage",
         model_prediction_result.get("output_file", ""),
@@ -415,6 +420,7 @@ def save_predictions_for_card(event_id: str) -> dict[str, Any]:
         "saved_rows": int(len(new_df)),
         "prediction_available_count": prediction_available_count,
         "prediction_unavailable_count": int(len(new_df) - prediction_available_count),
+        "duration_prediction_available_count": duration_prediction_available_count,
         "storage": "sqlite:saved_card_predictions",
         "saved_model_rows": model_prediction_result["saved_model_rows"],
         "model_prediction_available_count": model_prediction_result["model_prediction_available_count"],
@@ -437,6 +443,7 @@ def save_predictions_for_all_future_cards() -> dict[str, Any]:
     total_model_rows = 0
     total_model_available = 0
     total_model_unavailable = 0
+    total_duration_available = 0
 
     for card in cards:
         event_id = card["event_id"]
@@ -447,6 +454,7 @@ def save_predictions_for_all_future_cards() -> dict[str, Any]:
         total_rows += result["saved_rows"]
         total_available += result["prediction_available_count"]
         total_unavailable += result["prediction_unavailable_count"]
+        total_duration_available += result.get("duration_prediction_available_count", 0)
         total_model_rows += result.get("saved_model_rows", 0)
         total_model_available += result.get("model_prediction_available_count", 0)
         total_model_unavailable += result.get("model_prediction_unavailable_count", 0)
@@ -456,6 +464,7 @@ def save_predictions_for_all_future_cards() -> dict[str, Any]:
         "total_rows": total_rows,
         "total_prediction_available": total_available,
         "total_prediction_unavailable": total_unavailable,
+        "total_duration_prediction_available": total_duration_available,
         "total_model_prediction_rows": total_model_rows,
         "total_model_prediction_available": total_model_available,
         "total_model_prediction_unavailable": total_model_unavailable,

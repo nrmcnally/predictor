@@ -4,14 +4,14 @@
 
 **Status:** Current implementation guide
 **Repository:** `C:\Users\nrmcn\predictor\threejs`
-**Evidence snapshot:** July 13, 2026, commit `14bf2d4`
+**Evidence snapshot:** July 21, 2026, current `threejs` implementation after duration release `60d9c84` plus the audited evaluation-hardening working set
 **Audience:** FightIQ users, reviewers, and developers
 
 ---
 
 ## What this guide is for
 
-FightIQ presents several kinds of evidence on the same fight card: a calibrated winner probability, market odds, data-quality warnings, and sometimes a market total. These values answer different questions. They should not be combined casually.
+FightIQ presents several kinds of evidence on the same fight card: a winner probability from the selected logistic recipe, market odds, data-quality warnings, and sometimes a market total. These values answer different questions. They should not be combined casually.
 
 This guide explains what each value means, what it does not mean, and how to make a disciplined reading of a prediction. It reflects the implementation and model artifacts in the `threejs` repository at the evidence snapshot above. Proposed behavior is explicitly labeled.
 
@@ -29,7 +29,7 @@ The short version:
 
 ### Winner probability
 
-The main percentage beside the selected fighter is FightIQ's estimated probability that the fighter wins. The production winner model is a calibrated logistic-regression pipeline trained on differences between two fighters' pre-fight feature snapshots.
+The main percentage beside the selected fighter is FightIQ's estimated probability that the fighter wins. The selected winner recipe is logistic regression trained on differences between two fighters' pre-fight feature snapshots. Model 1.3 freezes candidate evaluation first, then refits that locked recipe on all eligible history for production.
 
 Example:
 
@@ -41,40 +41,37 @@ The displayed pick is normally the fighter whose probability is above 50%. A 51%
 
 ### Current held-out evidence
 
-The checked-in calibrated winner-model artifact reports the following held-out metrics:
+The frozen candidate-evaluation artifact reports the following held-out metrics; the separately labeled production model is refit on all eligible history and is not rescored on this now-seen holdout:
 
 | Metric | Current artifact | Plain-language interpretation |
 |---|---:|---|
-| Accuracy | 63.15% | About 63 of every 100 held-out outcomes were classified correctly. |
-| ROC AUC | 0.674 | The model ranks winners above losers better than chance, but not perfectly. |
+| Accuracy | 63.55% (95% CI 61.24%-65.79%) | About 64 of every 100 held-out outcomes were classified correctly. |
+| ROC AUC | 0.676 | The model ranks winners above losers better than chance, but not perfectly. |
 | Log loss | 0.649 | Measures the quality of the full probability distribution and penalizes confident errors. Lower is better. |
 | Brier score | 0.228 | Mean squared probability error. Lower is better. |
 
-The artifact's confidence-bucket table contains **3,436 oriented test rows representing 1,718 unique fights**. FightIQ mirrors each fight so that both fighter orientations are represented. Calling all 3,436 rows separate fights would double-count the test sample.
+The artifact contains **3,440 oriented test rows representing 1,720 unique fights**. FightIQ mirrors each fight so that both fighter orientations are represented, while the report below deduplicates to one observation per fight.
 
 ### How to read confidence bands
 
-The current artifact reports these calibrated logistic-regression buckets:
+The current frozen artifact reports these fight-deduplicated confidence buckets:
 
-| Displayed probability band | Oriented rows | Observed accuracy | Average predicted confidence |
+| Displayed probability band | Unique fights | Observed accuracy | Average predicted confidence |
 |---|---:|---:|---:|
-| 50% to under 55% | 874 | 53.1% | 52.5% |
-| 55% to under 60% | 850 | 62.8% | 57.4% |
-| 60% to under 65% | 642 | 63.9% | 62.4% |
-| 65% to under 70% | 510 | 65.9% | 67.4% |
-| 70% to under 75% | 298 | 71.8% | 72.2% |
-| 75% to under 80% | 156 | 85.9% | 77.3% |
-| 80% and above | 106 | 73.6% | 84.6% |
+| 50% to under 55% | 359 | 52.9% | 52.5% |
+| 55% to under 60% | 360 | 60.6% | 57.5% |
+| 60% to under 65% | 306 | 63.7% | 62.3% |
+| 65% to under 70% | 263 | 65.8% | 67.5% |
+| 70% and above | 432 | 73.4% | 77.2% |
 
-These are diagnostics, not promises. The highest-confidence bucket is small and overconfident in this split. That is a reason to cap enthusiasm for extreme percentages and to monitor calibration prospectively.
+These are diagnostics, not promises. The 70%+ bucket is modestly overconfident in this split, and it combines a wide range of displayed probabilities. That is a reason to cap enthusiasm for extreme percentages and monitor calibration prospectively.
 
 Practical reading:
 
 - **50% to 55%:** essentially a toss-up.
 - **55% to 60%:** a modest lean.
 - **60% to 70%:** a meaningful lean, subject to data quality and matchup context.
-- **70% to 80%:** a strong statistical lean, but still vulnerable to missing context.
-- **Above 80%:** rare. Treat as high model confidence, not certainty; the held-out sample is limited and currently overconfident at the top.
+- **70% and above:** a strong statistical lean, but not certainty; the aggregate held-out band is modestly overconfident and remains vulnerable to missing context.
 
 ---
 
@@ -167,29 +164,39 @@ Therefore:
 The improved Future Cards duration panel keeps three concepts visually separate:
 
 1. **Market total:** the line-specific de-vigged Over and Under percentages, when available.
-2. **Duration model:** reserved for a future line-specific model prediction.
+2. **Duration model:** an experimental, market-independent survival curve. When a market line exists, FightIQ queries the curve at that exact line.
 3. **Decision context:** the existing P(Decision), labeled as contextual and not used to calculate a model edge on the rounds market.
 
-If no dedicated line-specific duration model is present, the panel says so. It does not manufacture a model-over percentage from P(Decision).
+If the duration artifact or fighter inputs are unavailable, the panel says so. If the curve exists but the sportsbook has not posted a supported line, the compact card says **Curve ready / Awaiting market O/U**, while the expanded breakdown still shows the curve. FightIQ never manufactures a model-over percentage from P(Decision).
 
-### Proposed API contract for a future duration model
+### Current duration API contract
 
-The UI can consume a future response shaped like this:
+The Future Cards service currently returns a response shaped like this:
 
 ```json
 {
   "duration_prediction": {
+    "status": "ready",
     "line": 2.5,
     "over_probability": 0.58,
     "under_probability": 0.42,
-    "model_version": "duration-1.0.0"
+    "curve": [
+      {"line": 0.5, "over_probability": 0.89, "under_probability": 0.11},
+      {"line": 1.5, "over_probability": 0.71, "under_probability": 0.29},
+      {"line": 2.5, "over_probability": 0.58, "under_probability": 0.42}
+    ],
+    "model_version": "duration-survival-0.2.0",
+    "feature_schema_version": "duration-survival-features-2",
+    "promotion_status": "experimental",
+    "market_inputs_used": false,
+    "market_line_role": "query_only"
   }
 }
 ```
 
 The UI compares that prediction with the market only when the model's `line` exactly matches the market's `rounds_line`. A line mismatch produces a warning and no edge calculation.
 
-This is proposed backend behavior. At the evidence snapshot, the repository does **not** contain a trained, validated, line-specific duration model.
+This is current backend behavior. The installed artifact is an **experimental discrete-time half-round survival baseline**, not a production-approved betting system. It predicts one coherent curve independently of the market; the house line is applied only after prediction.
 
 ### What an honest duration comparison looks like
 
@@ -251,7 +258,7 @@ A pass is a valid result. FightIQ is an analytical aid, not a requirement to mak
 Current behavior:
 
 - Learns from mirrored fighter-difference rows.
-- Uses a calibrated logistic-regression classifier in production.
+- Uses the selected logistic-regression recipe in production; the current selected candidate is uncalibrated.
 - Consumes the checked feature schema and categorical weight class.
 - Outputs one winner probability per orientation, reconciled for display.
 
@@ -271,10 +278,12 @@ Current behavior:
 - Normalizes two-sided implied probabilities when both sides are available.
 - Tracks source and bookmaker coverage.
 
-Evidence gap at the snapshot:
+Point-in-time evidence at the snapshot:
 
-- The audited local odds artifact contained zero usable total quotes across 58 upcoming-fight rows, despite schema and UI support for totals.
-- Availability therefore depends on the external odds feed, event coverage, matching, and refresh reliability.
+- The append-only totals store contained 32 per-book quotes covering 8 fights, 4 bookmakers, and lines 1.5, 2.5, and 3.5.
+- The current-card consensus table had 8 fights with a posted total, while many later cards correctly remained in the no-market state.
+- Seven exact-line duration snapshots have now settled: six were correct, but all seven predicted Over, so the 85.7% accuracy is identical to an always-Over baseline. The Evaluation tab labels this sample **Very early** and shows its uncertainty/baseline rather than treating it as proof of skill.
+- Availability still depends on provider health, event coverage, safe fighter matching, and whether books have posted a total.
 
 ---
 
@@ -300,9 +309,9 @@ Odds can change after the card was refreshed. A model-market edge without timest
 
 Held-out historical performance is necessary but does not replace prospective monitoring on predictions frozen before events. Live drift, feed failures, and changing fighter populations require separate checks.
 
-### Fight duration is not yet modeled at the line level
+### Fight duration is experimental, not yet production-proven
 
-The current method model answers a related question, not the market's exact one. A dedicated model must be trained and validated before the UI can make a defensible model-versus-market duration comparison.
+FightIQ now models a market-independent duration survival curve and can query an exact supported line. Historical 80/20 results are encouraging, but live value has not been established. Treat the curve as insight and the line-matched difference as a neutral comparison until enough frozen predictions settle prospectively.
 
 ---
 
@@ -315,7 +324,7 @@ The current method model answers a related question, not the market's exact one.
 | Calibration | Agreement between predicted probabilities and observed frequencies. |
 | De-vigged probability | Implied market probability after normalizing out the two-sided bookmaker margin. |
 | Decision probability | Estimated probability that the official result method is Decision. |
-| Duration model | A proposed model that predicts Over/Under for a specific rounds line. |
+| Duration model | Experimental survival model that predicts the chance a fight continues beyond each supported half-round line. |
 | Edge | Difference, in percentage points, between model and market probabilities for the same outcome. |
 | Log loss | Probability-scoring rule that penalizes confident mistakes strongly; lower is better. |
 | Mirrored row | One orientation of a fight used for symmetry; each unique fight produces two oriented rows. |

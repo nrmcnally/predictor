@@ -11,10 +11,27 @@ from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, roc_auc_
 
 from app.repositories import event_fights_repository, saved_predictions_repository
 from app.services.duration_settlement import settle_duration_result
+from app.services.model_evaluation_service import evidence_status, wilson_interval
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DURATION_METRICS_PATH = PROJECT_ROOT / "models" / "duration_model_metrics.json"
+
+
+def _fight_key(value: Any) -> str:
+    """Canonical UFCStats fight identity shared by upcoming and result URLs.
+
+    Upcoming-card pages omit ``www`` while completed-result pages include it, so
+    the trailing ``fight-details`` identifier is the stable cross-table key.
+    """
+    if value is None:
+        return ""
+    try:
+        if bool(pd.isna(value)):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    return str(value).strip().rstrip("/").rsplit("/", 1)[-1].casefold()
 
 
 def _finite_probability(value: Any) -> float | None:
@@ -27,6 +44,15 @@ def _finite_probability(value: Any) -> float | None:
     if not math.isfinite(probability) or probability < 0 or probability > 1:
         return None
     return probability
+
+
+def _provided(value: Any) -> bool:
+    if value is None or value == "":
+        return False
+    try:
+        return not bool(pd.isna(value))
+    except (TypeError, ValueError):
+        return True
 
 
 def _valid_prediction(row: pd.Series) -> tuple[float, float, float] | None:
@@ -51,7 +77,32 @@ def _valid_prediction(row: pd.Series) -> tuple[float, float, float] | None:
     return line, over, under
 
 
-def _metric_payload(actual: list[int], probabilities: list[float]) -> dict[str, Any]:
+def _enrich_metrics(metrics: dict[str, Any], *, prospective: bool = False) -> dict[str, Any]:
+    enriched = dict(metrics or {})
+    fight_count = int(enriched.get("fight_count") or 0)
+    accuracy = enriched.get("accuracy")
+    over_rate = enriched.get("actual_over_rate", enriched.get("over_rate"))
+    if fight_count and accuracy is not None:
+        correct_count = int(round(float(accuracy) * fight_count))
+        lower, upper = wilson_interval(correct_count, fight_count)
+        enriched["correct_count"] = correct_count
+        enriched["accuracy_ci95_lower"] = lower
+        enriched["accuracy_ci95_upper"] = upper
+    if over_rate is not None:
+        majority = max(float(over_rate), 1.0 - float(over_rate))
+        enriched["majority_baseline_accuracy"] = majority
+        if accuracy is not None:
+            enriched["accuracy_above_majority"] = float(accuracy) - majority
+    enriched["evidence"] = evidence_status(fight_count, prospective=prospective)
+    return enriched
+
+
+def _metric_payload(
+    actual: list[int],
+    probabilities: list[float],
+    *,
+    prospective: bool = False,
+) -> dict[str, Any]:
     truth = np.asarray(actual, dtype=int)
     predicted_probabilities = np.clip(np.asarray(probabilities, dtype=float), 1e-6, 1 - 1e-6)
     predicted = (predicted_probabilities >= 0.5).astype(int)
@@ -60,7 +111,7 @@ def _metric_payload(actual: list[int], probabilities: list[float]) -> dict[str, 
         if len(np.unique(truth)) > 1
         else None
     )
-    return {
+    return _enrich_metrics({
         "fight_count": int(len(truth)),
         "accuracy": float(accuracy_score(truth, predicted)),
         "brier_score": float(brier_score_loss(truth, predicted_probabilities)),
@@ -68,7 +119,8 @@ def _metric_payload(actual: list[int], probabilities: list[float]) -> dict[str, 
         "roc_auc": auc,
         "actual_over_rate": float(truth.mean()),
         "average_over_probability": float(predicted_probabilities.mean()),
-    }
+        "predicted_over_rate": float(predicted.mean()),
+    }, prospective=prospective)
 
 
 def _historical_payload(metrics_path: Path) -> dict[str, Any]:
@@ -117,6 +169,10 @@ def _historical_payload(metrics_path: Path) -> dict[str, Any]:
             },
         }
 
+    payload["metrics"] = _enrich_metrics(payload.get("metrics") or {})
+    payload["by_line"] = [
+        _enrich_metrics(row or {}) for row in (payload.get("by_line") or [])
+    ]
     return {"available": True, **payload}
 
 
@@ -143,9 +199,9 @@ def _prospective_payload(
         }
 
     result_lookup = {
-        str(row.get("fight_url") or "").strip(): row
+        fight_key: row
         for _, row in event_fights_df.iterrows()
-        if str(row.get("fight_url") or "").strip()
+        if (fight_key := _fight_key(row.get("fight_url")))
     }
 
     saved_count = 0
@@ -159,13 +215,13 @@ def _prospective_payload(
     for _, row in saved_predictions_df.iterrows():
         prediction = _valid_prediction(row)
         if prediction is None:
-            if any(row.get(column) not in (None, "") for column in duration_columns):
+            if any(_provided(row.get(column)) for column in duration_columns):
                 invalid_count += 1
             continue
         saved_count += 1
         line, over_probability, under_probability = prediction
         fight_url = str(row.get("fight_url") or "").strip()
-        result = result_lookup.get(fight_url)
+        result = result_lookup.get(_fight_key(fight_url))
         if result is None:
             pending_count += 1
             continue
@@ -211,7 +267,9 @@ def _prospective_payload(
             line_rows = scored_frame[scored_frame["line"] == line_value]
             line_actual = [1 if side == "over" else 0 for side in line_rows["actual_side"]]
             line_probabilities = [float(value) for value in line_rows["over_probability"]]
-            metrics = _metric_payload(line_actual, line_probabilities)
+            metrics = _metric_payload(
+                line_actual, line_probabilities, prospective=True
+            )
             metrics["line"] = float(line_value)
             by_line.append(metrics)
 
@@ -229,7 +287,11 @@ def _prospective_payload(
         "pending_predictions": pending_count,
         "invalid_predictions": invalid_count,
         "excluded_results": excluded_count,
-        "metrics": _metric_payload(actual, probabilities) if scored_count else None,
+        "metrics": (
+            _metric_payload(actual, probabilities, prospective=True)
+            if scored_count
+            else None
+        ),
         "by_line": by_line,
         "future_card_results": result_rows[:50],
     }

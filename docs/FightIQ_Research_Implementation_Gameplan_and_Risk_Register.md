@@ -4,11 +4,11 @@ Evidence-based plan for improving prediction quality, fight-duration estimates, 
 
 Audited repository: `C:\Users\nrmcn\predictor\threejs`
 
-Audited Git baseline: branch `threejs-playground`, tracking `origin/threejs-frontend`, commit `14bf2d4`
+Audited Git baseline: branch `threejs-playground`, tracking `origin/threejs-frontend`; duration release baseline `60d9c84` plus the operational-hardening change set documented here
 
-Audit date: July 13, 2026
+Audit date: July 21, 2026
 
-Status: standalone implementation plan; proposals are not descriptions of shipped behavior unless explicitly labeled **Current**
+Status: standalone implementation plan updated after the experimental duration and refresh-observability implementation
 
 ## Document control and decision rules
 
@@ -42,16 +42,16 @@ The label **Current** means implemented at the audited commit. **Proposed** mean
 
 # 1. Executive decision summary
 
-FightIQ should not treat the current `Model distance` percentage as a finished over/under model. **Current:** it is the broad method model's calibrated probability of the `Decision` class. That is useful context, but it does not estimate the probability that a fight lasts beyond a quoted sportsbook line such as 2.5 or 4.5 rounds. A fight can finish after the line and still settle Over, so `P(Decision)` systematically answers a different question.
+FightIQ no longer treats `Model distance`/P(Decision) as the over/under model. **Current:** `duration-survival-0.2.0` predicts a market-independent half-round survival curve; the sportsbook line is used only to query the finished curve. P(Decision) remains separately labeled context. Seven frozen exact-line predictions have settled (six correct), but every prediction selected Over and performance equals the always-Over baseline; the evidence status therefore remains **Very early**.
 
 The recommended sequence is:
 
-1. Stabilize provenance, refresh observability, pipeline parity, and fighter identity boundaries.
-2. Establish reliable totals-line ingestion and coverage reporting.
-3. Build a dedicated calibrated duration/survival model that predicts `P(T > quoted threshold)`.
-4. Ship it in shadow/admin mode, then as a clearly labeled model-versus-market comparison.
-5. Accumulate prospective line-matched outcomes before displaying any edge or performance claim.
-6. Pursue additional model research only through chronological, unique-fight, leakage-safe gates.
+1. Freeze the implemented duration version and collect line-matched predictions without event-by-event tuning.
+2. Operate the encrypted daily refresh and monitor the persisted heartbeat, provider quota, coverage, match quality, and stale totals snapshots.
+3. Automatically grade frozen duration predictions after official results refresh and publish coverage/exclusions.
+4. Review at a predeclared 75-100 settled exact-line observations, with adequate five-round representation, before promotion.
+5. Build winner reliability/abstention analysis while duration evidence accumulates.
+6. Pursue new model features only through event-grouped chronological, leakage-safe gates.
 
 The six existing matchup interaction terms should not simply be wired into production. They were already evaluated across logistic regression, histogram gradient boosting, and XGBoost and were neutral to negative in recorded walk-forward experiments. They become worth revisiting only if new orthogonal inputs—such as reliable style annotations—change what the interactions represent.
 
@@ -59,13 +59,12 @@ The six existing matchup interaction terms should not simply be wired into produ
 
 ```mermaid
 flowchart LR
-    P0["P0: integrity and observability"] --> P1["P1: totals coverage"]
-    P1 --> P2["P2: duration model in shadow mode"]
-    P2 --> P3["P3: model-versus-market UI"]
-    P3 --> P4["P4: prospective evaluation"]
-    P0 --> R["Parallel research: Glicko, round features, calibration"]
-    R --> G["Leakage-safe promotion gate"]
-    G --> P2
+    D["Implemented: duration-survival-0.2.0"] --> S["Active: frozen exact-line snapshots"]
+    H["Implemented: refresh/totals health"] --> S
+    S --> E["75-100 settled observations"]
+    E --> G["Prospective promotion gate"]
+    H --> W["Next model work: winner reliability"]
+    W --> R["Event-grouped rolling-origin evaluation"]
 ```
 
 # 2. Verified baseline
@@ -78,14 +77,17 @@ The application is a FastAPI backend plus React/Vite frontend. It supports winne
 
 | Item | Verified current state |
 |---|---|
-| Winner recipe | `backend/app/models/model_version.py`, version 1.2, recipe hash `d15652b351` |
-| Serving model | Calibrated logistic winner model with 126 numeric inputs plus categorical `weight_class` |
-| Latest recorded winner metrics | Accuracy 0.6315; Brier 0.2280; log loss 0.6490; AUC 0.6739 |
-| Chronological split | 6,010 training fights; 859 calibration fights; 1,718 test fights |
-| Training coverage | March 11, 1994 through July 11, 2026 |
+| Winner recipe | `backend/app/models/model_version.py`, version 1.3; production protocol hash `d318130478`; frozen candidate-evaluation protocol hash `683f0e4d08` |
+| Serving model | Uncalibrated logistic recipe selected on the frozen holdout, then refit on all 8,599 eligible fights for production |
+| Latest recorded winner metrics | Frozen holdout: accuracy 0.6355 (95% Wilson interval 0.6124-0.6579); Brier 0.2276; log loss 0.6492; AUC 0.6756. Eight-fold walk-forward mean accuracy: 0.6214 |
+| Chronological split | 6,019 training fights; 860 calibration fights; 1,720 untouched test fights |
+| Training coverage | March 11, 1994 through July 18, 2026; production refit uses all eligible history after evaluation freeze |
 | Method model | Broad and detailed method models; 496 numeric inputs plus categorical `weight_class` |
-| Current `Model distance` | Broad method model probability assigned to `Decision` |
-| Provenance | Metrics include trained time, recipe hash, training-data hash, Git commit, and dirty-worktree flag |
+| Method-derived duration context | Broad method model probability assigned to `Decision`; separately labeled context, never an Over probability |
+| Duration model | Experimental discrete-time half-round survival model `duration-survival-0.2.0`; feature schema `duration-survival-features-2`; settlement `ufc-standard-rounds-2` |
+| Duration historical split | 6,816 train fights; 1,709 test fights; 5,443 exact-line test observations |
+| Duration historical metrics | Accuracy 0.7286; Brier 0.1754; log loss 0.5229; AUC 0.7514; zero monotonicity violations |
+| Provenance | Evaluation and production artifacts carry distinct roles, training protocols/hashes, row counts, date ranges, data hashes, Git commit, and dirty-worktree flag |
 
 The latest winner artifact was trained from a dirty worktree. That does not prove the artifact is invalid, but it prevents the Git commit alone from reproducing the exact source state. Before evaluating new ideas, establish a clean and immutable comparison baseline.
 
@@ -94,22 +96,23 @@ The latest winner artifact was trained from a dirty worktree. That does not prov
 | Area | Verified current state | Planning consequence |
 |---|---|---|
 | Historical fights | 8,772 `event_fights` rows in SQLite; exported raw CSV has 8,758 | SQLite and compatibility CSVs can diverge; define authoritative reads |
-| Training matchups | 17,174 mirrored rows representing 8,587 unique fights | Split and score by unique fight, never by mirrored row |
+| Training matchups | 17,198 mirrored rows representing 8,599 unique fights | Split and score by unique fight, never by mirrored row |
 | Current fighter features | 2,694 rows and 134 columns | Duration work can reuse only pre-fight-safe columns |
 | Upcoming schedule | 8 events/56 fights in SQLite versus 6/51 in CSV | UI freshness must use SQLite or explicit regenerated exports |
 | Moneyline odds | Implemented and persisted | Distinguish moneyline availability from totals availability |
 | Totals fields | Schema and ingestion code exist | Implementation presence is not coverage |
-| Totals coverage | 0 of 58 current `future_fight_odds` rows have a non-null total | Duration UI must show unavailable state until data arrives |
+| Totals coverage | 32 append-only per-book quotes across 8 fights, 4 bookmakers, and lines 1.5/2.5/3.5 | Keep curve-only/no-market states and continue daily prospective capture |
+| Frozen duration snapshots | 7 exact-line predictions settled; 6 correct; all 7 selected Over | Evidence is Very early and equals the always-Over baseline; preserve predictions and collect without tuning |
 | Odds history | 24 SQLite rows versus 19 CSV rows | Use database-backed evaluation; exports are compatibility outputs |
 
 ## 2.4 Validation baseline
 
 At the audited state, local validation passed:
 
-- Backend: 177 tests passed.
-- Frontend: lint passed; 32 tests in 9 files passed; production build passed.
+- Backend: 217 tests passed.
+- Frontend: lint passed; 41 tests in 12 files passed; production build passed.
 - Build warning: the lazy `OctagonScene` bundle is approximately 534 kB minified, above Vite's default 500 kB warning threshold.
-- Backend warnings: FastAPI startup event deprecation and a pandas DataFrame fragmentation warning.
+- Backend warning: a pandas DataFrame fragmentation warning in an authenticated end-to-end test.
 
 These results are a baseline, not proof that the unattended Windows scheduler, hosted upload, or real external odds and UFCStats integrations work continuously.
 
@@ -119,11 +122,11 @@ These results are a baseline, not proof that the unattended Windows scheduler, h
 
 | Finding | Evidence in this checkout | Decision |
 |---|---|---|
-| Duration should be modeled against the actual market threshold | Current UI compares a totals line with `P(Decision)`, which is not line-specific | Build a duration/survival target and retain `P(Decision)` only as separately labeled context if useful |
+| Duration should be modeled independently and queried at the actual threshold | Current survival curve is market-independent; P(Decision) remains separate | Freeze the version and validate exact-line outputs prospectively |
 | Chronological validation is mandatory | Training code and existing tests recognize time order and mirrored fights | Use chronological, unique-fight splits for every experiment |
 | Calibration matters as much as discrimination | The product exposes probabilities and market comparisons | Gate on Brier score, log loss, reliability curves, and subgroup calibration—not accuracy alone |
 | Round-level history is most relevant to duration | `fight_round_stats.csv` exists with 40,474 rows | Build aggregated prior-round tendencies with strict pre-fight cutoffs |
-| Prospective evaluation is needed | Saved model predictions and odds tracking already exist | Extend snapshots to line-specific duration predictions and settlements |
+| Prospective evaluation is needed | Exact-line duration fields, automatic grading, Evaluation UI, and 7 settled frozen predictions now exist; 6/7 is not above the always-Over baseline | Accumulate the predeclared sample without tuning or recomputing old predictions |
 | Identity resolution is a platform dependency | Different name normalizers are used for prediction joins, odds, images, and ingestion | Introduce one canonical mapping boundary before broadening external data |
 
 ## 3.2 Findings that conflict with repository experiments
@@ -132,8 +135,8 @@ These results are a baseline, not proof that the unattended Windows scheduler, h
 |---|---|---|
 | Six orphan matchup interactions are “free alpha” and should be wired | The exact terms were tested across logistic, histogram gradient boosting, and XGBoost; recorded deltas were neutral to negative | **Rejected for direct implementation.** Reopen only with new inputs or a materially different hypothesis |
 | Method prediction is absent from Future Cards | `future_card_service.py` derives distance probability from the method model and `FutureCards.jsx` renders it | **Stale statement.** The value is present, but mislabeled for over/under use |
-| Frontend has no automated tests and one fully eager bundle | Current suite has 32 tests and route-level lazy loading | **Historical state.** Add contract/E2E coverage; do not plan from the old count |
-| A successful pipeline log proves daily automation is fixed | The latest log succeeded, but the chain depends on Task Scheduler, a Windows account, DPAPI, a local venv, network access, and upload auth | **Unproven operationally.** Add heartbeat and stale-data alerts |
+| Frontend has no automated tests and one fully eager bundle | Current suite has 41 tests and route-level lazy loading | **Historical state.** Add contract/E2E coverage; do not plan from the old count |
+| A successful pipeline log proves daily automation is fixed | The chain still depends on Task Scheduler, one Windows account/machine, an Interactive logon session, DPAPI, a local venv, network, and upload auth | **Partially mitigated.** Persisted heartbeat/stale alerts and encrypted odds credential are implemented; the PC can still be offline or signed out |
 
 ## 3.3 Ideas requiring new evidence
 
@@ -177,6 +180,8 @@ No UI should subtract probabilities that refer to different events or different 
 
 ## Phase 0 — Integrity and observability foundation
 
+**Current status: partially implemented.** Refresh runs now persist a secret-free `data_refresh_runs` heartbeat that survives bundle upload. Data Ops shows freshness, degraded stages, odds status/quota, totals coverage/history, and duration collection. Unified artifact manifests, atomic generation switching, and canonical fighter identity remain open.
+
 Objective: make every later result reproducible and make “fresh” a measurable state.
 
 | Work item | Key files/components | Deliverable | Exit condition |
@@ -192,6 +197,8 @@ Rollback: these are additive controls. Keep legacy paths callable behind a tempo
 
 ## Phase 1 — Totals ingestion and coverage
 
+**Current status: implemented prospectively.** The provider request includes `h2h,totals`; the current table retains one consensus line per fight, while `totals_odds_snapshots` appends every matched per-book quote and alternate line. At the snapshot it contained 32 quotes across 8 fights and 4 books.
+
 Objective: prove that the application can receive, normalize, store, and display book totals for upcoming fights.
 
 Actions:
@@ -206,6 +213,8 @@ Actions:
 Exit condition: a representative upcoming-card fixture and at least one live authorized fetch populate line and both sides consistently; coverage is independently visible in Data Ops and Future Cards.
 
 ## Phase 2 — Duration dataset and baseline model
+
+**Current status: implemented as an experimental baseline.** `duration_features.py`, `duration_settlement.py`, and `train_duration_model.py` produce `duration-survival-0.2.0`. The chronological 80/20 artifact beats the same-line training base-rate baseline on Brier/log loss, but remains a one-split historical result.
 
 Objective: build a leakage-safe baseline that answers the quoted-line question.
 
@@ -224,6 +233,8 @@ Exit condition: the trainer produces a versioned model, feature contract, metric
 
 ## Phase 3 — Shadow serving and snapshot evaluation
 
+**Current status: implemented and collecting.** Future Cards receives a curve even without a market line, exact-line values are snapshotted only when the saved model and market lines agree, Evaluation grades them from official results, and the incremental pipeline runs that grader after results ingestion.
+
 Objective: run the candidate without changing the public interpretation of Future Cards.
 
 Actions:
@@ -238,6 +249,8 @@ Actions:
 Exit condition: shadow predictions survive at least one full event lifecycle from pre-fight snapshot through result settlement with no manual database edits.
 
 ## Phase 4 — Future Cards presentation
+
+**Current status: implemented with neutral language.** The compact card keeps the winner primary and shows only the duration side/line/probability or `Curve ready / Awaiting market O/U`. The expanded breakdown contains the full curve, market comparison, and separately labeled P(Decision) context.
 
 Objective: show a line-matched comparison without overstating certainty.
 
@@ -258,6 +271,8 @@ Exit condition: API, frontend mock fixtures, UI tests, responsive states, saved 
 
 ## Phase 5 — Prospective gate and controlled promotion
 
+**Current status: active, not passed.** Seven exact-line predictions have settled; six were correct, but all seven selected Over and therefore equal the always-Over baseline. Do not tune the artifact after each card or strengthen product language before the predeclared review.
+
 Objective: determine whether line-specific estimates are useful and stable enough for stronger presentation.
 
 Promote only when:
@@ -270,7 +285,7 @@ Promote only when:
 - subgroup calibration is acceptable for 3-round/5-round fights and high-volume weight classes;
 - no training/serving feature mismatch or identity error was observed in the evaluation set.
 
-Proposed sample gate: review after 200–300 line-matched, prospectively saved fights, but do not treat the number alone as sufficient. This threshold is a planning proposal, not an established statistical guarantee; power should be calculated from observed event rates and the minimum useful improvement.
+Working sample gate: first formal review at 75-100 line-matched, prospectively saved and settled fights, with a nontrivial five-round cohort. This is a pragmatic early gate, not an established statistical guarantee; power and uncertainty should be recalculated from observed event rates before any promotion.
 
 # 6. Fight-duration and totals implementation specification
 
@@ -320,48 +335,50 @@ Do not import the existing six interaction terms by default. If new style featur
 
 ## 6.4 Dataset contract
 
-Proposed files/modules:
+Current files/modules:
 
-- `backend/app/features/duration_dataset.py`: unique-fight label creation and prior-only feature assembly.
-- `backend/app/training/train_duration_model.py`: chronological train/calibration/test procedure.
-- `backend/app/training/evaluate_duration_model.py`: line and subgroup metrics plus reliability artifacts.
-- `backend/app/models/duration_model.py`: artifact loader and compatibility checks.
-- `backend/app/services/duration_service.py`: line-specific inference and reason-coded unavailable states.
-- `backend/app/services/totals_settlement.py`: one tested source of truth for threshold conversion and grading.
-
-The exact module names are proposed. Reuse existing generic helpers where doing so does not blur winner, method, and duration contracts.
+- `backend/app/features/duration_features.py`: symmetric prior-only feature assembly.
+- `backend/app/models/train_duration_model.py`: unique-fight chronological split, hazard interval expansion, training, and metrics.
+- `backend/app/services/duration_prediction_service.py`: artifact load/compatibility checks, curve inference, exact-line query, and reason-coded unavailable states.
+- `backend/app/services/duration_settlement.py`: one tested source of truth for elapsed time and result exclusions.
+- `backend/app/services/duration_evaluation_service.py`: historical artifact readout and prospective exact-line grading.
+- `backend/app/repositories/totals_odds_snapshots_repository.py`: append-only per-book totals history.
+- `backend/app/services/data_operations_health_service.py`: refresh/totals/duration operational telemetry.
 
 One row should represent one fight/line evaluation unit. If multiple lines per historical fight are synthesized for training, group every derived row from the fight into the same fold and report performance separately by actual-versus-synthetic line availability.
 
 ## 6.5 Artifact contract
 
-Proposed artifact family:
+Current artifact family:
 
 | Artifact | Required contents |
 |---|---|
 | `duration_model.joblib` | Fitted calibrated pipeline or survival estimator |
 | `duration_model_features.json` | Ordered numeric features, categorical features, definitions, null/default policy, schema version |
 | `duration_model_metrics.json` | Splits, metrics, reliability summaries, subgroup counts, exclusions, lineage |
-| `duration_model_registry.json` entry | Model version, relative paths, hashes, status, compatibility versions |
-| Out-of-fold predictions | Fight ID, event date, line, target, prediction, fold, model version; no secrets |
+| Registry entry | **Gap:** duration versions live inside the artifact/feature/metrics payloads, but no unified duration registry entry exists yet |
+| Out-of-fold predictions | **Gap:** recent test results are in metrics JSON; a durable full out-of-fold file is still recommended |
 
 The serving process must reject an artifact when its feature-schema version, ordered feature list, or preprocessing version does not match the serving builder.
 
 ## 6.6 API contract
 
-Proposed response fragment:
+Current response fragment (abridged):
 
 ```json
 {
   "duration_prediction": {
     "line": 2.5,
-    "line_seconds": 750,
+    "status": "ready",
     "over_probability": 0.54,
     "under_probability": 0.46,
-    "model_version": "duration-1.0.0",
-    "calibrated": true,
-    "coverage": "full",
-    "prediction_timestamp": "2026-07-13T18:00:00Z"
+    "curve": [{"line": 0.5, "over_probability": 0.89, "under_probability": 0.11}],
+    "model_version": "duration-survival-0.2.0",
+    "feature_schema_version": "duration-survival-features-2",
+    "promotion_status": "experimental",
+    "market_inputs_used": false,
+    "market_line_role": "query_only",
+    "generated_at": "2026-07-13T18:00:00Z"
   }
 }
 ```
@@ -405,7 +422,7 @@ Gate on chronological out-of-fold log loss and Brier score for winner prediction
 
 ## 7.3 Calibration alternatives
 
-Compare the current sigmoid calibration against carefully nested alternatives. Calibration fitting must occur without touching the final test period. Evaluate overall and subgroup reliability, expected calibration error with fixed/adaptive bins, Brier decomposition where practical, and bootstrap confidence intervals. A method that creates sharper-looking probabilities but worse log loss or unstable tails should remain experimental.
+Compare the selected uncalibrated logistic recipe against carefully nested calibration alternatives. Fit calibration without touching the final test period. Evaluate reliability, expected calibration error, proper scores, and bootstrap intervals; reject sharper-looking probabilities that worsen log loss or destabilize the tails.
 
 ## 7.4 Feature stability and selection
 
@@ -423,13 +440,11 @@ Before ingestion, verify terms of use, licensing, update stability, identity cov
 
 ## 8.1 Daily refresh
 
-**Current:** Windows Task Scheduler launches `backend/app/pipeline/auto_update.ps1`, which decrypts a DPAPI-protected credential, runs `auto_update.py`, executes the incremental pipeline, builds a bundle, and uploads it to the admin endpoint. The newest inspected log completed successfully, including the incremental update and hosted upload path. However, a successful log does not prove the job runs every day.
+**Current:** Windows Task Scheduler launches `deploy/auto_update.ps1`, which decrypts separate DPAPI-protected admin and Odds API credentials, runs `deploy/auto_update.py`, executes the incremental pipeline, builds a bundle, and uploads it. Each run writes a compact `data_refresh_runs` heartbeat into SQLite; bundle sync merges that table into the hosted DB. Data Ops shows run age/success, degraded stages, odds status/quota, current totals coverage, append-only history, match warnings, and prospective duration counts. Provider failure preserves the last good odds, pushes otherwise safe data, and returns a non-zero scheduled-task result. The registered task uses the `Interactive` logon type, so it catches up after the user logs on but cannot run while that account is signed out.
 
-Required improvements:
+Remaining improvements:
 
-- Persist `last_attempt_at`, `last_success_at`, `last_failure_stage`, `duration`, `local_bundle_hash`, and `upload_result` in a status record exposed to Data Ops.
-- Add a stale threshold independent of the scheduler; alert when the latest successful data date or run age exceeds policy.
-- Record explicit `skipped` reasons for optional odds and image stages. A best-effort skip is not equivalent to refreshed data.
+- Extend the heartbeat with bundle hash and explicit post-upload verification result.
 - Add a post-upload hosted health check that verifies manifest hash, database row counts, model versions, and latest event date.
 - Move the runner to an always-on CI/hosted system when credentials, scraping constraints, and cost permit. Until then, document that a sleeping/offline Windows machine cannot guarantee wall-clock daily execution.
 
@@ -452,7 +467,7 @@ Many FastAPI routes return untyped dictionaries and the frontend API client has 
 
 ## 8.4 Database and schema evolution
 
-The database currently relies on `PRAGMA user_version=1` plus forward-compatible column additions. Add numbered, idempotent migrations and a compatibility matrix for the backend, bundle, and database schema. Duration snapshots and settlements require migrations that preserve old rows and identify which model/line semantics produced them.
+The database currently relies on `PRAGMA user_version=1` plus forward-compatible column/table creation. Duration snapshots, totals history, and refresh heartbeat are present, but add numbered, idempotent migrations and a compatibility matrix before changing their semantics. Future migrations must preserve old rows and identify which model/line/settlement version produced them.
 
 # 9. Measurement and acceptance gates
 
@@ -486,21 +501,19 @@ Existing winner-model values in Section 2 are comparison baselines for winner wo
 
 ## 9.3 Proposed promotion rule
 
-Use paired bootstrap confidence intervals on identical fights. Promote a duration candidate only if it improves or is statistically compatible with the simpler baseline on the primary proper-scoring rule, does not materially degrade calibration or key subgroups, and adds enough coverage/maintainability value to justify complexity. Define “material” before the final test after a pilot power calculation; do not invent a favorable threshold after viewing results.
-
-For the UI, separate technical promotion from stronger product language. A model can be technically sound enough to display as context before it is proven to identify market value.
+Use paired bootstrap intervals on identical fights. Promote only if the candidate improves or is statistically compatible with the simpler baseline on the primary proper score, preserves calibration and key subgroups, and justifies its complexity. Define “material” before the final test; never choose a favorable threshold after seeing results.
 
 # 10. Risk and concern register
 
 | ID | Severity | Concern | Likely impact | Mitigation / decision |
 |---|---|---|---|---|
-| R1 | Critical | `Model distance` answers `P(Decision)`, not `P(Over line)` | Misleading market comparison and false edge interpretation | Separate concepts; dedicated duration target; migrate API/UI labels |
-| R2 | Critical | Current totals coverage is 0 of 58 rows | Feature can appear implemented while providing no usable comparisons | Coverage telemetry, live-provider verification, unavailable state |
+| R1 | Critical | Historical duration results could be mistaken for proven live edge | Overconfident product language and premature tuning | Keep experimental status, neutral display, frozen versions, and predeclared prospective gate |
+| R2 | High | Totals coverage is sparse: 32 quotes across 8 fights at snapshot | Small/line-biased prospective comparison | Continue append-only capture; report fight/book/line coverage and unavailable states |
 | R3 | Critical | Model artifacts and most generated data are ignored and the current winner artifact records a dirty worktree | Irreproducible baselines and accidental artifact drift | Immutable manifest, hashes, clean-source requirement or archived diff |
 | R4 | Critical | Bundle members are replaced sequentially | Mixed incompatible generations during requests | Stage, validate, and atomically switch versioned generations |
 | R5 | High | Full and incremental pipelines duplicate stage lists and ordering | A fix can update one path but not the other | Shared declarative stage registry and parity tests |
 | R6 | High | Name normalization differs across prediction, odds, images, and ingestion | Wrong or missing fighter joins; silent odds mismatch | Stable fighter IDs, alias registry, confidence and review queue |
-| R7 | High | Scheduler depends on a local Windows session, DPAPI, venv, connectivity, and machine availability | Missed daily refresh with no immediate visible failure | Heartbeat, stale alert, post-upload check, eventual always-on runner |
+| R7 | High | Scheduler depends on one Windows account/machine, DPAPI, venv, connectivity, and machine availability | A sleeping/offline PC can still miss wall-clock execution | Implemented heartbeat/stale alert; add external notification and eventual always-on runner |
 | R8 | High | Current SQLite and compatibility CSV row counts diverge | Training, UI, and debugging can use different “current” data | Define ownership; generate exports with timestamps/manifests |
 | R9 | High | Duration labels have bookmaker-specific boundary and void rules | Wrong training targets and grading at exact boundaries | One versioned settlement module with provider-specific fixtures |
 | R10 | High | Mirrored matchup rows can cross validation folds | Leakage and exaggerated model performance | Group by canonical fight ID; assert fold isolation |
@@ -534,14 +547,12 @@ For the UI, separate technical promotion from stronger product language. A model
 
 ## 11.2 Suggested working increments
 
-1. One pull request: manifest, source-state capture, `/health` generation fields, tests.
-2. One pull request: shared pipeline registry and scheduler heartbeat/status UI.
-3. One pull request: canonical identity service adopted first by odds ingestion.
-4. One pull request: totals fixtures, persistence, coverage, and unavailable UI—no duration model yet.
-5. One experimental branch: duration labels, baselines, chronological evaluation; no serving changes.
-6. One pull request: selected duration artifact contract and shadow serving.
-7. One pull request: snapshot settlement and evaluation.
-8. One pull request: neutral public presentation behind a feature flag.
+1. **Completed:** totals snapshots, duration artifact/curve, exact-line UI, historical/prospective Evaluation, encrypted odds credential, heartbeat, and Data Ops health.
+2. Next pull request: no-post-fight-overwrite/full-event lifecycle test plus hosted post-upload verification and external failure notification.
+3. Next model pull request: winner reliability/abstention cohorts under event-grouped rolling-origin evaluation.
+4. Platform pull request: canonical fighter identity service adopted first by odds ingestion.
+5. Release-engineering pull request: artifact manifest and atomic generation switch.
+6. Duration review pull request only after the predeclared settled-sample gate; do not tune between events.
 
 Small, reversible increments make it clear which change caused any data, calibration, or deployment regression.
 
@@ -559,19 +570,18 @@ Pause the duration rollout when:
 
 # 12. Recommended next work session
 
-The best next work is a short P0 foundation slice followed immediately by the duration dataset—not another broad model experiment.
+The best next work is to operate and validate what has just shipped, while beginning winner-reliability work that does not contaminate the frozen duration experiment.
 
 Recommended scope:
 
-1. Add an artifact-manifest schema and generation command.
-2. Record refresh last-attempt/last-success/failure/upload fields and expose them in Data Ops.
-3. Add totals coverage diagnostics and fixture-driven tests.
-4. Define and test the official elapsed-time/line settlement function.
-5. Produce a duration-dataset audit report with row counts, exclusions, target rates by line, rounds, era, and weight class.
+1. Let `duration-survival-0.2.0` collect frozen exact-line predictions; review Data Ops after every scheduled run, not the model after every card.
+2. Add a full event-lifecycle test proving a pre-fight snapshot survives result ingestion and cannot be recomputed post-fight.
+3. Add external notification and a post-upload hosted verification/hash so local failure is visible without opening FightIQ.
+4. Build winner reliability cohorts for debutants, low UFC sample, missing features, long layoffs, weight moves, and replacement bouts; define downgrade/abstain behavior.
+5. Upgrade winner evaluation to event-grouped rolling-origin folds before choosing a new winner feature family.
+6. Begin canonical fighter IDs/name aliases after the monitoring slice.
 
-At that checkpoint, review the audit before choosing logistic-per-line versus survival modeling. This sequence directly advances the improved Future Cards duration feature while reducing the chance of building it on stale data or ambiguous labels.
-
-Alternative if operational reliability is the urgent concern: complete items 1–3 and run the scheduler through a full local-to-hosted cycle before any model work. Alternative if research is the priority: items 1 and 4–5 are the minimum safe prerequisite.
+Review the duration model only when the predeclared prospective count is reached or a real integrity failure is discovered. This avoids test-set-by-test-set tuning while other high-value work continues.
 
 # 13. Practical kickoff checklist
 

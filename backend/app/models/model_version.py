@@ -10,7 +10,8 @@ Three layers, increasing automation:
          MINOR (1.1) = smaller meaningful change: a feature added, calibration tweak.
        Bump it deliberately when you ship a meaningful change — NOT on routine retrains.
 
-  2. recipe_hash    — automatic. Hash of (feature columns + model type + calibration).
+  2. recipe_hash    — automatic. Hash of (feature columns + model type + calibration
+         + training protocol).
        Stays identical across routine retrains (same recipe, new data); changes only
        when the recipe actually changes. This is the objective "meaningful change"
        detector, so staleness flags don't false-alarm on every data refresh.
@@ -57,6 +58,14 @@ VERSION_HISTORY = [
             "low-data gating, and probability-aware grading."
         ),
     },
+    {
+        "version": "1.3",
+        "date": "2026-07-21",
+        "summary": (
+            "Evaluation/serving split: freeze chronological holdout artifacts, then "
+            "refit the locked winning recipe on all eligible history for production."
+        ),
+    },
 ]
 
 MODEL_VERSION = VERSION_HISTORY[-1]["version"]
@@ -71,12 +80,14 @@ def compute_recipe_hash(
     categorical_features: list[str],
     model_type: str,
     calibration_method: str,
+    training_protocol: str = "candidate_selection_v1",
 ) -> str:
     payload = {
         "numeric_features": sorted(numeric_features),
         "categorical_features": sorted(categorical_features),
         "model_type": model_type,
         "calibration_method": calibration_method,
+        "training_protocol": training_protocol,
     }
     blob = json.dumps(payload, sort_keys=True).encode("utf-8")
     return hashlib.sha256(blob).hexdigest()[:10]
@@ -123,15 +134,21 @@ def build_provenance(
     categorical_features: list[str],
     model_type: str,
     calibration_method: str,
+    training_protocol: str = "candidate_selection_v1",
 ) -> dict[str, Any]:
     """Computed at train time and saved into calibrated_model_metrics.json."""
     provenance = {
         "model_version": MODEL_VERSION,
         "recipe_hash": compute_recipe_hash(
-            numeric_features, categorical_features, model_type, calibration_method
+            numeric_features,
+            categorical_features,
+            model_type,
+            calibration_method,
+            training_protocol,
         ),
         "model_type": model_type,
         "calibration_method": calibration_method,
+        "training_protocol": training_protocol,
         "trained_at": datetime.now().isoformat(timespec="seconds"),
     }
     provenance.update(get_git_info())

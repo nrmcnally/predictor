@@ -5,7 +5,7 @@ onto the server volume (see DEPLOY.md).
 
     python deploy/make_bundle.py            # serving core (~150MB)
     python deploy/make_bundle.py --full     # + winner_models & training matchups
-                                            #   (enables the Evaluation deep-dives)
+                                            #   (offline research/debugging only)
 
 Run it after a local Data Ops update, then push the fresh bundle to the host.
 """
@@ -31,7 +31,8 @@ CORE_PATTERNS = [
     "models/*.joblib",
     "models/market_shadow_models/*",
 ]
-# Heavier extras for the Evaluation tab's model-comparison / holdout deep-dives.
+# Heavier extras for offline/server-side research. Production Evaluation uses the
+# portable JSON reports already matched by models/*.json above.
 FULL_PATTERNS = [
     "models/winner_models/*",
     "data/processed/training_matchups.csv",

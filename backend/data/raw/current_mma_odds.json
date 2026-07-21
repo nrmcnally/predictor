@@ -1,34 +1,88 @@
 {
-  "fetched_at": "2026-06-27T17:11:38",
+  "fetched_at": "2026-07-21T11:45:07",
   "source": "the-odds-api",
   "sport_key": "mma_mixed_martial_arts",
-  "markets": "h2h",
+  "markets": "h2h,totals",
   "odds_format": "american",
+  "requests_remaining": "486",
   "data": [
     {
-      "id": "c689d001aa0022349b0a7b5a28490ed4",
+      "id": "1382284184eda3da5ba5bd2f3a221bde",
       "sport_key": "mma_mixed_martial_arts",
       "sport_title": "MMA",
-      "commence_time": "2026-06-27T23:00:00Z",
-      "home_team": "Cobey Fehr",
-      "away_team": "Daniel Bzdigian",
+      "commence_time": "2026-07-25T09:00:00Z",
+      "home_team": "Ismael Bonfim",
+      "away_team": "Axel Sola",
       "bookmakers": [
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
-                  "name": "Cobey Fehr",
-                  "price": -1000
+                  "name": "Axel Sola",
+                  "price": -193
                 },
                 {
-                  "name": "Daniel Bzdigian",
-                  "price": 700
+                  "name": "Ismael Bonfim",
+                  "price": 168
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 100,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -120,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Axel Sola",
+                  "price": -195
+                },
+                {
+                  "name": "Ismael Bonfim",
+                  "price": 162
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 100,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -120,
+                  "point": 2.5
                 }
               ]
             }
@@ -37,19 +91,135 @@
         {
           "key": "fanduel",
           "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
+          "last_update": "2026-07-21T15:44:53Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
+              "last_update": "2026-07-21T15:44:53Z",
               "outcomes": [
                 {
-                  "name": "Cobey Fehr",
-                  "price": -1200
+                  "name": "Axel Sola",
+                  "price": -210
                 },
                 {
-                  "name": "Daniel Bzdigian",
-                  "price": 750
+                  "name": "Ismael Bonfim",
+                  "price": 162
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Axel Sola",
+                  "price": -182
+                },
+                {
+                  "name": "Ismael Bonfim",
+                  "price": 145
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Axel Sola",
+                  "price": -198
+                },
+                {
+                  "name": "Ismael Bonfim",
+                  "price": 164
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 105,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -135,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2026-07-21T15:43:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:43:27Z",
+              "outcomes": [
+                {
+                  "name": "Axel Sola",
+                  "price": -200
+                },
+                {
+                  "name": "Ismael Bonfim",
+                  "price": 165
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Axel Sola",
+                  "price": -198
+                },
+                {
+                  "name": "Ismael Bonfim",
+                  "price": 168
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 100,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -130,
+                  "point": 2.5
                 }
               ]
             }
@@ -58,29 +228,82 @@
       ]
     },
     {
-      "id": "fe6bf375c40c4fc5084b4889eb946b53",
+      "id": "f6e926c493471c7fb622447575c843c4",
       "sport_key": "mma_mixed_martial_arts",
       "sport_title": "MMA",
-      "commence_time": "2026-06-27T23:00:00Z",
-      "home_team": "Shannon Clark",
-      "away_team": "Ilara Joanne",
+      "commence_time": "2026-07-25T09:00:00Z",
+      "home_team": "Magomed Ankalaev",
+      "away_team": "Bogdan Guskov",
       "bookmakers": [
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
-                  "name": "Ilara Joanne",
-                  "price": 245
+                  "name": "Bogdan Guskov",
+                  "price": 400
                 },
                 {
-                  "name": "Shannon Clark",
-                  "price": -290
+                  "name": "Magomed Ankalaev",
+                  "price": -550
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 135,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -155,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Bogdan Guskov",
+                  "price": 399
+                },
+                {
+                  "name": "Magomed Ankalaev",
+                  "price": -550
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 130,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -155,
+                  "point": 2.5
                 }
               ]
             }
@@ -89,18 +312,355 @@
         {
           "key": "fanduel",
           "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
+          "last_update": "2026-07-21T15:44:53Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
+              "last_update": "2026-07-21T15:44:53Z",
               "outcomes": [
                 {
-                  "name": "Ilara Joanne",
-                  "price": 245
+                  "name": "Bogdan Guskov",
+                  "price": 370
                 },
                 {
-                  "name": "Shannon Clark",
+                  "name": "Magomed Ankalaev",
+                  "price": -560
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Bogdan Guskov",
+                  "price": 390
+                },
+                {
+                  "name": "Magomed Ankalaev",
+                  "price": -560
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Bogdan Guskov",
+                  "price": 410
+                },
+                {
+                  "name": "Magomed Ankalaev",
+                  "price": -550
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 124,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -160,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2026-07-21T15:43:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:43:27Z",
+              "outcomes": [
+                {
+                  "name": "Bogdan Guskov",
+                  "price": 425
+                },
+                {
+                  "name": "Magomed Ankalaev",
+                  "price": -600
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Bogdan Guskov",
+                  "price": 410
+                },
+                {
+                  "name": "Magomed Ankalaev",
+                  "price": -550
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 125,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -165,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aadd177a06dce384ea7a5406ef2b025b",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-25T09:00:00Z",
+      "home_team": "Magomed Zaynukov",
+      "away_team": "Damian Rzepecki",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Damian Rzepecki",
+                  "price": 248
+                },
+                {
+                  "name": "Magomed Zaynukov",
+                  "price": -288
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -220,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 186,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Damian Rzepecki",
+                  "price": 250
+                },
+                {
+                  "name": "Magomed Zaynukov",
+                  "price": -305
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -220,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 182,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Damian Rzepecki",
+                  "price": 265
+                },
+                {
+                  "name": "Magomed Zaynukov",
+                  "price": -370
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Damian Rzepecki",
+                  "price": 260
+                },
+                {
+                  "name": "Magomed Zaynukov",
+                  "price": -345
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Damian Rzepecki",
+                  "price": 260
+                },
+                {
+                  "name": "Magomed Zaynukov",
+                  "price": -325
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -230,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 175,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Damian Rzepecki",
+                  "price": 250
+                },
+                {
+                  "name": "Magomed Zaynukov",
+                  "price": -300
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -145,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 110,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2026-07-21T15:43:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:43:27Z",
+              "outcomes": [
+                {
+                  "name": "Damian Rzepecki",
+                  "price": 240
+                },
+                {
+                  "name": "Magomed Zaynukov",
                   "price": -300
                 }
               ]
@@ -110,29 +670,82 @@
       ]
     },
     {
-      "id": "dc08ab65e356e5ee943ace7ee53c1bcf",
+      "id": "96dce0976c858e0da8478c1b12792f89",
       "sport_key": "mma_mixed_martial_arts",
       "sport_title": "MMA",
-      "commence_time": "2026-06-28T00:00:00Z",
-      "home_team": "Ariane Lipski",
-      "away_team": "Jena Bishop",
+      "commence_time": "2026-07-25T09:00:00Z",
+      "home_team": "Islam Dulatov",
+      "away_team": "Wellington Turman",
       "bookmakers": [
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
-                  "name": "Ariane Lipski",
-                  "price": -120
+                  "name": "Islam Dulatov",
+                  "price": -950
                 },
                 {
-                  "name": "Jena Bishop",
-                  "price": 100
+                  "name": "Wellington Turman",
+                  "price": 650
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 215,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -260,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Islam Dulatov",
+                  "price": -950
+                },
+                {
+                  "name": "Wellington Turman",
+                  "price": 605
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 214,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -260,
+                  "point": 1.5
                 }
               ]
             }
@@ -141,475 +754,40 @@
         {
           "key": "fanduel",
           "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
+          "last_update": "2026-07-21T15:44:53Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
+              "last_update": "2026-07-21T15:44:53Z",
               "outcomes": [
                 {
-                  "name": "Ariane Lipski",
-                  "price": -118
+                  "name": "Islam Dulatov",
+                  "price": -850
                 },
                 {
-                  "name": "Jena Bishop",
-                  "price": 100
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "8b369df9ed2746ad0ee2ac506344e5e4",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T00:00:00Z",
-      "home_team": "Khasan Magomedsharipov",
-      "away_team": "Joshua Weems",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Joshua Weems",
-                  "price": 1600
-                },
-                {
-                  "name": "Khasan Magomedsharipov",
-                  "price": -4000
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "b0504c38ef47cbf72fb55486c65132b9",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T00:00:00Z",
-      "home_team": "Justin Wetzell",
-      "away_team": "Sarvarjon Hamidov",
-      "bookmakers": [
-        {
-          "key": "fanduel",
-          "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
-              "outcomes": [
-                {
-                  "name": "Justin Wetzell",
-                  "price": 350
-                },
-                {
-                  "name": "Sarvarjon Hamidov",
-                  "price": -450
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "10894457dddc254b60419cfd03bb3a68",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T02:00:00Z",
-      "home_team": "Abraham Bably",
-      "away_team": "Rob Wilkinson",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Abraham Bably",
-                  "price": -165
-                },
-                {
-                  "name": "Rob Wilkinson",
-                  "price": 145
+                  "name": "Wellington Turman",
+                  "price": 500
                 }
               ]
             }
           ]
         },
         {
-          "key": "fanduel",
-          "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
+              "last_update": "2026-07-21T15:44:06Z",
               "outcomes": [
                 {
-                  "name": "Abraham Bably",
-                  "price": -180
+                  "name": "Islam Dulatov",
+                  "price": -910
                 },
                 {
-                  "name": "Rob Wilkinson",
-                  "price": 152
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "ee37a39c1d8a992a65c6ff399fa48c63",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T02:00:00Z",
-      "home_team": "Alexandre Pantoja",
-      "away_team": "Joshua Van",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Alexandre Pantoja",
-                  "price": -200
-                },
-                {
-                  "name": "Joshua Van",
-                  "price": 170
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "1ca0b61248b7eb5feef12a04661003e0",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T02:00:00Z",
-      "home_team": "Tom Aspinall",
-      "away_team": "Ciryl Gane",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Ciryl Gane",
-                  "price": -110
-                },
-                {
-                  "name": "Tom Aspinall",
-                  "price": -110
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "702055a9e35d07bddba5fd446eef719c",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T02:00:00Z",
-      "home_team": "Islam Makhachev",
-      "away_team": "Michael Morales",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Islam Makhachev",
-                  "price": -335
-                },
-                {
-                  "name": "Michael Morales",
-                  "price": 275
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "ee6203b3168fb34a63a60ad51dd01050",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T02:00:00Z",
-      "home_team": "Weili Zhang",
-      "away_team": "Mackenzie Dern",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Mackenzie Dern",
-                  "price": 350
-                },
-                {
-                  "name": "Weili Zhang",
-                  "price": -450
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "05b3dc3515568962c8e7351c06ff69c0",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T02:00:00Z",
-      "home_team": "Merab Dvalishvili",
-      "away_team": "Petr Yan",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Merab Dvalishvili",
-                  "price": 150
-                },
-                {
-                  "name": "Petr Yan",
-                  "price": -175
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "2af47620337e7a204f12b0dd105b309c",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T02:15:00Z",
-      "home_team": "Alexander Shabliy",
-      "away_team": "Alfie Davis",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Alexander Shabliy",
-                  "price": -650
-                },
-                {
-                  "name": "Alfie Davis",
-                  "price": 475
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "fanduel",
-          "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
-              "outcomes": [
-                {
-                  "name": "Alexander Shabliy",
-                  "price": -490
-                },
-                {
-                  "name": "Alfie Davis",
-                  "price": 380
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "0b2ef8939ed274e078297fbe0a9fab3a",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T02:30:00Z",
-      "home_team": "Liz Carmouche",
-      "away_team": "Viviane Araujo",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Liz Carmouche",
-                  "price": -175
-                },
-                {
-                  "name": "Viviane Araujo",
-                  "price": 150
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "fanduel",
-          "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
-              "outcomes": [
-                {
-                  "name": "Liz Carmouche",
-                  "price": -180
-                },
-                {
-                  "name": "Viviane Araujo",
-                  "price": 152
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cdc7ac17e04eae1225fdd9065644b8c7",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-06-28T03:00:00Z",
-      "home_team": "AJ McKee",
-      "away_team": "Salamat Isbulaev",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "AJ McKee",
-                  "price": -145
-                },
-                {
-                  "name": "Salamat Isbulaev",
-                  "price": 125
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "fanduel",
-          "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
-              "outcomes": [
-                {
-                  "name": "AJ McKee",
-                  "price": -136
-                },
-                {
-                  "name": "Salamat Isbulaev",
-                  "price": 116
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "3b755bb89b4450d72825f3e7327cb547",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-07-11T21:00:00Z",
-      "home_team": "Brandon Royval",
-      "away_team": "Lone'er Kavanagh",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Brandon Royval",
-                  "price": 170
-                },
-                {
-                  "name": "Lone'er Kavanagh",
-                  "price": -200
+                  "name": "Wellington Turman",
+                  "price": 550
                 }
               ]
             }
@@ -618,468 +796,35 @@
         {
           "key": "draftkings",
           "title": "DraftKings",
-          "last_update": "2026-06-27T21:11:14Z",
+          "last_update": "2026-07-21T15:44:46Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:11:14Z",
+              "last_update": "2026-07-21T15:44:46Z",
               "outcomes": [
                 {
-                  "name": "Brandon Royval",
-                  "price": 164
+                  "name": "Islam Dulatov",
+                  "price": -900
                 },
                 {
-                  "name": "Lone'er Kavanagh",
-                  "price": -198
+                  "name": "Wellington Turman",
+                  "price": 600
                 }
               ]
-            }
-          ]
-        },
-        {
-          "key": "fanduel",
-          "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
-          "markets": [
+            },
             {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
               "outcomes": [
                 {
-                  "name": "Brandon Royval",
-                  "price": 140
+                  "name": "Over",
+                  "price": 220,
+                  "point": 1.5
                 },
                 {
-                  "name": "Lone'er Kavanagh",
-                  "price": -180
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "bovada",
-          "title": "Bovada",
-          "last_update": "2026-06-27T21:07:04Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:07:04Z",
-              "outcomes": [
-                {
-                  "name": "Brandon Royval",
-                  "price": 160
-                },
-                {
-                  "name": "Lone'er Kavanagh",
-                  "price": -185
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "b1ae0b4452457fa13a37445b78f46930",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-07-12T02:00:00Z",
-      "home_team": "Gable Steveson",
-      "away_team": "Elisha Ellison",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Elisha Ellison",
-                  "price": 1300
-                },
-                {
-                  "name": "Gable Steveson",
-                  "price": -2800
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "draftkings",
-          "title": "DraftKings",
-          "last_update": "2026-06-27T21:11:14Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:14Z",
-              "outcomes": [
-                {
-                  "name": "Elisha Ellison",
-                  "price": 1400
-                },
-                {
-                  "name": "Gable Steveson",
-                  "price": -3200
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "fanduel",
-          "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
-              "outcomes": [
-                {
-                  "name": "Elisha Ellison",
-                  "price": 900
-                },
-                {
-                  "name": "Gable Steveson",
-                  "price": -2500
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "bovada",
-          "title": "Bovada",
-          "last_update": "2026-06-27T21:07:04Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:07:04Z",
-              "outcomes": [
-                {
-                  "name": "Elisha Ellison",
-                  "price": 1050
-                },
-                {
-                  "name": "Gable Steveson",
-                  "price": -2000
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "96b80306b34d20d1370629a7469f676d",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-07-12T02:30:00Z",
-      "home_team": "Cory Sandhagen",
-      "away_team": "Mario Bautista",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Cory Sandhagen",
-                  "price": -145
-                },
-                {
-                  "name": "Mario Bautista",
-                  "price": 125
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "draftkings",
-          "title": "DraftKings",
-          "last_update": "2026-06-27T21:11:14Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:14Z",
-              "outcomes": [
-                {
-                  "name": "Cory Sandhagen",
-                  "price": -148
-                },
-                {
-                  "name": "Mario Bautista",
-                  "price": 124
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "fanduel",
-          "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
-              "outcomes": [
-                {
-                  "name": "Cory Sandhagen",
-                  "price": -164
-                },
-                {
-                  "name": "Mario Bautista",
-                  "price": 128
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "bovada",
-          "title": "Bovada",
-          "last_update": "2026-06-27T21:07:04Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:07:04Z",
-              "outcomes": [
-                {
-                  "name": "Cory Sandhagen",
-                  "price": -142
-                },
-                {
-                  "name": "Mario Bautista",
-                  "price": 122
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "8ea7b2765e5de9ce31d512d1a6c1a138",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-07-12T02:45:00Z",
-      "home_team": "Paddy Pimblett",
-      "away_team": "Benoit Saint-Denis",
-      "bookmakers": [
-        {
-          "key": "draftkings",
-          "title": "DraftKings",
-          "last_update": "2026-06-27T21:11:14Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:14Z",
-              "outcomes": [
-                {
-                  "name": "Benoit Saint-Denis",
-                  "price": -155
-                },
-                {
-                  "name": "Paddy Pimblett",
-                  "price": 130
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Benoit Saint-Denis",
-                  "price": -150
-                },
-                {
-                  "name": "Paddy Pimblett",
-                  "price": 130
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "fanduel",
-          "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
-              "outcomes": [
-                {
-                  "name": "Benoit Saint-Denis",
-                  "price": -184
-                },
-                {
-                  "name": "Paddy Pimblett",
-                  "price": 142
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "bovada",
-          "title": "Bovada",
-          "last_update": "2026-06-27T21:07:04Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:07:04Z",
-              "outcomes": [
-                {
-                  "name": "Benoit Saint-Denis",
-                  "price": -150
-                },
-                {
-                  "name": "Paddy Pimblett",
-                  "price": 130
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "2c982ef7f30e521915fb0c82ffdaf4ba",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-07-12T03:30:00Z",
-      "home_team": "Conor McGregor",
-      "away_team": "Max Holloway",
-      "bookmakers": [
-        {
-          "key": "fanduel",
-          "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
-              "outcomes": [
-                {
-                  "name": "Conor McGregor",
-                  "price": 200
-                },
-                {
-                  "name": "Max Holloway",
-                  "price": -265
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Conor McGregor",
-                  "price": 185
-                },
-                {
-                  "name": "Max Holloway",
-                  "price": -220
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "bovada",
-          "title": "Bovada",
-          "last_update": "2026-06-27T21:07:04Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:07:04Z",
-              "outcomes": [
-                {
-                  "name": "Conor McGregor",
-                  "price": 185
-                },
-                {
-                  "name": "Max Holloway",
-                  "price": -220
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "423b105e6762942c1908a6133f044fde",
-      "sport_key": "mma_mixed_martial_arts",
-      "sport_title": "MMA",
-      "commence_time": "2026-07-19T04:30:00Z",
-      "home_team": "Dricus Du Plessis",
-      "away_team": "Kamaru Usman",
-      "bookmakers": [
-        {
-          "key": "betonlineag",
-          "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
-              "outcomes": [
-                {
-                  "name": "Dricus Du Plessis",
-                  "price": -350
-                },
-                {
-                  "name": "Kamaru Usman",
-                  "price": 285
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "key": "draftkings",
-          "title": "DraftKings",
-          "last_update": "2026-06-27T21:11:14Z",
-          "markets": [
-            {
-              "key": "h2h",
-              "last_update": "2026-06-27T21:11:14Z",
-              "outcomes": [
-                {
-                  "name": "Dricus Du Plessis",
-                  "price": -340
-                },
-                {
-                  "name": "Kamaru Usman",
-                  "price": 270
+                  "name": "Under",
+                  "price": -298,
+                  "point": 1.5
                 }
               ]
             }
@@ -1088,19 +833,56 @@
         {
           "key": "betmgm",
           "title": "BetMGM",
-          "last_update": "2026-06-27T21:10:49Z",
+          "last_update": "2026-07-21T15:43:27Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:10:49Z",
+              "last_update": "2026-07-21T15:43:27Z",
               "outcomes": [
                 {
-                  "name": "Dricus Du Plessis",
-                  "price": -375
+                  "name": "Islam Dulatov",
+                  "price": -1000
                 },
                 {
-                  "name": "Kamaru Usman",
-                  "price": 260
+                  "name": "Wellington Turman",
+                  "price": 650
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Islam Dulatov",
+                  "price": -950
+                },
+                {
+                  "name": "Wellington Turman",
+                  "price": 625
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 220,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -300,
+                  "point": 1.5
                 }
               ]
             }
@@ -1109,29 +891,124 @@
       ]
     },
     {
-      "id": "35a63dcdef5f848c9fee8cc366f5b6fb",
+      "id": "1fee61192bb544721f439c8560afc7e6",
       "sport_key": "mma_mixed_martial_arts",
       "sport_title": "MMA",
-      "commence_time": "2026-07-25T16:00:00Z",
-      "home_team": "Magomed Ankalaev",
-      "away_team": "Khalil Rountree",
+      "commence_time": "2026-07-25T09:00:00Z",
+      "home_team": "Nurullo Aliev",
+      "away_team": "Mike Davis",
       "bookmakers": [
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
-                  "name": "Khalil Rountree",
-                  "price": 260
+                  "name": "Mike Davis",
+                  "price": 185
                 },
                 {
-                  "name": "Magomed Ankalaev",
-                  "price": -310
+                  "name": "Nurullo Aliev",
+                  "price": -220
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -200,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 174,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Mike Davis",
+                  "price": 182
+                },
+                {
+                  "name": "Nurullo Aliev",
+                  "price": -220
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -200,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 166,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Mike Davis",
+                  "price": 154
+                },
+                {
+                  "name": "Nurullo Aliev",
+                  "price": -200
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Mike Davis",
+                  "price": 155
+                },
+                {
+                  "name": "Nurullo Aliev",
+                  "price": -195
                 }
               ]
             }
@@ -1140,19 +1017,1613 @@
         {
           "key": "draftkings",
           "title": "DraftKings",
-          "last_update": "2026-06-27T21:11:14Z",
+          "last_update": "2026-07-21T15:44:46Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:11:14Z",
+              "last_update": "2026-07-21T15:44:46Z",
               "outcomes": [
                 {
-                  "name": "Khalil Rountree",
-                  "price": 250
+                  "name": "Mike Davis",
+                  "price": 180
                 },
                 {
-                  "name": "Magomed Ankalaev",
+                  "name": "Nurullo Aliev",
+                  "price": -218
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2026-07-21T15:43:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:43:27Z",
+              "outcomes": [
+                {
+                  "name": "Mike Davis",
+                  "price": 180
+                },
+                {
+                  "name": "Nurullo Aliev",
+                  "price": -220
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Mike Davis",
+                  "price": 185
+                },
+                {
+                  "name": "Nurullo Aliev",
+                  "price": -220
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -220,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 165,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "76d27919e05a7dcb1ce4555ce99ba07c",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-25T09:00:00Z",
+      "home_team": "Stephen Erceg",
+      "away_team": "Ramazonbek Temirov",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Ramazonbek Temirov",
+                  "price": -115
+                },
+                {
+                  "name": "Stephen Erceg",
+                  "price": -105
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -175,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 153,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Ramazonbek Temirov",
+                  "price": -115
+                },
+                {
+                  "name": "Stephen Erceg",
+                  "price": -105
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -175,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 146,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Ramazonbek Temirov",
+                  "price": -106
+                },
+                {
+                  "name": "Stephen Erceg",
+                  "price": -120
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Ramazonbek Temirov",
+                  "price": -112
+                },
+                {
+                  "name": "Stephen Erceg",
+                  "price": -108
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -188,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 145,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Ramazonbek Temirov",
+                  "price": -109
+                },
+                {
+                  "name": "Stephen Erceg",
+                  "price": -109
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -185,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 140,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ee9ec67d76397a71d56ca25a71d6fe6f",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-25T09:00:00Z",
+      "home_team": "Rizvan Kuniev",
+      "away_team": "Tyrell Fortune",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Rizvan Kuniev",
+                  "price": -315
+                },
+                {
+                  "name": "Tyrell Fortune",
+                  "price": 265
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -135,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 115,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Rizvan Kuniev",
+                  "price": -315
+                },
+                {
+                  "name": "Tyrell Fortune",
+                  "price": 258
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -135,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 114,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Rizvan Kuniev",
                   "price": -310
+                },
+                {
+                  "name": "Tyrell Fortune",
+                  "price": 230
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Rizvan Kuniev",
+                  "price": -335
+                },
+                {
+                  "name": "Tyrell Fortune",
+                  "price": 250
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2026-07-21T15:43:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:43:27Z",
+              "outcomes": [
+                {
+                  "name": "Rizvan Kuniev",
+                  "price": -325
+                },
+                {
+                  "name": "Tyrell Fortune",
+                  "price": 260
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Rizvan Kuniev",
+                  "price": -298
+                },
+                {
+                  "name": "Tyrell Fortune",
+                  "price": 240
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -140,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 110,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Rizvan Kuniev",
+                  "price": -310
+                },
+                {
+                  "name": "Tyrell Fortune",
+                  "price": 255
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -145,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": 110,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7dd77c75b6cef66bca46d1fc528032a3",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-25T09:00:00Z",
+      "home_team": "Santiago Ponzinibbio",
+      "away_team": "Sam Patterson",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Sam Patterson",
+                  "price": -400
+                },
+                {
+                  "name": "Santiago Ponzinibbio",
+                  "price": 300
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 105,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -125,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Sam Patterson",
+                  "price": -400
+                },
+                {
+                  "name": "Santiago Ponzinibbio",
+                  "price": 309
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 105,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -125,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Sam Patterson",
+                  "price": -460
+                },
+                {
+                  "name": "Santiago Ponzinibbio",
+                  "price": 320
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Sam Patterson",
+                  "price": -420
+                },
+                {
+                  "name": "Santiago Ponzinibbio",
+                  "price": 310
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Sam Patterson",
+                  "price": -410
+                },
+                {
+                  "name": "Santiago Ponzinibbio",
+                  "price": 320
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 100,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -130,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2026-07-21T15:43:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:43:27Z",
+              "outcomes": [
+                {
+                  "name": "Sam Patterson",
+                  "price": -450
+                },
+                {
+                  "name": "Santiago Ponzinibbio",
+                  "price": 340
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Sam Patterson",
+                  "price": -415
+                },
+                {
+                  "name": "Santiago Ponzinibbio",
+                  "price": 325
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 100,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -130,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "3c1e0cc4ae1722b734dca27034cc269d",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-25T09:00:00Z",
+      "home_team": "Valter Walker",
+      "away_team": "Thomas Petersen",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Thomas Petersen",
+                  "price": 141
+                },
+                {
+                  "name": "Valter Walker",
+                  "price": -161
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -160,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 140,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Thomas Petersen",
+                  "price": 142
+                },
+                {
+                  "name": "Valter Walker",
+                  "price": -170
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -160,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 134,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Thomas Petersen",
+                  "price": 150
+                },
+                {
+                  "name": "Valter Walker",
+                  "price": -194
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Thomas Petersen",
+                  "price": 145
+                },
+                {
+                  "name": "Valter Walker",
+                  "price": -182
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2026-07-21T15:43:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:43:27Z",
+              "outcomes": [
+                {
+                  "name": "Thomas Petersen",
+                  "price": 150
+                },
+                {
+                  "name": "Valter Walker",
+                  "price": -185
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Thomas Petersen",
+                  "price": 142
+                },
+                {
+                  "name": "Valter Walker",
+                  "price": -170
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -166,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 130,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Thomas Petersen",
+                  "price": 147
+                },
+                {
+                  "name": "Valter Walker",
+                  "price": -172
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -170,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 130,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f945c9c0daa5c2b3fe2598f854ecc4c2",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-25T13:10:00Z",
+      "home_team": "Cody Gibson",
+      "away_team": "Abdul Hussein",
+      "bookmakers": [
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Abdul Hussein",
+                  "price": -430
+                },
+                {
+                  "name": "Cody Gibson",
+                  "price": 300
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Abdul Hussein",
+                  "price": -500
+                },
+                {
+                  "name": "Cody Gibson",
+                  "price": 385
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 157,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -180,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Abdul Hussein",
+                  "price": -500
+                },
+                {
+                  "name": "Cody Gibson",
+                  "price": 369
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 150,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -180,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2026-07-21T15:43:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:43:27Z",
+              "outcomes": [
+                {
+                  "name": "Abdul Hussein",
+                  "price": -500
+                },
+                {
+                  "name": "Cody Gibson",
+                  "price": 375
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Abdul Hussein",
+                  "price": -480
+                },
+                {
+                  "name": "Cody Gibson",
+                  "price": 370
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 140,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -185,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Abdul Hussein",
+                  "price": -420
+                },
+                {
+                  "name": "Cody Gibson",
+                  "price": 310
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Abdul Hussein",
+                  "price": -455
+                },
+                {
+                  "name": "Cody Gibson",
+                  "price": 350
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 140,
+                  "point": 2.5
+                },
+                {
+                  "name": "Under",
+                  "price": -180,
+                  "point": 2.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "343c05283a55f70a0f89819d8a153d2a",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-25T13:45:00Z",
+      "home_team": "Magomed Tuchalov",
+      "away_team": "Brendson Ribeiro",
+      "bookmakers": [
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Brendson Ribeiro",
+                  "price": 525
+                },
+                {
+                  "name": "Magomed Tuchalov",
+                  "price": -800
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 198,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -240,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Brendson Ribeiro",
+                  "price": 430
+                },
+                {
+                  "name": "Magomed Tuchalov",
+                  "price": -670
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Brendson Ribeiro",
+                  "price": 475
+                },
+                {
+                  "name": "Magomed Tuchalov",
+                  "price": -715
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Brendson Ribeiro",
+                  "price": 575
+                },
+                {
+                  "name": "Magomed Tuchalov",
+                  "price": -800
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 200,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -240,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Brendson Ribeiro",
+                  "price": 550
+                },
+                {
+                  "name": "Magomed Tuchalov",
+                  "price": -800
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 180,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -238,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2026-07-21T15:43:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:43:27Z",
+              "outcomes": [
+                {
+                  "name": "Brendson Ribeiro",
+                  "price": 600
+                },
+                {
+                  "name": "Magomed Tuchalov",
+                  "price": -900
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Brendson Ribeiro",
+                  "price": 575
+                },
+                {
+                  "name": "Magomed Tuchalov",
+                  "price": -850
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": 185,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": -250,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c87363a9aa48862f66b0a23daf58ffe7",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-25T15:15:00Z",
+      "home_team": "Dustin Jacoby",
+      "away_team": "Muhammad Said",
+      "bookmakers": [
+        {
+          "key": "betmgm",
+          "title": "BetMGM",
+          "last_update": "2026-07-21T15:43:27Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:43:27Z",
+              "outcomes": [
+                {
+                  "name": "Dustin Jacoby",
+                  "price": -180
+                },
+                {
+                  "name": "Muhammad Said",
+                  "price": 145
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Dustin Jacoby",
+                  "price": -155
+                },
+                {
+                  "name": "Muhammad Said",
+                  "price": 130
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -185,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 154,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Dustin Jacoby",
+                  "price": -174
+                },
+                {
+                  "name": "Muhammad Said",
+                  "price": 136
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Dustin Jacoby",
+                  "price": -175
+                },
+                {
+                  "name": "Muhammad Said",
+                  "price": 138
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Dustin Jacoby",
+                  "price": -155
+                },
+                {
+                  "name": "Muhammad Said",
+                  "price": 135
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -185,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 161,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bovada",
+          "title": "Bovada",
+          "last_update": "2026-07-21T15:40:59Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Dustin Jacoby",
+                  "price": -163
+                },
+                {
+                  "name": "Muhammad Said",
+                  "price": 138
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:40:59Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -200,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 150,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Dustin Jacoby",
+                  "price": -166
+                },
+                {
+                  "name": "Muhammad Said",
+                  "price": 140
+                }
+              ]
+            },
+            {
+              "key": "totals",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Over",
+                  "price": -195,
+                  "point": 1.5
+                },
+                {
+                  "name": "Under",
+                  "price": 150,
+                  "point": 1.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9026becb00a858a15cc96f0f5af0d837",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-07-25T16:15:00Z",
+      "home_team": "Abubakar Vagaev",
+      "away_team": "Saygid Izagakhmaev",
+      "bookmakers": [
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Abubakar Vagaev",
+                  "price": -265
+                },
+                {
+                  "name": "Saygid Izagakhmaev",
+                  "price": 200
                 }
               ]
             }
@@ -1171,19 +2642,19 @@
         {
           "key": "draftkings",
           "title": "DraftKings",
-          "last_update": "2026-06-27T21:11:14Z",
+          "last_update": "2026-07-21T15:44:46Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:11:14Z",
+              "last_update": "2026-07-21T15:44:46Z",
               "outcomes": [
                 {
                   "name": "Gillian Robertson",
-                  "price": 150
+                  "price": 164
                 },
                 {
                   "name": "Mackenzie Dern",
-                  "price": -180
+                  "price": -198
                 }
               ]
             }
@@ -1192,19 +2663,19 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
                   "name": "Gillian Robertson",
-                  "price": 185
+                  "price": 195
                 },
                 {
                   "name": "Mackenzie Dern",
-                  "price": -220
+                  "price": -230
                 }
               ]
             }
@@ -1213,19 +2684,40 @@
         {
           "key": "fanduel",
           "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
+          "last_update": "2026-07-21T15:44:53Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
+              "last_update": "2026-07-21T15:44:53Z",
               "outcomes": [
                 {
                   "name": "Gillian Robertson",
-                  "price": 146
+                  "price": 172
                 },
                 {
                   "name": "Mackenzie Dern",
-                  "price": -188
+                  "price": -225
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Gillian Robertson",
+                  "price": 188
+                },
+                {
+                  "name": "Mackenzie Dern",
+                  "price": -240
                 }
               ]
             }
@@ -1244,11 +2736,11 @@
         {
           "key": "draftkings",
           "title": "DraftKings",
-          "last_update": "2026-06-27T21:11:14Z",
+          "last_update": "2026-07-21T15:44:46Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:11:14Z",
+              "last_update": "2026-07-21T15:44:46Z",
               "outcomes": [
                 {
                   "name": "Ian Garry",
@@ -1265,19 +2757,19 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
                   "name": "Ian Garry",
-                  "price": 290
+                  "price": 250
                 },
                 {
                   "name": "Islam Makhachev",
-                  "price": -365
+                  "price": -300
                 }
               ]
             }
@@ -1286,11 +2778,11 @@
         {
           "key": "fanduel",
           "title": "FanDuel",
-          "last_update": "2026-06-27T21:11:30Z",
+          "last_update": "2026-07-21T15:44:53Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:11:30Z",
+              "last_update": "2026-07-21T15:44:53Z",
               "outcomes": [
                 {
                   "name": "Ian Garry",
@@ -1299,6 +2791,121 @@
                 {
                   "name": "Islam Makhachev",
                   "price": -390
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betrivers",
+          "title": "BetRivers",
+          "last_update": "2026-07-21T15:44:06Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:06Z",
+              "outcomes": [
+                {
+                  "name": "Ian Garry",
+                  "price": 280
+                },
+                {
+                  "name": "Islam Makhachev",
+                  "price": -385
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "8ab8d406b097e3650cac5c1e838b262b",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-08-29T20:00:00Z",
+      "home_team": "Umar Nurmagomedov",
+      "away_team": "Song Yadong",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Song Yadong",
+                  "price": 300
+                },
+                {
+                  "name": "Umar Nurmagomedov",
+                  "price": -400
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "betus",
+          "title": "BetUS",
+          "last_update": "2026-07-21T15:44:05Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:05Z",
+              "outcomes": [
+                {
+                  "name": "Song Yadong",
+                  "price": 309
+                },
+                {
+                  "name": "Umar Nurmagomedov",
+                  "price": -400
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "draftkings",
+          "title": "DraftKings",
+          "last_update": "2026-07-21T15:44:46Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:46Z",
+              "outcomes": [
+                {
+                  "name": "Song Yadong",
+                  "price": 360
+                },
+                {
+                  "name": "Umar Nurmagomedov",
+                  "price": -470
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "fanduel",
+          "title": "FanDuel",
+          "last_update": "2026-07-21T15:44:53Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:53Z",
+              "outcomes": [
+                {
+                  "name": "Song Yadong",
+                  "price": 350
+                },
+                {
+                  "name": "Umar Nurmagomedov",
+                  "price": -520
                 }
               ]
             }
@@ -1317,11 +2924,11 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:28Z",
               "outcomes": [
                 {
                   "name": "Joshua Van",
@@ -1348,11 +2955,11 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:28Z",
               "outcomes": [
                 {
                   "name": "Alex Pereira",
@@ -1379,11 +2986,11 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:28Z",
               "outcomes": [
                 {
                   "name": "Arman Tsarukyan",
@@ -1410,11 +3017,11 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:28Z",
               "outcomes": [
                 {
                   "name": "Ciryl Gane",
@@ -1441,11 +3048,11 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
                   "name": "Ilia Topuria",
@@ -1454,6 +3061,37 @@
                 {
                   "name": "Justin Gaethje",
                   "price": 210
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "8ecba67676067ae49594bb3f9bc86673",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2026-12-31T15:00:00Z",
+      "home_team": "Valentina Shevchenko",
+      "away_team": "Natalia Silva",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Natalia Silva",
+                  "price": 210
+                },
+                {
+                  "name": "Valentina Shevchenko",
+                  "price": -250
                 }
               ]
             }
@@ -1472,11 +3110,11 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
                   "name": "Conor McGregor",
@@ -1485,6 +3123,68 @@
                 {
                   "name": "Jorge Masvidal",
                   "price": 125
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e5b5791d4bbe6c78d9a05cbd6b956b2b",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2027-01-01T03:00:00Z",
+      "home_team": "Alexandre Pantoja",
+      "away_team": "Joshua Van",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Alexandre Pantoja",
+                  "price": -180
+                },
+                {
+                  "name": "Joshua Van",
+                  "price": 155
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fa2d7e022c2c47e0855f04084d08f163",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2027-01-01T03:00:00Z",
+      "home_team": "Tom Aspinall",
+      "away_team": "Ciryl Gane",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Ciryl Gane",
+                  "price": 105
+                },
+                {
+                  "name": "Tom Aspinall",
+                  "price": -125
                 }
               ]
             }
@@ -1503,11 +3203,11 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
                   "name": "Khamzat Chimaev",
@@ -1534,11 +3234,11 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
                   "name": "Khamzat Chimaev",
@@ -1547,6 +3247,68 @@
                 {
                   "name": "Sean Strickland",
                   "price": 175
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "408347757571816aeae5ff71d1fd3849",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2027-01-01T03:00:00Z",
+      "home_team": "Max Holloway",
+      "away_team": "Paddy Pimblett",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Max Holloway",
+                  "price": -180
+                },
+                {
+                  "name": "Paddy Pimblett",
+                  "price": 155
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1ea714e4819dc8a7185f0870bc490c14",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2027-01-01T03:00:00Z",
+      "home_team": "Merab Dvalishvili",
+      "away_team": "Petr Yan",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Merab Dvalishvili",
+                  "price": 150
+                },
+                {
+                  "name": "Petr Yan",
+                  "price": -175
                 }
               ]
             }
@@ -1565,11 +3327,11 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
                   "name": "Nassourdine Imavov",
@@ -1596,11 +3358,11 @@
         {
           "key": "betonlineag",
           "title": "BetOnline.ag",
-          "last_update": "2026-06-27T21:09:16Z",
+          "last_update": "2026-07-21T15:44:29Z",
           "markets": [
             {
               "key": "h2h",
-              "last_update": "2026-06-27T21:09:16Z",
+              "last_update": "2026-07-21T15:44:29Z",
               "outcomes": [
                 {
                   "name": "Islam Makhachev",
@@ -1609,6 +3371,37 @@
                 {
                   "name": "Kamaru Usman",
                   "price": 270
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9f2a5922ae9758c3b18ad1a31ea88959",
+      "sport_key": "mma_mixed_martial_arts",
+      "sport_title": "MMA",
+      "commence_time": "2027-07-11T00:00:00Z",
+      "home_team": "Paddy Pimblett",
+      "away_team": "Conor McGregor",
+      "bookmakers": [
+        {
+          "key": "betonlineag",
+          "title": "BetOnline.ag",
+          "last_update": "2026-07-21T15:44:29Z",
+          "markets": [
+            {
+              "key": "h2h",
+              "last_update": "2026-07-21T15:44:29Z",
+              "outcomes": [
+                {
+                  "name": "Conor McGregor",
+                  "price": 130
+                },
+                {
+                  "name": "Paddy Pimblett",
+                  "price": -150
                 }
               ]
             }

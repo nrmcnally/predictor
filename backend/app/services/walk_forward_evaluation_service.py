@@ -36,6 +36,7 @@ from app.models.train_calibrated_models import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TRAINING_MATCHUPS_CSV = PROJECT_ROOT / "data" / "processed" / "training_matchups.csv"
+WALK_FORWARD_ARTIFACT_PATH = PROJECT_ROOT / "models" / "walk_forward_evaluation.json"
 
 DEFAULT_N_FOLDS = 8
 DEFAULT_MIN_TEST_FIGHTS = 150
@@ -207,6 +208,61 @@ def _summarize(values: list[float | None]) -> dict[str, Any]:
     return {"mean": mean, "std": std, "ci95": ci95, "n": len(array)}
 
 
+def _drift_summary(folds: list[dict[str, Any]]) -> dict[str, Any]:
+    if len(folds) < 3:
+        return {
+            "status": "insufficient",
+            "label": "Not enough folds",
+            "message": "At least three yearly folds are required for the drift check.",
+        }
+
+    latest = folds[-1]
+    prior_values = [float(row["accuracy"]) for row in folds[:-1]]
+    prior_mean = float(np.mean(prior_values))
+    delta = float(latest["accuracy"] - prior_mean)
+    latest_elo_edge = latest.get("model_minus_elo_accuracy")
+    prior_elo_edges = [
+        float(row["model_minus_elo_accuracy"])
+        for row in folds[:-1]
+        if row.get("model_minus_elo_accuracy") is not None
+    ]
+    prior_elo_edge_mean = (
+        float(np.mean(prior_elo_edges)) if prior_elo_edges else None
+    )
+    elo_edge_delta = (
+        float(latest_elo_edge - prior_elo_edge_mean)
+        if latest_elo_edge is not None and prior_elo_edge_mean is not None
+        else None
+    )
+    accuracy_watch = delta <= -0.03
+    relative_watch = elo_edge_delta is not None and elo_edge_delta <= -0.03
+    status = "watch" if accuracy_watch or relative_watch else "stable"
+    reasons = []
+    if accuracy_watch:
+        reasons.append("absolute accuracy")
+    if relative_watch:
+        reasons.append("the advantage over Elo")
+    return {
+        "status": status,
+        "label": "Drift watch" if status == "watch" else "No material performance drift",
+        "latest_year": int(latest["test_year"]),
+        "latest_accuracy": float(latest["accuracy"]),
+        "prior_fold_mean_accuracy": prior_mean,
+        "delta": delta,
+        "latest_model_minus_elo_accuracy": latest_elo_edge,
+        "prior_model_minus_elo_mean": prior_elo_edge_mean,
+        "model_minus_elo_delta": elo_edge_delta,
+        "threshold": -0.03,
+        "message": (
+            "The newest fold is at least 3 percentage points lower in "
+            + " and ".join(reasons)
+            + " than the mean of prior folds."
+            if status == "watch"
+            else "The newest fold is within 3 percentage points of prior-fold accuracy and relative Elo edge."
+        ),
+    }
+
+
 def run_walk_forward_evaluation(
     n_folds: int = DEFAULT_N_FOLDS,
     min_test_fights: int = DEFAULT_MIN_TEST_FIGHTS,
@@ -225,6 +281,7 @@ def run_walk_forward_evaluation(
         int(min_test_fights),
         int(min_train_fights),
         tuple(sorted(drop_set)),
+        resolve_production_model_spec(),
         TRAINING_MATCHUPS_CSV.stat().st_mtime if TRAINING_MATCHUPS_CSV.exists() else 0,
     )
     if cache_key in _RESULT_CACHE:
@@ -334,6 +391,16 @@ def run_walk_forward_evaluation(
         },
         "aggregate": aggregate,
         "folds": fold_rows,
+        "drift": _drift_summary(fold_rows),
+        "evidence": {
+            "level": "established" if len(fold_rows) >= 5 else "moderate",
+            "label": (
+                "Established walk-forward evidence"
+                if len(fold_rows) >= 5
+                else "Moderate walk-forward evidence"
+            ),
+            "message": "Every fold is trained only on fights before its test year.",
+        },
     }
 
     _RESULT_CACHE[cache_key] = result
@@ -342,3 +409,39 @@ def run_walk_forward_evaluation(
 
 def clear_walk_forward_cache() -> None:
     _RESULT_CACHE.clear()
+
+
+def write_walk_forward_evaluation_artifact(
+    artifact_path: Path = WALK_FORWARD_ARTIFACT_PATH,
+) -> dict[str, Any]:
+    clear_walk_forward_cache()
+    payload = run_walk_forward_evaluation()
+    payload.setdefault("metadata", {})["artifact_file"] = (
+        "models/walk_forward_evaluation.json"
+    )
+    payload["metadata"]["artifact_role"] = "frozen_expanding_window_backtest"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return payload
+
+
+def get_walk_forward_evaluation() -> dict[str, Any]:
+    if WALK_FORWARD_ARTIFACT_PATH.exists():
+        try:
+            return json.loads(WALK_FORWARD_ARTIFACT_PATH.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    if TRAINING_MATCHUPS_CSV.exists():
+        return run_walk_forward_evaluation()
+
+    return {
+        "available": False,
+        "message": (
+            "The frozen walk-forward artifact is missing. Run the local training "
+            "pipeline and deploy the generated model JSON artifacts."
+        ),
+        "metadata": {"artifact_file": "models/walk_forward_evaluation.json"},
+        "aggregate": {},
+        "folds": [],
+    }

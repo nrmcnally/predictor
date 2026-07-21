@@ -33,8 +33,12 @@ bundle — the server hot-reloads changed model/data files, no redeploy needed.
 ```powershell
 python deploy/make_bundle.py          # serving core, ~44MB compressed
 python deploy/make_bundle.py --full   # + winner_models & training matchups
-                                      #   (enables the Evaluation tab's deep-dives)
+                                      #   (offline diagnosis/research only)
 ```
+
+The core bundle includes the frozen winner holdout and walk-forward JSON reports,
+so every live Evaluation panel works without shipping `training_matchups.csv` or
+training models inside an API request.
 
 Re-run and re-push after every local Data Ops update.
 
@@ -120,10 +124,10 @@ model files, but **never touches accounts, picks, or friendships created on the
 server**. Changed files hot-reload automatically — no restart.
 
 <details>
-<summary>Fallback: SSH route (first boot, or the ~450MB <code>--full</code> bundle)</summary>
+<summary>Fallback: SSH route (first boot, or the larger <code>--full</code> research bundle)</summary>
 
 ```bash
-python deploy/make_bundle.py            # add --full for the Evaluation deep-dives
+python deploy/make_bundle.py            # add --full only for server-side research/debugging
 fly ssh sftp put deploy/deploy_bundle.tar.gz /data/bundle.tar.gz
 fly ssh console -C "sh /app/deploy/update_from_bundle.sh"
 ```

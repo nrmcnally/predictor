@@ -30,6 +30,9 @@ def test_recipe_hash_changes_on_meaningful_change():
     assert compute_recipe_hash(["a", "b", "c"], ["weight_class"], "logistic_regression", "none") != base  # new feature
     assert compute_recipe_hash(["a", "b"], ["weight_class"], "xgboost", "none") != base                   # model type
     assert compute_recipe_hash(["a", "b"], ["weight_class"], "logistic_regression", "sigmoid") != base     # calibration
+    assert compute_recipe_hash(
+        ["a", "b"], ["weight_class"], "logistic_regression", "none", "full_history_refit_v1"
+    ) != base  # training protocol
 
 
 def test_model_version_is_major_minor():

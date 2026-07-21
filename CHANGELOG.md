@@ -13,7 +13,22 @@ snapshots saved before provenance stamping (pre-1.2) are **estimated** from thei
 
 ---
 
-## 1.2 — 2026-06-27 (current)
+## 1.3 — 2026-07-21 (current)
+- **Evaluation/production lifecycle separation** — candidate recipes are selected on a
+  locked chronological 70/10/20 split, their honest holdout and walk-forward reports
+  are frozen as portable JSON artifacts, and the selected recipe is then refit on all
+  eligible history for production inference.
+- Evaluation and production artifacts now carry distinct roles, training protocols,
+  hashes, row counts, date ranges, and data hashes.
+- The Evaluation tab reports uncertainty intervals, simple baselines, uplift, evidence
+  labels, and a relative-to-Elo drift watch instead of presenting small samples as
+  conclusive evidence.
+- Core deployment bundles include frozen evaluation reports but still exclude the large
+  training table; hosted evaluation no longer depends on development-only CSV files.
+
+---
+
+## 1.2 — 2026-06-27
 - **Strength-of-schedule features** — opponent-Elo quality (avg / recent / peak opponent
   Elo, quality of wins). The first feature change since 1.1; recipe hash changed here.
 - Shipped in the same generation (trust/eval/UX, not recipe changes themselves):

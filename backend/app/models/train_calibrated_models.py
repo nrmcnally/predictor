@@ -460,6 +460,67 @@ def print_metrics_table(results: dict[str, dict[str, float]]) -> None:
     print("-" * 82)
 
 
+def fit_production_model(
+    best_model_name: str,
+    full_df: pd.DataFrame,
+    numeric_features: list[str],
+    categorical_features: list[str],
+) -> tuple[Any, dict[str, Any]]:
+    """Refit the locked winning recipe for serving after evaluation is frozen.
+
+    Raw models use every eligible row. Calibrated recipes reserve the newest 10%
+    of fights for their calibrator; those rows still influence the final serving
+    artifact, but never the base estimator. The historical holdout report is built
+    before this function runs and is therefore not contaminated by this refit.
+    """
+    feature_columns = numeric_features + categorical_features
+    base_name = base_model_type(best_model_name)
+    calibration_method = calibration_method_for_model(best_model_name)
+    models = build_base_models(numeric_features, categorical_features)
+    if base_name not in models:
+        raise ValueError(f"Unknown production model recipe: {best_model_name}")
+
+    base_model = models[base_name]
+    full_fights = (
+        full_df[["fight_url", "event_date_parsed"]]
+        .drop_duplicates()
+        .sort_values("event_date_parsed")
+        .reset_index(drop=True)
+    )
+
+    if calibration_method in {"sigmoid", "isotonic"}:
+        core_end = int(len(full_fights) * 0.90)
+        core_urls = set(full_fights.iloc[:core_end]["fight_url"])
+        core_df = full_df[full_df["fight_url"].isin(core_urls)].copy()
+        calibration_df = full_df[~full_df["fight_url"].isin(core_urls)].copy()
+        base_model.fit(core_df[feature_columns], core_df["target"])
+        production_model = make_calibrated_model(base_model, method=calibration_method)
+        production_model.fit(
+            calibration_df[feature_columns], calibration_df["target"]
+        )
+        base_rows = int(len(core_df))
+        calibration_rows = int(len(calibration_df))
+    else:
+        production_model = base_model.fit(
+            full_df[feature_columns], full_df["target"]
+        )
+        base_rows = int(len(full_df))
+        calibration_rows = 0
+
+    details = {
+        "role": "production_full_history_refit",
+        "recipe_selected_from": "frozen_chronological_holdout",
+        "uses_holdout_for_metric_reporting": False,
+        "eligible_rows": int(len(full_df)),
+        "eligible_fights": int(full_df["fight_url"].nunique()),
+        "base_fit_rows": base_rows,
+        "calibration_rows": calibration_rows,
+        "date_min": str(full_df["event_date_parsed"].min().date()),
+        "date_max": str(full_df["event_date_parsed"].max().date()),
+    }
+    return production_model, details
+
+
 def save_outputs(
     best_model_name: str,
     best_model,
@@ -475,6 +536,9 @@ def save_outputs(
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     WINNER_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Temporarily expose the evaluation candidate at the conventional path. The
+    # frozen holdout artifact is generated from it below; the path is then replaced
+    # by a separately refit production artifact.
     joblib.dump(best_model, BEST_MODEL_PATH)
 
     model_registry: dict[str, dict[str, Any]] = {}
@@ -490,7 +554,7 @@ def save_outputs(
             "training_role": (
                 "shadow_experiment"
                 if is_shadow_model_name(model_name)
-                else "primary_candidate"
+                else "evaluation_candidate"
             ),
             "calibration_method": calibration_method_for_model(model_name),
             "metrics": results.get(model_name, {}),
@@ -545,14 +609,16 @@ def save_outputs(
             categorical_features=categorical_features,
             model_type=base_model_type(best_model_name),
             calibration_method=calibration_method_for_model(best_model_name),
+            training_protocol="chronological_70_10_20_candidate_v1",
         ),
     }
 
     # #17 real reproducibility: fingerprint the exact training data the model was fit
     # on, stamp it into provenance, and record the run in the model_runs audit table.
     feature_columns = numeric_features + categorical_features
-    training_data_hash = compute_training_data_hash(train_df, feature_columns)
-    metrics_payload["provenance"]["training_data_hash"] = training_data_hash
+    evaluation_training_data_hash = compute_training_data_hash(train_df, feature_columns)
+    metrics_payload["provenance"]["training_data_hash"] = evaluation_training_data_hash
+    metrics_payload["evaluation_provenance"] = dict(metrics_payload["provenance"])
 
     with open(CALIBRATED_METRICS_PATH, "w", encoding="utf-8") as file:
         json.dump(metrics_payload, file, indent=2)
@@ -574,6 +640,54 @@ def save_outputs(
     with open(FEATURES_PATH, "w", encoding="utf-8") as file:
         json.dump(features_payload, file, indent=2)
 
+    # Build serving-portable evaluation reports while BEST_MODEL_PATH still points
+    # to the untouched evaluation candidate. Neither report needs training data in
+    # production, and neither can accidentally score the full-history refit.
+    from app.services.model_evaluation_service import write_model_evaluation_artifact
+    from app.services.walk_forward_evaluation_service import (
+        write_walk_forward_evaluation_artifact,
+    )
+
+    write_model_evaluation_artifact()
+    write_walk_forward_evaluation_artifact()
+
+    production_model, production_details = fit_production_model(
+        best_model_name=best_model_name,
+        full_df=pd.concat([train_df, calibration_df, test_df], ignore_index=True),
+        numeric_features=numeric_features,
+        categorical_features=categorical_features,
+    )
+    full_df = pd.concat([train_df, calibration_df, test_df], ignore_index=True)
+    production_training_data_hash = compute_training_data_hash(full_df, feature_columns)
+    production_provenance = build_provenance(
+        numeric_features=numeric_features,
+        categorical_features=categorical_features,
+        model_type=base_model_type(best_model_name),
+        calibration_method=calibration_method_for_model(best_model_name),
+        training_protocol="full_history_refit_v1",
+    )
+    production_provenance["training_data_hash"] = production_training_data_hash
+    production_provenance["artifact_role"] = "production_full_history_refit"
+    metrics_payload["provenance"] = production_provenance
+    metrics_payload["production_refit"] = production_details
+    joblib.dump(production_model, BEST_MODEL_PATH)
+
+    model_registry[best_model_name]["is_best_model"] = False
+    registry_payload["production_model"] = {
+        "model_name": best_model_name,
+        "path": str(BEST_MODEL_PATH.relative_to(MODELS_DIR)),
+        "is_best_model": True,
+        "training_role": "production_full_history_refit",
+        "calibration_method": calibration_method_for_model(best_model_name),
+        **production_details,
+    }
+
+    with open(CALIBRATED_METRICS_PATH, "w", encoding="utf-8") as file:
+        json.dump(metrics_payload, file, indent=2)
+
+    with open(MODEL_REGISTRY_PATH, "w", encoding="utf-8") as file:
+        json.dump(registry_payload, file, indent=2)
+
     provenance = metrics_payload["provenance"]
     model_runs_repository.record_run(
         {
@@ -585,9 +699,9 @@ def save_outputs(
             "model_type": provenance.get("model_type", ""),
             "calibration_method": provenance.get("calibration_method", ""),
             "best_model_name": best_model_name,
-            "training_data_hash": training_data_hash,
-            "training_rows": int(len(train_df)),
-            "training_fights": int(train_df["fight_url"].nunique()),
+            "training_data_hash": production_training_data_hash,
+            "training_rows": int(len(full_df)),
+            "training_fights": int(full_df["fight_url"].nunique()),
             "feature_count": len(feature_columns),
         }
     )

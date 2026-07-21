@@ -596,8 +596,18 @@ def refresh_future_fight_odds(api_key: str | None = None) -> dict[str, Any]:
 
     odds_available_count = int(odds_df["odds_available"].sum()) if not odds_df.empty else 0
 
+    provider_metadata: dict[str, Any] = {}
+    try:
+        provider_metadata = json.loads(CURRENT_MMA_ODDS_JSON.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        pass
+
     return {
+        "available": True,
+        "message": "Future fight odds and totals snapshots refreshed.",
         "storage": "sqlite:future_fight_odds",
+        "provider_fetched_at": provider_metadata.get("fetched_at"),
+        "provider_requests_remaining": provider_metadata.get("requests_remaining"),
         "odds_track_fights": track_result.get("tracked_fights", 0),
         "totals_quotes_received": len(totals_rows),
         "totals_snapshots_added": totals_added,

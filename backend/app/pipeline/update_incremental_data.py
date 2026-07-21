@@ -19,6 +19,7 @@ from app.data.scrape_fighter_images import (
 )
 
 from app.services.odds_service import refresh_future_fight_odds
+from app.services.duration_evaluation_service import build_duration_evaluation
 
 from app.services.prediction_service import clear_prediction_cache
 
@@ -32,6 +33,7 @@ from app.services.saved_prediction_service import (
 
 from app.services.data_validation_service import validate_scraped_event_fights
 from app.repositories import (
+    data_refresh_runs_repository,
     event_fights_repository,
     future_cards_repository,
     saved_model_predictions_repository,
@@ -266,15 +268,26 @@ def find_event_urls_with_incomplete_results(event_fights_df: pd.DataFrame) -> se
     
 def refresh_future_fight_odds_stage() -> dict[str, Any]:
     try:
-        return {
-            "available": True,
-            **refresh_future_fight_odds(),
-        }
+        return refresh_future_fight_odds()
     except Exception as error:
+        message = str(error)
+        if "Missing ODDS_API_KEY" in message:
+            error_code = "missing_api_key"
+        elif "401" in message or "INVALID_KEY" in message:
+            error_code = "provider_auth_failed"
+        elif "429" in message or "quota" in message.lower():
+            error_code = "provider_quota_exhausted"
+        else:
+            error_code = "provider_request_failed"
+        warning = (
+            "Odds refresh did not complete; the last good odds tables were preserved "
+            f"({error_code})."
+        )
         return {
             "available": False,
-            "message": "Skipped odds refresh. Set ODDS_API_KEY to enable odds.",
-            "error": str(error),
+            "message": warning,
+            "error_code": error_code,
+            "validation_warnings": [warning],
         }
 
 
@@ -804,12 +817,37 @@ def score_user_predictions_stage() -> dict[str, Any]:
     return score_all_pending()
 
 
+def settle_duration_predictions_stage() -> dict[str, Any]:
+    """Grade frozen exact-line duration snapshots after completed results refresh."""
+    prospective = build_duration_evaluation().get("prospective") or {}
+    return {
+        "status": prospective.get("status"),
+        "saved_predictions": prospective.get("saved_predictions", 0),
+        "scored_predictions": prospective.get("scored_predictions", 0),
+        "pending_predictions": prospective.get("pending_predictions", 0),
+        "invalid_predictions": prospective.get("invalid_predictions", 0),
+        "excluded_results": prospective.get("excluded_results", 0),
+        "message": prospective.get("message", ""),
+    }
+
+
 def build_summary(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
     failed_stages = [
         stage["name"]
         for stage in stage_reports
         if stage["status"] != "success"
     ]
+    degraded_stages = [
+        stage["name"]
+        for stage in stage_reports
+        if (stage.get("details") or {}).get("validation_warnings")
+    ]
+    saved_duration_rows = 0
+    saved_frame = saved_predictions_repository.read_all_df()
+    if not saved_frame.empty and "duration_line" in saved_frame.columns:
+        saved_duration_rows = int(
+            pd.to_numeric(saved_frame["duration_line"], errors="coerce").notna().sum()
+        )
 
     return {
         "completed_events_rows": count_csv_rows(COMPLETED_EVENTS_CSV),
@@ -823,9 +861,11 @@ def build_summary(stage_reports: list[dict[str, Any]]) -> dict[str, Any]:
         "upcoming_fights_rows": future_cards_repository.count_upcoming_fights(),
         "fighter_images_rows": count_csv_rows(RAW_DATA_DIR / "fighter_images.csv"),
         "failed_stages": failed_stages,
+        "degraded_stages": degraded_stages,
         "success": len(failed_stages) == 0,
         "saved_card_predictions_rows": saved_predictions_repository.count(),
         "saved_model_predictions_rows": saved_model_predictions_repository.count(),
+        "saved_duration_predictions_rows": saved_duration_rows,
     }
 
 
@@ -901,6 +941,7 @@ def run_incremental_update(
         "stages": stage_reports,
     }
 
+    data_refresh_runs_repository.record_report(report)
     save_report(report)
 
     if status_callback is not None:
@@ -967,6 +1008,7 @@ def save_future_card_predictions_stage() -> dict[str, Any]:
 INCREMENTAL_STAGES: list[tuple[str, Callable[[], dict[str, Any]]]] = [
     ("Refresh completed events", refresh_completed_events_stage),
     ("Update completed fight list incrementally", update_event_fights_incrementally_stage),
+    ("Settle duration predictions", settle_duration_predictions_stage),
     ("Score user predictions", score_user_predictions_stage),
     ("Update fight stats incrementally", update_fight_stats_incrementally_stage),
     ("Update fight round stats incrementally", update_round_stats_incrementally_stage),

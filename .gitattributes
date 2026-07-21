@@ -1,3 +1,7 @@
 # Shell scripts must stay LF — they run inside the Linux container.
 *.sh text eol=lf
 Dockerfile text eol=lf
+
+# Generated Office/PDF artifacts are binary. Never normalize their internal bytes.
+*.pdf binary
+*.docx binary

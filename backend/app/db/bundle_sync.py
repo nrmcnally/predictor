@@ -18,8 +18,9 @@ SHARED_TABLES = [
     "saved_model_predictions",
     "model_runs",
     "totals_odds_snapshots",
+    "data_refresh_runs",
 ]
-APPEND_ONLY_SHARED_TABLES = {"totals_odds_snapshots"}
+APPEND_ONLY_SHARED_TABLES = {"totals_odds_snapshots", "data_refresh_runs"}
 PERSONAL_TABLES = ["users", "user_predictions", "friendships", "event_controls"]
 
 

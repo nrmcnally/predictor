@@ -4,9 +4,9 @@ Developer reference for the ThreeJS/FIGHT IQ application
 
 Audited repository: `C:\Users\nrmcn\predictor\threejs`
 
-Audited Git baseline: branch `threejs-playground`, tracking `origin/threejs-frontend`, commit `14bf2d4`
+Audited Git baseline: branch `threejs-playground`; commit baseline `60d9c84` plus the operational/evaluation-hardening change set documented here
 
-Audit date: 2026-07-13 (America/New_York)
+Audit date: 2026-07-21 (America/New_York)
 
 Document status: current implementation guide; completely rebuilt from the ThreeJS repository
 
@@ -23,7 +23,7 @@ Evidence labels used throughout:
 - **Planned:** documented intention without a complete production implementation.
 - **Conflict:** source, artifact, or documentation statements disagree; the disagreement is stated rather than resolved by assumption.
 
-The working tree was not clean during the audit. The tracked file `backend/data/raw/current_mma_odds.json` had local changes, and locally generated PDF files were untracked. Model provenance also records `git_dirty: true`. The commit is therefore the code baseline, while row counts and artifact timestamps are a point-in-time local snapshot.
+The working tree was not clean during the audit: current odds data, maintained documentation, and generated model/evaluation artifacts had local changes. Model provenance also records `git_dirty: true`. The commit is therefore the code baseline, while row counts and artifact timestamps are a point-in-time local snapshot.
 
 ## Table of contents
 
@@ -50,7 +50,8 @@ FIGHT IQ is a full-stack UFC analytics, prediction, and social prediction-game a
 
 - Winner probabilities for a single matchup and for upcoming cards.
 - A separate broad/detailed manner-of-ending model.
-- A method-model-derived probability that a fight reaches a decision, displayed as **Model distance** on Future Cards.
+- An experimental market-independent fight-duration survival curve, queried at an exact sportsbook line when available and always visible in the expanded Future Cards breakdown.
+- A separate method-model P(Decision) value retained only as clearly labeled context.
 - Optional current moneyline and rounds-total market comparison from The Odds API.
 - Saved pre-event model snapshots, results grading, model-versus-market analysis, and limited closing-line-value tracking.
 - Fighter profiles, Elo trends, fighter rankings, model evaluation, and data-quality views.
@@ -68,11 +69,11 @@ The production winner model is market-blind. Odds are comparison and evaluation 
 | 3D | Three.js 0.182, lazy-loaded `OctagonScene` | `frontend/src/three/OctagonScene.jsx`, `frontend/src/App.jsx` |
 | API | FastAPI 0.136, Pydantic request models, Uvicorn | `backend/app/main.py`, `backend/requirements.txt` |
 | Data processing | Python 3.12 target, pandas, NumPy, BeautifulSoup, requests, Playwright fallback | `backend/app/data/`, `backend/app/pipeline/` |
-| ML | scikit-learn pipelines, XGBoost candidates, joblib artifacts, SHAP dependency | `backend/app/models/`, `backend/models/` |
+| ML | scikit-learn winner/method pipelines, XGBoost candidates, experimental discrete-time duration survival artifact, joblib artifacts, SHAP dependency | `backend/app/models/`, `backend/models/` |
 | Transactional storage | SQLite with WAL, schema-on-connect, repositories, forward column migration | `backend/app/db/`, `backend/app/repositories/` |
 | Large analytical artifacts | CSV and JSON files under `backend/data/` and `backend/models/` | feature/model/pipeline modules |
 | Deployment | Multi-stage Docker image, Fly.io configuration, optional Docker Compose VPS path | `Dockerfile`, `fly.toml`, `deploy/` |
-| Automation | Windows Task Scheduler + DPAPI-protected password + local pipeline + HTTPS bundle upload | `deploy/setup_auto_update.ps1`, `deploy/auto_update.*` |
+| Automation | Windows Task Scheduler + DPAPI-protected admin/odds credentials + local pipeline + persisted health heartbeat + HTTPS bundle upload | `deploy/setup_auto_update.ps1`, `deploy/auto_update.*`, `data_refresh_runs` |
 | CI | GitHub Actions: backend tests; frontend lint, tests, and build | `.github/workflows/ci.yml` |
 
 ## 1.3 Runtime architecture
@@ -102,7 +103,7 @@ The deployed container serves both the static frontend and the API. `FRONTEND_DI
 | Friends | `#/friends`, `Friends.jsx` | friendships, comparison service, shared picks | Only mutually available/eligible pick information should be exposed. |
 | Fight lab | `#/lab`, `FightLab.jsx` | `/predict`, `/predict-method`, fighter search | Uses `PredictionBreakdown`; Three.js scene is lazy-loaded. |
 | Fighters | `#/fighters/<name>`, `FighterProfile.jsx` | fighter profile/image services | Deep-linkable hash route. |
-| Future cards | `#/future`, `FutureCards.jsx` | future-card service, winner/method models, odds, event controls | Shows market O/U when available and method-derived Model distance separately. |
+| Future cards | `#/future`, `FutureCards.jsx` | future-card service, winner/method/duration models, odds, event controls | Shows a compact duration prediction, market O/U when available, and an always-visible duration curve in the expanded breakdown; P(Decision) remains separately labeled context. |
 | Card results | `#/recent`, `RecentCards.jsx` | saved snapshots, results, grading, market/CLV services | Prospective evaluation; sample sizes remain small. |
 | User leaderboard | `#/user-leaderboard` | predictions stats/leaderboard services | Multi-user game performance. |
 | Fighter rankings | `#/leaderboards` | generated category-leader artifacts/service | Some scores are heuristic and must remain labeled. |
@@ -155,18 +156,24 @@ The deployed container serves both the static frontend and the API. `FRONTEND_DI
 | `backend/app/features/add_cardio_features.py` | Prior-only round trajectory aggregates. | Method model; retained but excluded from winner model. |
 | `backend/app/features/build_matchups.py` | Mirrored A/B training rows and `diff_` fields. | Winner training, evaluation, method-data build. |
 | `backend/app/features/build_method_training_data.py` | Orientation-invariant mean/max/min/abs method features and labels. | Method training. |
+| `backend/app/features/duration_features.py` | Market-independent, symmetric prior-only duration features and interval inputs. | Duration training and serving. |
 | `backend/app/features/matchup_interactions.py` | Six experimental cross-terms. | **Unused/dead by design after negative walk-forward evaluation**, despite stale repository prose that still calls them promising. |
 | `backend/app/models/train_calibrated_models.py` | Chronological train/calibration/test split, candidate training, selection, provenance, registry. | Winner artifacts and evaluation. |
 | `backend/app/models/train_method_models.py` | Broad/detailed method training and artifacts. | `/predict-method` and Future Cards Model distance. |
+| `backend/app/models/train_duration_model.py` | Chronological unique-fight discrete-time survival training and historical evaluation. | Duration joblib, feature-schema, and metrics artifacts. |
 | `backend/app/models/train_market_shadow_models.py` | Market-only and model+market experimental models. | Evaluation only. |
 | `backend/app/models/model_version.py` | Winner recipe version history, recipe/training hashes, Git lineage. | Model metrics, saved snapshots, Recent Cards generation labels. |
 | `backend/app/services/prediction_service.py` | Current feature lookup, winner inference, two-orientation normalization, explanations, flags, file-aware caches. | Fight Lab, Future Cards, saved snapshots. Large/high-coupling module (~1,973 lines). |
 | `backend/app/services/method_prediction_service.py` | Loads method artifacts and builds method feature row. | Fight Lab method panel and Future Cards Model distance. |
-| `backend/app/services/future_card_service.py` | Cards, fight context, predictions, scheduled-round override, decision-probability extraction. | Future Cards API and My Picks card inputs. |
-| `backend/app/services/odds_service.py` | Current h2h/totals fetch, fuzzy matching, de-vig, consensus, tracking. | Future Cards and market evaluation. |
-| `backend/app/pipeline/update_incremental_data.py` | Canonical 25-stage routine refresh. | UI update job and unattended refresh. |
+| `backend/app/services/duration_prediction_service.py` | Loads the duration artifact, predicts a monotone half-round curve, and queries an optional exact line. | Future Cards duration summary/breakdown and snapshots. |
+| `backend/app/services/duration_settlement.py` | One duration/result boundary contract with reason-coded exclusions. | Historical tests and prospective grading. |
+| `backend/app/services/duration_evaluation_service.py` | Historical artifact readout plus grading of frozen exact-line snapshots. | Admin Evaluation and pipeline settlement stage. |
+| `backend/app/services/data_operations_health_service.py` | Refresh freshness, odds/totals coverage, quota, snapshot age, duration collection, and alerts. | Hosted/local Data Ops. |
+| `backend/app/services/future_card_service.py` | Cards, fight context, winner/method/duration predictions, scheduled-round override. | Future Cards API and My Picks card inputs. |
+| `backend/app/services/odds_service.py` | Current h2h/totals fetch, fuzzy matching, de-vig, consensus, and per-book append-only totals tracking. | Future Cards, market evaluation, Data Ops. |
+| `backend/app/pipeline/update_incremental_data.py` | Canonical refresh, explicit duration settlement, degraded-stage reporting, and heartbeat persistence. | UI update job and unattended refresh. |
 | `backend/app/pipeline/update_all_data.py` | Full historical rebuild. | Disaster recovery and parser/feature rebuilds; partially duplicated sequence. |
-| `backend/tests/` | 40 test modules and 177 test functions at audit. | CI and release confidence. |
+| `backend/tests/` | 54 test modules and 217 collected tests at audit. | CI and release confidence. |
 
 ## 2.3 Frontend structure and key files
 
@@ -177,7 +184,7 @@ The deployed container serves both the static frontend and the API. `FRONTEND_DI
 | `frontend/src/api/client.js` | API base, token storage, request/error behavior, endpoint functions, mock dispatch. | Primary frontend contract boundary. |
 | `frontend/src/api/mock.js` | Demo-mode data and behaviors. | Must be updated with client/UI contract changes. |
 | `frontend/src/api/mockContract.test.js` | Verifies mock function coverage and selected UI-read fields. | Partial guard; not an OpenAPI-vs-client contract test. |
-| `frontend/src/views/FutureCards.jsx` | Cards, predictions, market lines, Model distance, overrides, event lock admin. | Duration/odds/API schema changes land here. |
+| `frontend/src/views/FutureCards.jsx` | Cards, winner predictions, compact exact-line duration insight, expanded survival curve, market lines, overrides, event lock admin. | Duration/odds/API schema changes land here. |
 | `frontend/src/views/FightLab.jsx` | Single prediction orchestration. | Winner/method response changes. |
 | `frontend/src/components/PredictionBreakdown.jsx` | Verdict, risk flags, insights, edges, method panel. | Shared prediction presentation. |
 | `frontend/src/views/MyPicks.jsx` | Pick queue, picks, standings. | Event lock and user-prediction schema changes. Large module (~804 lines). |
@@ -247,28 +254,29 @@ The order is load-bearing. Several enrichment scripts rewrite `fighter_snapshots
 
 ## 3.3 Winner-model architecture
 
-- Training input: 17,174 mirrored rows representing 8,587 fights.
+- Training input: 17,198 mirrored rows representing 8,599 fights.
 - Input schema: 126 numeric features plus categorical `weight_class`.
 - Numeric selection: `diff_` columns and fight-context columns, excluding the configured cardio differences.
-- Split: by unique fight URL, chronological; 6,010 train fights, 859 calibration fights, 1,718 test fights.
+- Candidate-evaluation split: by unique fight URL, chronological; 6,019 train fights, 860 calibration fights, 1,720 untouched test fights.
 - Candidate families: logistic regression, random forest, ExtraTrees, HistGradientBoosting, XGBoost; sigmoid-calibrated variants; isotonic shadow variants.
 - Selection: lowest Brier, then log loss, accuracy, AUC.
-- Current winner: calibrated logistic regression, test accuracy 0.6315, Brier 0.2280, log loss 0.6490, AUC 0.6739.
+- Current selected recipe: uncalibrated logistic regression. Frozen holdout accuracy is 0.6355 (95% Wilson interval 0.6124-0.6579), Brier 0.2276, log loss 0.6492, and AUC 0.6756. The eight-fold expanding-window mean accuracy is 0.6214; the newest fold triggers a relative-Elo drift watch because its advantage over Elo is 3.5 points below the prior-fold mean.
+- Evaluation/serving boundary: the candidate is scored and frozen to portable JSON before the locked recipe is refit on all 8,599 eligible fights through 2026-07-18. The full-history joblib drives live predictions but is never scored on the now-seen historical holdout.
 - Serving: predicts both fighter orientations and normalizes. Missing fighter coverage produces no prediction rather than a fallback guess.
 
-## 3.4 Method and current Model distance architecture
+## 3.4 Method context and experimental fight-duration architecture
 
 The broad and detailed method models use 496 numeric features plus `weight_class`. The method-data builder transforms A/B matchup columns into orientation-invariant mean, maximum, minimum, and absolute-difference fields. Both production method artifacts are random forests in the audited artifact set.
 
-`future_card_service._model_distance_probability()` calls the broad method model and returns the row labeled `Decision`. Therefore:
+`future_card_service` still extracts the broad method model's `Decision` row, but labels it as P(Decision) context and never substitutes it for an Over probability. The dedicated duration path is separate:
 
-- **Model distance is P(Decision), used as an approximation to P(goes the scheduled distance).**
-- It is not trained against a quoted rounds line.
-- It is not P(Over 1.5), P(Over 2.5), or P(Over 4.5).
-- A fight can finish after a totals threshold but before a decision, so P(Decision) can materially understate P(Over line).
-- It remains useful as directional context, but it must not be presented as a line-specific model/market comparison.
+1. `duration_features.py` builds symmetric, prior-only fight features without odds or a house line.
+2. `train_duration_model.py` expands each fight into half-round hazard intervals and fits `duration-survival-0.2.0`.
+3. `duration_prediction_service.py` converts interval hazards into a monotone survival curve for supported 3- and 5-round schedules.
+4. A posted market line is query-only: an exact supported point becomes the compact Over/Under prediction; otherwise the API returns `curve_only` and the expanded graph remains visible.
+5. `duration_settlement.py` resolves official elapsed time; `duration_evaluation_service.py` grades only frozen predictions whose saved model line equals the saved market line.
 
-This is current implemented behavior, not a dedicated fight-duration model.
+The artifact is **experimental**. Historical 80/20 results are available and seven frozen exact-line future predictions have settled (six correct), but all seven selected Over and the result equals the always-Over majority baseline. The UI therefore labels the prospective sample **Very early**, shows a Wilson interval and baseline uplift, and must not present 85.7% as proof of production skill.
 
 ## 3.5 Odds architecture
 
@@ -281,8 +289,9 @@ This is current implemented behavior, not a dedicated fight-duration model.
 - Aggregates moneyline probabilities across matched books.
 - Selects the most common totals line and averages only books quoting that line.
 - Tracks first and latest moneyline probabilities in `fight_odds_track` for provisional CLV.
+- Appends every matched per-book total to `totals_odds_snapshots` without replacing prior quotes.
 
-Current but data-empty: the audited SQLite table had 58 odds rows and all 58 had `rounds_line IS NULL`. The older local CSV also had only the pre-totals 23-column header. Thus the UI and schema support totals, but the audited local artifact set cannot display a real rounds O/U quote.
+Current point-in-time data: the append-only store held 32 per-book totals quotes covering 8 fights, 4 bookmakers, and lines 1.5, 2.5, and 3.5. Many later fights legitimately had no posted total. Data Ops now treats coverage as a measured ratio, preserves the unavailable state, and alerts on stale or failed provider refreshes.
 
 ## 3.6 Transactional data ownership
 
@@ -302,7 +311,7 @@ The distinction is critical: changing `bundle_sync.py` or the shared-table allow
 flowchart LR
     TS[Windows Task Scheduler] --> PS[deploy/auto_update.ps1]
     PS --> PY[deploy/auto_update.py]
-    PY --> IP[25-stage local incremental pipeline]
+    PY --> IP[26-stage local incremental pipeline]
     IP --> B[make_bundle.py]
     B --> H[Authenticated HTTPS upload]
     H --> API[/admin/data/upload-bundle]
@@ -313,7 +322,7 @@ flowchart LR
     FC --> LIVE[Fly/Docker live app]
 ```
 
-The scheduled task runs under one Windows user and decrypts a DPAPI-protected admin password. It does not wake a powered-off PC. `StartWhenAvailable` catches up after the machine next runs. A failed pipeline does not upload. The latest audited log (`20260713_114039`) reported a successful pipeline and server push, but this does not prove long-term scheduler reliability.
+The scheduled task runs under one Windows user and decrypts DPAPI-protected admin and odds-provider credentials. The registered principal uses the Windows `Interactive` logon type: it runs while that user is logged on and `StartWhenAvailable` catches up after the next logon, but it cannot run while the account is signed out and it does not wake a powered-off PC. A failed pipeline does not upload. The latest audited log (`20260713_114039`) reported a successful pipeline and server push, but this does not prove long-term scheduler reliability.
 
 # 4. Major component dependency matrix
 
@@ -328,10 +337,12 @@ The scheduled task runs under one Windows user and decrypts a DPAPI-protected ad
 | Round/cardio features | per-round CSV, fight chronology | method model; winner experiments | round parser, prior-only aggregation |
 | Matchup builder | enriched snapshots, fight context | winner training, method training | mirrored symmetry, `diff_` naming/order |
 | Winner trainer | matchups, model version module | joblib, registry, features, metrics, model_runs | artifact set and recipe/training hashes |
-| Method trainer | method data/labels | broad/detailed joblib and Model distance | label mapping, 497-feature schema |
+| Method trainer | method data/labels | broad/detailed joblib and P(Decision) context | label mapping, 497-feature schema |
+| Duration trainer | pre-fight snapshots, official elapsed time, settlement contract | experimental survival joblib, features, metrics | unique-fight chronology, interval contract, artifact versions |
 | Prediction service | current features, winner artifacts | `/predict`, card predictions, saved snapshots | exact fighter resolution, artifact compatibility |
-| Method prediction service | current features, method artifacts | `/predict-method`, Model distance | orientation-invariant feature build |
-| Odds service | The Odds API, future fights, name matcher | odds table, Future Cards, market evaluation | event/fighter match thresholds and de-vig method |
+| Method prediction service | current features, method artifacts | `/predict-method`, P(Decision) context | orientation-invariant feature build |
+| Duration prediction/evaluation | current features, duration artifact, frozen line snapshots, results | Future Cards curve/exact-line insight, Evaluation, Data Ops counts | market-independent features, exact-line match, settlement version |
+| Odds service | The Odds API, future fights, name matcher | odds table, append-only totals, Future Cards, market evaluation | event/fighter match thresholds and de-vig method |
 | Future-card service | cards, context, winner/method models, locks | Future Cards and saved card snapshots | fight URL identity, scheduled rounds, response fields |
 | Saved/recent evaluation | prospective snapshots, event results, odds/provenance | Card results and Evaluation | immutable pre-event timestamp/provenance |
 | Frontend client/mock | FastAPI routes and response shapes | all views | implicit JS property contract |
@@ -342,7 +353,7 @@ The scheduled task runs under one Windows user and decrypts a DPAPI-protected ad
 | Source field(s) | Transformation | Model input/output | API output | UI presentation |
 |---|---|---|---|---|
 | `event_fights.winner`, result flags | chronological prior wins/losses, Bayesian/decayed win rates | winner `diff_prior_*`; method aggregates | prediction probabilities, data reliability | verdict, confidence, record/insights |
-| `event_fights.method`, `round`, `time` | finish rates; broad/detailed labels; elapsed duration available but no dedicated totals label pipeline | method targets; winner finish-history features | method probabilities; decision row becomes Model distance | Fight Lab method panel; Future Cards Model distance |
+| `event_fights.method`, `round`, `time` | finish rates; broad/detailed labels; canonical elapsed-time settlement | method targets; winner history; duration hazard labels | method probabilities; duration evaluation settlement | Fight Lab method panel; Future Cards duration insight; Evaluation |
 | `fight_stats.sig_str_*` | per-15, accuracy, defense, differential, recent/decayed/opponent-adjusted | multiple `diff_` winner features; mean/max/min/abs method features | matchup edges/insights and winner/method probabilities | striking edges, explanation, probability bars |
 | `fight_stats.td_*`, `sub_att`, `ctrl_seconds` | grappling rates, defense, path/vulnerability composites | winner and method features | grappling edges/insights | matchup breakdown |
 | head/body/leg and distance/clinch/ground counts | target/position rates and style composites | winner/method features | explanation fields where selected | style/path context |
@@ -352,7 +363,7 @@ The scheduled task runs under one Windows user and decrypts a DPAPI-protected ad
 | weight class and fight history | class limits, moves, class experience, relative size | winner diff/context and method features | weight class, risk flags | class badges and weight-move flags |
 | event card index/size and round override | scheduled rounds, main event, position | winner fight-context fields; method context fields | `fight_context`, `scheduled_rounds` | round badge and admin override |
 | current h2h odds | implied probability + proportional de-vig | shadow/evaluation only | moneyline and market probability | market favorite, agreement, edge |
-| current totals odds | consensus line + proportional de-vig | no current totals model input | `rounds_line`, over/under fields | Rounds O/U, only when non-null |
+| current totals odds | consensus line + proportional de-vig; per-book append-only snapshots | query-only line for duration curve; never a fitted input | `rounds_line`, market probabilities, exact-line model point | Compact O/U insight when posted; full curve remains in breakdown |
 | user pick + snapshotted bout names | lock validation and later result scoring | not an ML input | prediction status/score | My Picks, friends, leaderboards |
 
 # 6. Change-impact playbooks
@@ -385,22 +396,22 @@ Validation: `pytest`, frontend `npm test`, `npm run lint`, `npm run build`, and 
 
 Affected files include `train_calibrated_models.py`, `model_version.py`, `prediction_service.py`, evaluation services, `backend/models/*`, saved snapshot provenance, `CHANGELOG.md`, `MODEL_RESEARCH.md`, and this guide.
 
-Required sequence: rebuild training rows if inputs changed; run walk-forward comparison; train candidates; verify the chronological test; inspect calibration and subgroup results; bump recipe version if warranted; save all artifacts; smoke-load in the API; build a full deploy bundle when Evaluation needs candidate models.
+Required sequence: rebuild training rows if inputs changed; train candidates on the locked 70/10/20 chronology; select the recipe on the untouched test; freeze `winner_model_evaluation.json` and `walk_forward_evaluation.json`; refit that locked recipe on all eligible history for production; bump recipe/training-protocol version when warranted; save the complete artifact set; refresh open-card snapshots; smoke-load in the API; build the core deploy bundle. Candidate joblibs and `training_matchups.csv` are required only for offline research/debugging, not the live Evaluation tab.
 
-Compatibility risk: `best_winner_model.joblib`, `model_features.json`, `model_registry.json`, and `calibrated_model_metrics.json` are one compatibility unit. Mixed generations can load but produce invalid predictions or evaluation.
+Compatibility risk: `best_winner_model.joblib`, `model_features.json`, `model_registry.json`, `calibrated_model_metrics.json`, `winner_model_evaluation.json`, and `walk_forward_evaluation.json` are one compatibility unit. `best_winner_model.joblib` is the full-history serving refit; historical metrics must come from the frozen evaluation JSON, never by scoring that production artifact on seen rows. Mixed generations can load but produce invalid predictions, lineage, or evaluation.
 
 ## 6.4 Method, distance, or totals model change
 
 | Area | Required action |
 |---|---|
-| Labels | Update `explore_method_labels.py` and/or create a dedicated elapsed-time/line settlement label builder. Verify round/time edge cases. |
+| Labels | Update `duration_settlement.py` and training/evaluation callers together. Verify round/time and exclusion edge cases. |
 | Features | Update method/duration training data and the serving row builder together. |
-| Artifacts | Retrain broad/detailed or new duration model; regenerate feature and metrics JSON. |
-| API | Update `/predict-method` and `future_card_service`; retain `model_distance_*` during migration if the frontend still reads it. |
-| Persistence | Add totals-model and market fields to saved prediction schemas before claiming prospective performance. |
+| Artifacts | Retrain broad/detailed method or duration model; regenerate joblib, feature-schema JSON, and metrics JSON as one compatibility unit. |
+| API | Update `/predict-method`, `duration_prediction_service.py`, and `future_card_service.py`; preserve curve-only and exact-line states. |
+| Persistence | Update saved duration columns, `totals_odds_snapshots`, bundle sync, heartbeat fields, and prospective evaluation together. |
 | UI | Update Future Cards, Card Results, Evaluation, mock shapes, interpretation documentation. |
 | Validation | Chronological calibration by line, scheduled-round cohort, weight class, symmetry, missing artifacts, and real API response. |
-| Rollback | Feature flag the new duration panel; keep old directional decision probability labeled as such or hide it. |
+| Rollback | Omit/disable the duration artifact and return an explicit unavailable state; do not restore P(Decision) as an Over proxy. |
 
 ## 6.5 Dataset schema or preprocessing change
 
@@ -430,7 +441,7 @@ Required review: all data scrapers, physical/weight joins, prediction lookup, od
 | `FIGHTIQ_HOSTED`, `REQUIRE_AUTH`, `ALLOW_REGISTRATION` | `runtime_config.py`, auth middleware/settings | hosted boot, public-path and registration tests |
 | `AUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, legacy `ADMIN_TOKEN` | auth/token/admin seed | no secret logging; hosted fail-fast; password rotation invalidates old tokens |
 | `FIGHTIQ_DB_PATH`, `FIGHTIQ_DEMO` | DB connection/demo sanitization | correct DB, no production-account copy to demo |
-| `ODDS_API_KEY` | odds refresh | missing key is an intentional best-effort skip in the pipeline |
+| `ODDS_API_KEY` | odds refresh | scheduled runner requires a DPAPI-encrypted key; provider failure preserves last good odds but marks the run degraded/non-zero |
 | `UFCSTATS_PLAYWRIGHT_HEADLESS` | scraper fallback | browser dependency and headless execution |
 | `FIGHTER_IMAGE_MODE/LIMIT/DELAY_SECONDS/FORCE` | pipelines/image scraper | allowed mode and rate behavior |
 | `CORS_ORIGINS`, rate limits, `TRUST_PROXY` | API hardening | proxy/IP and browser origin tests |
@@ -471,11 +482,16 @@ Review `frontend/package*.json`, Vite config, backend requirements, Docker stage
 | `data/processed/method_training_data.csv` | method label/data builders | method trainer | `python -m app.features.build_method_training_data` |
 | `data/processed/current_fighter_features.csv` | `build_current_fighter_features.py`, age enrichment | serving prediction/profile | pipeline or module commands |
 | `data/processed/future_fight_odds.csv` | `odds_service.py` compatibility export | older/offline consumers | `python -m app.services.odds_service` with key |
-| `models/best_winner_model.joblib` | winner trainer | prediction/evaluation | `python -m app.models.train_calibrated_models` |
+| `models/best_winner_model.joblib` | winner trainer, after candidate evaluation is frozen | production prediction only | `python -m app.models.train_calibrated_models` |
 | `models/model_features.json` | winner trainer | prediction/evaluation | winner training command |
-| `models/model_registry.json`, `winner_models/*` | winner trainer | all-model snapshots/evaluation | winner training; include `--full` deployment bundle if needed |
+| `models/model_registry.json`, `winner_models/*` | winner trainer | all-model snapshots/offline candidate evaluation | winner training; include `--full` only for server-side research/debugging |
 | `models/calibrated_model_metrics.json` | winner trainer | evaluation/provenance | winner training command |
-| `models/method_*` | method trainer | method prediction/Model distance | `python -m app.models.train_method_models` |
+| `models/winner_model_evaluation.json` | winner trainer before production refit | live historical holdout Evaluation | winner training command; included in core bundle |
+| `models/walk_forward_evaluation.json` | expanding-window evaluator during winner training | live walk-forward Evaluation | winner training command; included in core bundle |
+| `models/method_*` | method trainer | method prediction/P(Decision) context | `python -m app.models.train_method_models` |
+| `models/duration_model.joblib`, `duration_model_features.json`, `duration_model_metrics.json` | duration trainer | duration serving and historical Evaluation | `python -m app.models.train_duration_model` |
+| SQLite `totals_odds_snapshots` | odds refresh | Data Ops and future line-movement/exact-book evaluation | append on each successful `python -m app.services.odds_service` run |
+| SQLite `data_refresh_runs` | incremental pipeline | hosted/local Data Ops heartbeat | recorded automatically at the end of each pipeline run |
 | `models/market_shadow_*` | shadow trainer | evaluation only | `python -m app.models.train_market_shadow_models` |
 | `data/reports/latest_incremental_update_report.json` | incremental pipeline | Data Ops and automation logs | `python -m app.pipeline.update_incremental_data` |
 | `deploy/deploy_bundle.tar.gz` | `deploy/make_bundle.py` | upload/deployment | `python deploy/make_bundle.py` or `--full` |
@@ -489,8 +505,9 @@ Review `frontend/package*.json`, Vite config, backend requirements, Docker stage
 |---|---|---|---|
 | Frontend package | `frontend/package.json` = `1.0.0` | Build metadata only; private package. | Not synchronized to an app release. |
 | API | `FastAPI(version="0.1.0")` in `main.py` | OpenAPI metadata. | No route versioning or compatibility policy. |
-| Winner model recipe | `model_version.py` = `1.2`; `CHANGELOG.md` | Manual major/minor recipe generations; routine retrain does not bump. | Method/duration models lack equivalent first-class versions. |
-| Winner exact lineage | recipe hash, training-data hash, Git commit/dirty flag, trained timestamp | Written to metrics, `model_runs`, saved snapshots. | Recipe hash sorts feature names and is not an explicit schema version; dirty retrains are allowed. |
+| Winner model recipe | `model_version.py` = `1.3`; `CHANGELOG.md` | Manual major/minor generations; 1.3 separates frozen evaluation from a full-history production refit. Routine retrains do not bump. | Method models still lack equivalent first-class versions. |
+| Duration model/schema/settlement | artifact metadata: `duration-survival-0.2.0`, `duration-survival-features-2`, `ufc-standard-rounds-2` | Explicit experimental versions are saved in API/snapshots/metrics. | Not yet registered in a unified application artifact manifest. |
+| Winner exact lineage | recipe hash, training-protocol hash input, training-data hash, Git commit/dirty flag, trained timestamp | Evaluation and production have distinct protocol/data hashes; production lineage is written to metrics, `model_runs`, and saved snapshots. | Recipe hash is not an explicit schema version; dirty retrains are allowed. |
 | SQLite schema | column specs plus `PRAGMA user_version=1` | Missing columns added on connect; one migration version used. | No full migration history, downgrade, or release compatibility table. |
 | Dataset schema | CSV headers and code expectations | Implicit. | No dataset version or manifest. |
 | Feature schema | `model_features.json`, `method_model_features.json` | Exact feature lists consumed with artifacts. | No semantic schema version/checksum shared across all artifacts. |
@@ -548,7 +565,7 @@ Preferred command from `backend/`:
 python -m app.pipeline.update_incremental_data
 ```
 
-The audited pipeline has 25 ordered stages: refresh events; incremental result list; score user picks; incremental fight totals; incremental rounds; profiles; DOB restore; snapshots; Elo; physical; weight/size; age; cardio; matchups; method labels/data/models; winner models; current features; current age; future cards; images; odds; shadow models; saved card predictions.
+The audited pipeline has 26 ordered stages: refresh events; incremental result list; settle frozen duration predictions; score user picks; incremental fight totals; incremental rounds; profiles; DOB restore; snapshots; Elo; physical; weight/size; age; cardio; matchups; method labels/data/models; winner candidates/frozen evaluations/full-history refit; current features; current age; future cards; images; odds; shadow models; saved card predictions.
 
 The odds stage is best-effort when `ODDS_API_KEY` is absent. That skip returns a successful stage payload with `available: false`; monitor the report, not only process exit status, if odds coverage matters.
 
@@ -584,12 +601,12 @@ npm test
 npm run build
 ```
 
-Audit result: 177 backend tests passed with warnings for deprecated FastAPI startup events and a fragmented pandas DataFrame; 32 frontend tests passed, lint passed, and build passed with a >500 KB Three.js chunk warning.
+Audit result: 217 backend tests passed with one fragmented pandas DataFrame warning; 41 frontend tests in 12 files passed, lint passed, and build passed with a >500 KB Three.js chunk warning.
 
 ## 9.6 Deployment
 
 1. Run/verify the local incremental pipeline.
-2. Build a core bundle: `python deploy/make_bundle.py` from the repository root. Use `--full` when candidate winner models and training matchups are required on the server.
+2. Build a core bundle: `python deploy/make_bundle.py` from the repository root. The core includes portable winner/duration/method metrics plus frozen winner and walk-forward evaluation reports. Use `--full` only when candidate winner models and training matchups are intentionally required for server-side research/debugging.
 3. Upload through `python deploy/push_update.py https://host --email <admin>` or the automated wrapper.
 4. Server validates bundle paths, merges shared DB tables, and overwrites global artifacts.
 5. Verify `/health`, authentication, Future Cards, prediction smoke, data freshness, model provenance, and user/social preservation.
@@ -601,6 +618,8 @@ Code deployment uses the Dockerfile/Fly workflow; data/model deployment uses the
 ## 10.1 Existing safeguards
 
 - Chronological split by unique fight, keeping mirrored rows together.
+- Frozen winner holdout and walk-forward JSON artifacts generated before the separately refit production model; live evaluation has no training-CSV dependency.
+- Wilson 95% accuracy intervals, majority/random/Elo baseline comparisons, evidence-stage labels, and a newest-fold relative-Elo drift watch.
 - Snapshot leakage test and prior-only cardio test.
 - Model version, training hash, model run, and prospective snapshot provenance tests.
 - Ingestion structural validation for empty fights, missing identities/URLs, duplicates, and winner mismatch.
@@ -619,7 +638,7 @@ Code deployment uses the Dockerfile/Fly workflow; data/model deployment uses the
 |---|---|---|
 | Artifact manifest/schema compatibility test | Prevent mixed joblib/feature/data generations. | P0 |
 | Full and incremental pipeline parity test | Prevent stage-order drift. | P0 |
-| Dedicated duration-label settlement tests | Prevent incorrect Over/Under targets. | P0 before duration model |
+| Duration-label settlement and prospective lifecycle tests | Existing boundary tests are strong; add no-post-fight-overwrite/full-event integration coverage. | P0 before promotion |
 | OpenAPI response schema + frontend contract generation/check | Replace implicit dict/property coupling. | P1 |
 | End-to-end browser smoke against mock and real API | Catch auth/pick/card flows across layers. | P1 |
 | Scheduled-task dry-run/last-result monitor | Detect DPAPI/user/path/task failures. | P1 |
@@ -659,16 +678,16 @@ Code deployment uses the Dockerfile/Fly workflow; data/model deployment uses the
 | Severity | Issue | Likely impact | Recommended resolution |
 |---|---|---|---|
 | Critical | Research recommends wiring `matchup_interactions`, while repository A/B records show the same six terms were neutral-to-negative across three model families. | Repeating a rejected experiment and possibly degrading the model. | Mark the module as negative experiment; remove “free alpha” priority. Revisit only with genuinely new style data/hypothesis. |
-| High | Model/feature/data artifacts are ignored and lack a single compatibility manifest; current model was trained from a dirty tree. | Non-reproducible or mixed production state. | Generate signed/checksummed artifact manifest; block release on dirty provenance unless explicitly overridden. |
+| High | Model/feature/data artifacts are ignored and lack a single compatibility manifest; current model was trained from a dirty tree. Evaluation/production roles and hashes are now separate, but distribution is still bundle-based. | Non-reproducible or mixed production state. | Generate signed/checksummed artifact manifest; block release on dirty provenance unless explicitly overridden. |
 | High | Bundle application overwrites global files sequentially rather than atomically switching a validated set. | Partial failure can leave incompatible model/data files live. | Stage on-volume, validate, then atomic directory/version pointer switch. |
 | High | Full and incremental pipelines duplicate orchestration and already differ in ordering. | Silent rebuild/refresh divergence. | Share one stage registry with modes/conditions. |
-| High | Current Model distance is P(Decision), not line-specific P(Over). | Misleading comparison to market totals. | Relabel immediately; build a dedicated calibrated duration/survival model before showing model-vs-total edge. |
-| High | Totals schema/UI are present but audited DB coverage is 0/58 rows; compatibility CSV lacks totals columns. | Feature appears implemented but has no current data. | Diagnose odds source/key/market availability; add coverage alert and schema migration/export parity. |
+| High | Experimental duration results could be mistaken for live betting proof. | Users may over-read a single historical split or tiny prospective sample. | Freeze version 0.2.0, keep neutral language, publish coverage/exclusions, and require a predeclared prospective gate. |
+| High | Totals coverage remains sparse (32 quotes across 8 fights at snapshot). | Model/market evaluation can be unstable or line-biased. | Continue append-only daily capture and show coverage/freshness by card, line, and book. |
 | High | Fighter normalization is duplicated and inconsistent; no canonical fighter ID/alias registry. | Missing predictions, wrong odds/image joins, risky fuzzy matches. | Introduce canonical IDs, normalized-name library, aliases, and ambiguity tests. |
 | High | API responses are mostly untyped dicts; frontend is plain JS; mock contract is partial. | Backend changes can silently break views. | Add response models and generated/JSDoc client types; validate OpenAPI against mocks. |
-| High | Unattended refresh depends on a specific Windows user, DPAPI secret, local venv, awake PC, and long local pipeline. | Daily refresh can fail without server-side visibility. | Add scheduler health sentinel/notification and consider server/CI runner with secure artifact upload. |
+| High | Unattended refresh still depends on a specific Windows user, DPAPI secrets, local venv, awake PC, and long local pipeline. | The persisted heartbeat detects staleness but cannot make an offline PC run. | Add external notification and consider an always-on runner with secure artifact upload. |
 | Medium | `ROADMAP.md` contains both completed negative interaction results and stale high-ROI interaction shortlist rows. | Confusing future prioritization. | Add status supersession and remove/strike stale shortlist entries. |
-| Medium | `README.md` says method predictions are not shown on Future Cards, but a method-derived distance value is shown. | Developer/user misunderstanding. | Update README and interpretation guide. |
+| Resolved | Earlier `README.md` text said method predictions were not shown on Future Cards even though P(Decision) context appears in the expanded breakdown. | Developer/user misunderstanding. | README now distinguishes the winner model, duration model, and separately labeled method-derived context. |
 | Medium | `UI_PLAN.md` reports zero frontend tests and old bundle architecture before appending completion notes. | Historical metrics mistaken for current facts. | Label snapshot sections as historical or archive them. |
 | Medium | 1,536 tracked `.ui-review*` files consume about 127 MB. | Clone/review noise and repository growth. | Move selected final evidence to an external archive or Git LFS; delete intermediate variants through a reviewed migration. |
 | Medium | Generated `current_mma_odds.json` is tracked while most generated data is ignored. | Persistent dirty tree and stale odds in Git. | Untrack or replace with a small fixture under a clear test path. |
@@ -684,9 +703,9 @@ Code deployment uses the Dockerfile/Fly workflow; data/model deployment uses the
 ## Quick wins
 
 1. Adopt this guide as the maintained architecture/change-impact source for the audited checkout and assign an owner for freshness reviews.
-2. Correct `MODEL_RESEARCH.md`, `ROADMAP.md`, and `README.md` conflicts about interactions and Model distance.
-3. Rename the current UI value to “Model decision probability” with an explanation that it is not line-specific.
-4. Add totals coverage and automation-last-success indicators to Data Ops.
+2. Correct remaining `ROADMAP.md` and `README.md` conflicts about rejected interactions and legacy Model distance semantics.
+3. Freeze `duration-survival-0.2.0` and prospectively grade it without tuning after every event.
+4. Monitor the implemented heartbeat, encrypted odds refresh, totals coverage, and stale-snapshot alerts in Data Ops.
 5. Add an artifact manifest with hashes, versions, row counts, and Git lineage.
 6. Move shared pipeline ordering into one canonical stage registry.
 7. Centralize fighter normalization and begin an explicit alias table.
@@ -694,7 +713,7 @@ Code deployment uses the Dockerfile/Fly workflow; data/model deployment uses the
 
 ## Medium-term
 
-1. Build a dedicated, leakage-safe duration/survival model and prospective line-matched totals tracker behind a feature flag.
+1. Accumulate and review 75-100 settled exact-line duration observations before considering promotion.
 2. Add Pydantic response models and generate or check frontend contract types.
 3. Stage and atomically switch deployment artifact sets.
 4. Implement ordered DB/dataset/feature schema versions and migration tests.
@@ -717,14 +736,16 @@ Code deployment uses the Dockerfile/Fly workflow; data/model deployment uses the
 | Brier score | Mean squared error of binary probabilities; lower is better. |
 | Calibration | Agreement between predicted probability and observed frequency. |
 | CLV | Closing-line value; comparison of an earlier price/probability with the closing market. Current sample is provisional. |
-| Decision probability | Broad method model probability of a decision; current source of Model distance. |
+| Decision probability | Broad method model probability of a decision; contextual only, never an Over probability. |
 | Difference feature | Fighter A value minus Fighter B value, generally prefixed `diff_`. |
 | Fight context | Scheduled rounds, main-event flag, card position, and card size. |
 | Frame contract | Repository guarantee for text/numeric missing values in pandas DataFrames. |
 | Market-blind model | Winner model that does not use betting odds as features. |
 | Market shadow | Experimental model using market data for measurement, not public prediction. |
 | Mirrored rows | Each fight represented in A-vs-B and B-vs-A orientation. |
-| Model distance | Current UI label for P(Decision); not a dedicated totals model. |
+| Model distance | Legacy label for P(Decision); it must not be used as an Over/Under probability. |
+| Duration curve | Experimental market-independent probabilities that the fight continues beyond each supported half-round line. |
+| Curve-only | Duration curve is available, but no supported current market line can be queried. |
 | Prospective snapshot | Prediction persisted before an event and later graded without recomputing it. |
 | Recipe hash | Short hash of winner feature names, model type, and calibration method. |
 | Walk-forward | Expanding-window chronological evaluation with future periods held out. |

@@ -101,6 +101,51 @@ def test_evaluation_reads_historical_artifact_and_scores_future_result(tmp_path)
     assert payload["readiness"]["saved_totals_snapshots"] == 1
 
 
+def test_evaluation_matches_ufcstats_url_variants_by_fight_id(tmp_path):
+    saved = pd.DataFrame(
+        [
+            {
+                "saved_at": "2026-07-18T10:46:03",
+                "event_name": "Test Event",
+                "event_date": "July 18, 2026",
+                "fight_url": "http://ufcstats.com/fight-details/abc123",
+                "fighter_1": "One",
+                "fighter_2": "Two",
+                "scheduled_rounds": 3,
+                "duration_line": 2.5,
+                "duration_over_probability": 0.7,
+                "duration_under_probability": 0.3,
+                "duration_model_version": "duration-survival-0.2.0",
+                "rounds_line": 2.5,
+            }
+        ]
+    )
+    results = pd.DataFrame(
+        [
+            {
+                "fight_url": "https://www.ufcstats.com/fight-details/ABC123/",
+                "result_1": "win",
+                "result_2": "loss",
+                "winner": "One",
+                "method": "U-DEC",
+                "round": 3,
+                "time": "5:00",
+            }
+        ]
+    )
+
+    payload = build_duration_evaluation(
+        metrics_path=tmp_path / "missing.json",
+        saved_predictions_df=saved,
+        event_fights_df=results,
+    )
+
+    assert payload["prospective"]["status"] == "ready"
+    assert payload["prospective"]["scored_predictions"] == 1
+    assert payload["prospective"]["pending_predictions"] == 0
+    assert payload["prospective"]["future_card_results"][0]["correct"] is True
+
+
 def test_historical_standard_line_artifact_is_rejected_as_stale(tmp_path):
     metrics_path = tmp_path / "duration_model_metrics.json"
     metrics_path.write_text(
@@ -149,3 +194,25 @@ def test_invalid_duration_probabilities_are_counted_but_not_scored(tmp_path):
     assert payload["prospective"]["saved_predictions"] == 0
     assert payload["prospective"]["invalid_predictions"] == 1
     assert payload["prospective"]["scored_predictions"] == 0
+
+
+def test_empty_database_nulls_are_not_reported_as_invalid_predictions(tmp_path):
+    saved = pd.DataFrame(
+        [
+            {
+                "fight_url": "fight-1",
+                "duration_line": float("nan"),
+                "duration_over_probability": float("nan"),
+                "duration_under_probability": float("nan"),
+            }
+        ]
+    )
+
+    payload = build_duration_evaluation(
+        metrics_path=tmp_path / "missing.json",
+        saved_predictions_df=saved,
+        event_fights_df=pd.DataFrame(),
+    )
+
+    assert payload["prospective"]["saved_predictions"] == 0
+    assert payload["prospective"]["invalid_predictions"] == 0

@@ -233,6 +233,41 @@ TOTALS_ODDS_SNAPSHOT_COLUMNS: list[tuple[str, str]] = [
     ("odds_match_min_score", "REAL"),
 ]
 
+# data_refresh_runs - append-only operational heartbeat copied to the hosted DB
+# with each successful bundle. It intentionally stores a compact, secret-free
+# summary rather than the full local report, which can contain large scrape logs.
+DATA_REFRESH_RUN_COLUMNS: list[tuple[str, str]] = [
+    ("run_id", "TEXT"),
+    ("update_type", "TEXT"),
+    ("started_at", "TEXT"),
+    ("finished_at", "TEXT"),
+    ("duration_seconds", "REAL"),
+    ("success", "INTEGER"),
+    ("failed_stages_json", "TEXT"),
+    ("degraded_stages_json", "TEXT"),
+    ("completed_events_rows", "INTEGER"),
+    ("event_fights_rows", "INTEGER"),
+    ("upcoming_events_rows", "INTEGER"),
+    ("upcoming_fights_rows", "INTEGER"),
+    ("saved_card_predictions_rows", "INTEGER"),
+    ("saved_duration_predictions_rows", "INTEGER"),
+    ("settled_duration_predictions", "INTEGER"),
+    ("pending_duration_predictions", "INTEGER"),
+    ("odds_stage_status", "TEXT"),
+    ("odds_available", "INTEGER"),
+    ("odds_error_code", "TEXT"),
+    ("odds_message", "TEXT"),
+    ("provider_requests_remaining", "INTEGER"),
+    ("odds_matched_fights", "INTEGER"),
+    ("odds_unmatched_fights", "INTEGER"),
+    ("totals_quotes_received", "INTEGER"),
+    ("totals_snapshots_added", "INTEGER"),
+    ("totals_snapshots_total", "INTEGER"),
+    ("totals_fights_matched", "INTEGER"),
+    ("totals_lines_json", "TEXT"),
+    ("recorded_at", "TEXT"),
+]
+
 
 # event_fights (completed results). fight_url is the natural key (one row per fight),
 # so it's the PRIMARY KEY — no surrogate id — which makes incremental upserts clean.
@@ -357,6 +392,13 @@ SCHEMA_STATEMENTS: list[str] = [
     "ON totals_odds_snapshots(fight_url, captured_at)",
     "CREATE INDEX IF NOT EXISTS idx_totals_odds_snapshots_event "
     "ON totals_odds_snapshots(odds_event_id)",
+    create_table_sql(
+        "data_refresh_runs",
+        DATA_REFRESH_RUN_COLUMNS,
+        primary_key="run_id",
+    ),
+    "CREATE INDEX IF NOT EXISTS idx_data_refresh_runs_finished "
+    "ON data_refresh_runs(finished_at)",
     # users: accounts + roles. email is the unique login identifier (Phase 6).
     """
     CREATE TABLE IF NOT EXISTS users (
@@ -479,6 +521,7 @@ _SPEC_TABLES: list[tuple[str, list[tuple[str, str]]]] = [
     ("model_runs", MODEL_RUNS_COLUMNS),
     ("future_fight_odds", FUTURE_FIGHT_ODDS_COLUMNS),
     ("totals_odds_snapshots", TOTALS_ODDS_SNAPSHOT_COLUMNS),
+    ("data_refresh_runs", DATA_REFRESH_RUN_COLUMNS),
     ("user_predictions", USER_PREDICTIONS_COLUMNS),
     ("event_controls", EVENT_CONTROLS_COLUMNS),
 ]

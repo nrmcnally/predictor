@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import math
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +22,7 @@ TRAINING_MATCHUPS_CSV = PROCESSED_DATA_DIR / "training_matchups.csv"
 BEST_MODEL_PATH = MODELS_DIR / "best_winner_model.joblib"
 FEATURES_PATH = MODELS_DIR / "model_features.json"
 METRICS_PATH = MODELS_DIR / "calibrated_model_metrics.json"
+EVALUATION_ARTIFACT_PATH = MODELS_DIR / "winner_model_evaluation.json"
 
 
 MAJOR_WEIGHT_CLASSES = [
@@ -74,6 +77,59 @@ FAVORITE_THRESHOLDS = [
     0.70,
     0.75,
 ]
+
+
+def wilson_interval(successes: int, total: int) -> tuple[float | None, float | None]:
+    """95% Wilson interval for a binomial rate.
+
+    It remains well behaved for small samples, unlike the normal approximation.
+    """
+    if total <= 0:
+        return None, None
+
+    z = 1.959963984540054
+    rate = successes / total
+    denominator = 1 + (z * z / total)
+    center = (rate + (z * z / (2 * total))) / denominator
+    margin = (
+        z
+        * math.sqrt((rate * (1 - rate) / total) + (z * z / (4 * total * total)))
+        / denominator
+    )
+    return max(0.0, center - margin), min(1.0, center + margin)
+
+
+def evidence_status(sample_size: int, *, prospective: bool = False) -> dict[str, str]:
+    if prospective:
+        if sample_size < 30:
+            return {
+                "level": "very_early",
+                "label": "Very early",
+                "message": "Too few frozen future predictions for a stable performance claim.",
+            }
+        if sample_size < 100:
+            return {
+                "level": "early",
+                "label": "Early",
+                "message": "Useful directional evidence, but still sensitive to a few results.",
+            }
+        return {
+            "level": "established",
+            "label": "Established prospective sample",
+            "message": "Large enough for routine monitoring; segment results can still be noisy.",
+        }
+
+    if sample_size < 100:
+        level, label = "limited", "Limited historical sample"
+    elif sample_size < 500:
+        level, label = "moderate", "Moderate historical sample"
+    else:
+        level, label = "established", "Established historical sample"
+    return {
+        "level": level,
+        "label": label,
+        "message": "Chronological holdout evidence; production refits are not scored on this set.",
+    }
 
 def clean_text(value: Any) -> str:
     if value is None or pd.isna(value):
@@ -404,13 +460,21 @@ def summarize_fight_predictions(fight_df: pd.DataFrame) -> dict[str, Any]:
             "average_confidence_percentage": "",
         }
 
-    accuracy = float(fight_df["prediction_correct"].mean())
+    correct_count = int(fight_df["prediction_correct"].sum())
+    fight_count = int(len(fight_df))
+    accuracy = float(correct_count / fight_count)
     average_confidence = float(fight_df["model_confidence"].mean())
+    ci_lower, ci_upper = wilson_interval(correct_count, fight_count)
 
     return {
-        "fight_count": int(len(fight_df)),
+        "fight_count": fight_count,
+        "correct_count": correct_count,
         "accuracy": accuracy,
         "accuracy_percentage": format_percent(accuracy),
+        "accuracy_ci95_lower": ci_lower,
+        "accuracy_ci95_upper": ci_upper,
+        "random_baseline_accuracy": 0.5,
+        "accuracy_above_random": accuracy - 0.5,
         "average_confidence": average_confidence,
         "average_confidence_percentage": format_percent(average_confidence),
     }
@@ -632,7 +696,7 @@ def resolve_holdout(
     return train_df, holdout_df, "chronological_fraction"
 
 
-def get_model_evaluation(
+def _compute_model_evaluation(
     test_fraction: float = 0.20,
     recent_prediction_limit: int = 25,
 ) -> dict[str, Any]:
@@ -675,6 +739,8 @@ def get_model_evaluation(
         test_date_max = pd.NaT
 
     return {
+        "available": True,
+        "evidence": evidence_status(int(len(fight_level_df))),
         "metadata": {
             "source_file": str(TRAINING_MATCHUPS_CSV),
             "model_file": str(BEST_MODEL_PATH),
@@ -725,3 +791,71 @@ def get_model_evaluation(
             limit=10,
         ),
     }
+
+
+def write_model_evaluation_artifact(
+    recent_prediction_limit: int = 100,
+    artifact_path: Path = EVALUATION_ARTIFACT_PATH,
+) -> dict[str, Any]:
+    """Freeze the honest holdout report before the production model is refit.
+
+    Serving this compact JSON keeps the live API independent of the large training
+    CSV and prevents a full-history production model from ever being evaluated on
+    rows it has seen.
+    """
+    payload = _compute_model_evaluation(
+        test_fraction=0.20,
+        recent_prediction_limit=max(100, int(recent_prediction_limit)),
+    )
+    payload["metadata"]["artifact_file"] = "models/winner_model_evaluation.json"
+    payload["metadata"]["artifact_role"] = "frozen_chronological_holdout"
+    payload["metadata"]["source_file"] = "data/processed/training_matchups.csv"
+    selected_name = payload["metadata"].get("saved_best_model_name") or "selected-candidate"
+    payload["metadata"]["model_file"] = f"models/winner_models/{selected_name}.joblib"
+    payload["metadata"]["features_file"] = "models/model_features.json"
+    payload["metadata"]["saved_metrics_file"] = "models/calibrated_model_metrics.json"
+    saved_metrics = load_saved_metrics()
+    payload["metadata"]["evaluation_provenance"] = (
+        saved_metrics.get("evaluation_provenance")
+        or saved_metrics.get("provenance")
+        or {}
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return payload
+
+
+def get_model_evaluation(
+    test_fraction: float = 0.20,
+    recent_prediction_limit: int = 25,
+) -> dict[str, Any]:
+    """Load the portable frozen report, with a local-computation fallback.
+
+    ``test_fraction`` is retained for API compatibility. A frozen artifact always
+    wins because changing a query parameter must not silently redefine a holdout.
+    """
+    if EVALUATION_ARTIFACT_PATH.exists():
+        try:
+            payload = json.loads(EVALUATION_ARTIFACT_PATH.read_text(encoding="utf-8"))
+            result = deepcopy(payload)
+            result["recent_predictions"] = list(result.get("recent_predictions") or [])[
+                : max(1, min(int(recent_prediction_limit), 100))
+            ]
+            return result
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+    try:
+        return _compute_model_evaluation(
+            test_fraction=test_fraction,
+            recent_prediction_limit=recent_prediction_limit,
+        )
+    except FileNotFoundError:
+        return {
+            "available": False,
+            "message": (
+                "The frozen winner evaluation artifact is missing. Run the local "
+                "training pipeline and deploy the generated model JSON artifacts."
+            ),
+            "metadata": {"artifact_file": "models/winner_model_evaluation.json"},
+        }
