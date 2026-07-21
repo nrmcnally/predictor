@@ -135,10 +135,14 @@ def _score(pending: list[dict[str, Any]], today: date | None = None) -> dict[str
     upcoming_keys: set[str] | None = None  # built lazily, only if needed
     scored = 0
     voided = 0
+    still_pending = 0
     for pick in pending:
+        already_void = pick.get("status") == "void"
         key = _fight_key(pick.get("fight_url"))
         result = results.get(key)
         if result is None:
+            if already_void:
+                continue
             if _orphan_overdue(pick, today):
                 if upcoming_keys is None:
                     upcoming_keys = _upcoming_fight_keys()
@@ -146,13 +150,19 @@ def _score(pending: list[dict[str, Any]], today: date | None = None) -> dict[str
                 if key not in upcoming_keys:
                     user_predictions_repository.mark_void(pick["id"])
                     voided += 1
+                    continue
+            still_pending += 1
             continue  # event not completed yet — leave pending
 
         outcome = grade_pick(pick, result)
         if outcome is None:
-            user_predictions_repository.mark_void(pick["id"])
-            voided += 1
+            if not already_void:
+                user_predictions_repository.mark_void(pick["id"])
+                voided += 1
         else:
+            # A clean official row can arrive after an incomplete/transitional
+            # scrape prematurely voided the pick. Re-grade it now; genuine swaps,
+            # draws and no-contests still return None above and remain void.
             result_correct, method_correct = outcome
             user_predictions_repository.mark_scored(
                 pick["id"], result_correct, method_correct
@@ -162,16 +172,19 @@ def _score(pending: list[dict[str, Any]], today: date | None = None) -> dict[str
     return {
         "scored": scored,
         "voided": voided,
-        "still_pending": len(pending) - scored - voided,
+        "still_pending": still_pending,
     }
 
 
 def score_all_pending() -> dict[str, int]:
-    """Grade every pending pick that now has a completed result. Idempotent: already
-    scored/voided picks are skipped (only status 'open' is considered)."""
-    return _score(user_predictions_repository.list_pending())
+    """Grade open picks and reconcile premature voids against current results.
+
+    Scored picks remain terminal. A void changes only when a later clean result row
+    exactly matches the snapshotted bout, making repeated runs safe.
+    """
+    return _score(user_predictions_repository.list_reconcilable())
 
 
 def score_user_pending(user_id: Any) -> dict[str, int]:
     """Grade one user's newly-completed picks (lazy resolution before reading stats)."""
-    return _score(user_predictions_repository.list_pending(user_id))
+    return _score(user_predictions_repository.list_reconcilable(user_id))

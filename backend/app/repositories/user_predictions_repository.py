@@ -136,6 +136,29 @@ def list_pending(user_id: Any | None = None) -> list[dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+def list_reconcilable(user_id: Any | None = None) -> list[dict[str, Any]]:
+    """Picks that may still change as official result data settles.
+
+    ``open`` picks need their first settlement. ``void`` picks are included because
+    a provider can briefly publish an incomplete or mismatched result row before the
+    clean official result arrives. Scored picks remain terminal.
+    """
+    with connection.transaction() as conn:
+        schema.init_db(conn)
+        if user_id is None:
+            rows = conn.execute(
+                f"SELECT {_FULL_COLUMNS} FROM user_predictions "
+                "WHERE status IN ('open', 'void') ORDER BY id"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                f"SELECT {_FULL_COLUMNS} FROM user_predictions "
+                "WHERE status IN ('open', 'void') AND user_id = ? ORDER BY id",
+                (user_id,),
+            ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def delete(user_id: Any, fight_url: str) -> bool:
     with connection.transaction() as conn:
         schema.init_db(conn)

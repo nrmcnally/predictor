@@ -132,6 +132,62 @@ def test_voids_swap_and_no_contest(tmp_path=None):
         p = user_predictions_repository.get(user["id"], UP + fid)
         assert p["status"] == "void" and p["result_correct"] is None
 
+    # Repeated reconciliation leaves genuine voids untouched and does not report
+    # them as newly voided or pending.
+    assert predictions_scoring_service.score_all_pending() == {
+        "scored": 0,
+        "voided": 0,
+        "still_pending": 0,
+    }
+
+
+def test_clean_result_repairs_premature_void(tmp_path=None):
+    tmp = tmp_path or tempfile.mkdtemp()
+    _use_temp_db(tmp)
+    user = auth_service.register_user("repair@example.com", "password123")
+
+    user_predictions_repository.upsert(
+        user["id"],
+        _fight(UP + "repair", "Dricus Du Plessis", "Kamaru Usman"),
+        "Kamaru Usman",
+        "decision",
+    )
+
+    # A transitional scrape has the right URL but an incomplete/mismatched bout,
+    # which is conservatively voided on the first pass.
+    event_fights_repository.replace_all([
+        _result(
+            RES + "repair",
+            "Dricus Du Plessis",
+            "Replacement Fighter",
+            "Dricus Du Plessis",
+            "U-DEC",
+        ),
+    ])
+    assert predictions_scoring_service.score_all_pending()["voided"] == 1
+    assert user_predictions_repository.get(user["id"], UP + "repair")["status"] == "void"
+
+    # Once the clean official row arrives, the same idempotent scoring pass repairs
+    # the stale void and grades both the winner and optional method normally.
+    event_fights_repository.replace_all([
+        _result(
+            RES + "repair",
+            "Dricus Du Plessis",
+            "Kamaru Usman",
+            "Dricus Du Plessis",
+            "U-DEC",
+        ),
+    ])
+    assert predictions_scoring_service.score_all_pending() == {
+        "scored": 1,
+        "voided": 0,
+        "still_pending": 0,
+    }
+    repaired = user_predictions_repository.get(user["id"], UP + "repair")
+    assert repaired["status"] == "scored"
+    assert repaired["result_correct"] == 0
+    assert repaired["method_correct"] == 1
+
 
 def test_pending_without_result_and_idempotent(tmp_path=None):
     tmp = tmp_path or tempfile.mkdtemp()
