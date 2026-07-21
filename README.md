@@ -382,7 +382,7 @@ The normal update path is incremental. It:
 8. Rebuilds matchup training rows
 9. Builds method labels and method training data
 10. Retrains method/manner-of-ending models
-11. Retrains the calibrated winner model
+11. Selects winner candidates on the locked chronology, freezes evaluation reports, and refits the selected recipe on all eligible history
 12. Rebuilds current fighter data
 13. Adds current age features
 14. Refreshes future cards
@@ -672,7 +672,7 @@ cd backend
 python -m app.pipeline.update_all_data
 ```
 
-## Train Calibrated Winner Model
+## Train and Evaluate Winner Model Candidates
 
 ```cmd
 cd backend

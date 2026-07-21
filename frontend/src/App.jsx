@@ -473,7 +473,7 @@ function AppShell() {
 
             <div className="sidebar-footer">
               <p>
-                Calibrated UFC fight predictions from scraped UFCStats data. Odds are
+                Evaluated UFC fight predictions from scraped UFCStats data. Odds are
                 comparison-only.
               </p>
             </div>
